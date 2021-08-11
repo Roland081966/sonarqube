@@ -42,14 +42,12 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.eclipse.jgit.api.DiffCommand;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.GitAPIException;
-import org.eclipse.jgit.lib.ObjectId;
-import org.eclipse.jgit.lib.PersonIdent;
-import org.eclipse.jgit.lib.RefDatabase;
-import org.eclipse.jgit.lib.Repository;
+import org.eclipse.jgit.lib.*;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 import org.eclipse.jgit.treewalk.AbstractTreeIterator;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -129,6 +127,8 @@ public class GitScmProviderTest {
     repo.create();
 
     git = new Git(repo);
+    StoredConfig config = git.getRepository().getConfig();
+    config.setBoolean(ConfigConstants.CONFIG_COMMIT_SECTION, null, "gpgsign", false);
 
     createAndCommitFile("file-in-first-commit.xoo");
   }
@@ -140,7 +140,7 @@ public class GitScmProviderTest {
 
   @Test
   public void returnImplem() {
-    JGitBlameCommand jblameCommand = new JGitBlameCommand(new PathResolver(), analysisWarnings);
+    JGitBlameCommand jblameCommand = new JGitBlameCommand(new PathResolver(), analysisWarnings, mock(org.sonar.api.config.Configuration.class));
     GitScmProvider gitScmProvider = new GitScmProvider(jblameCommand, analysisWarnings, gitIgnoreCommand, system2);
 
     assertThat(gitScmProvider.blameCommand()).isEqualTo(jblameCommand);

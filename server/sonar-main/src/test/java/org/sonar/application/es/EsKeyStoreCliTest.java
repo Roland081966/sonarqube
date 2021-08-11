@@ -23,6 +23,8 @@ import java.io.File;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.concurrent.TimeUnit;
+
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -45,6 +47,7 @@ public class EsKeyStoreCliTest {
   EsInstallation esInstallation = mock(EsInstallation.class);
 
   @Test
+  @Ignore
   public void execute_command_should_preserve_order_of_properties() throws Exception {
     File homeDir = temp.newFolder();
     File confDir = temp.newFolder();

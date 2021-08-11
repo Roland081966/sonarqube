@@ -96,7 +96,7 @@ allprojects {
         // https://www.jfrog.com/jira/browse/RTFACT-13797
         repository = 'public'
       }
-      url "https://repox.jfrog.io/repox/${repository}"
+      url "https://nexus-test.eos.local/repository/maven-public/"
     }
   }
 
@@ -499,6 +499,7 @@ subprojects {
       version = '10.22.1'
       yarnVersion = '1.22.0'
       download = true
+      distBaseUrl = 'https://nexus-test.eos.local/repository/raw-group'
     }
 
     // the OWASP tool does not support yarn, and its yarn.lock files, so node modules

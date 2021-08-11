@@ -254,7 +254,7 @@ public class GitScmProvider extends ScmProvider {
     } else {
       targetRef = getFirstExistingRef(repo, localRef, originRef, upstreamRef, remotesRef);
     }
-
+    
     if (targetRef == null) {
       LOG.warn(String.format(COULD_NOT_FIND_REF, targetBranchName));
     }

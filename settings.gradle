@@ -1,7 +1,7 @@
 pluginManagement {
   repositories {
     maven {
-      url 'https://repox.jfrog.io/repox/plugins.gradle.org/'
+      url 'https://nexus-test.eos.local/repository/maven-public/'
     }
   }
 }

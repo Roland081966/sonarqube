@@ -33,6 +33,7 @@ public final class GitScmSupport {
     return Arrays.asList(
       JGitBlameCommand.class,
       GitScmProvider.class,
-      GitIgnoreCommand.class);
+      GitIgnoreCommand.class,
+      GitScmConfiguration.class);
   }
 }

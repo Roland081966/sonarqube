@@ -21,6 +21,7 @@ package org.sonar.core.config;
 
 import java.util.List;
 import org.sonar.api.CoreProperties;
+import org.sonar.api.PropertyType;
 import org.sonar.api.config.PropertyDefinition;
 import org.sonar.api.resources.Qualifiers;
 
@@ -30,6 +31,7 @@ import static org.sonar.api.PropertyType.BOOLEAN;
 public class ScannerProperties {
 
   public static final String BRANCHES_DOC_LINK = "https://redirect.sonarsource.com/doc/branches.html";
+  public static final String INCLUDE_SCM_SUBMODULES = "sonar.scm.submodules.included";
 
   public static final String BRANCH_NAME = "sonar.branch.name";
   @Deprecated
@@ -48,6 +50,15 @@ public class ScannerProperties {
 
   public static List<PropertyDefinition> all() {
     return asList(
+      PropertyDefinition.builder(INCLUDE_SCM_SUBMODULES)
+              .name("Include submodules in SCM Sensor")
+              .description("Enable the retrieval of blame information for submodules from Source Control Manager")
+              .category(CoreProperties.CATEGORY_SCM)
+              .subCategory("Git")
+              .type(PropertyType.BOOLEAN)
+              .onQualifiers(Qualifiers.PROJECT, Qualifiers.APP)
+              .defaultValue("false")
+              .build(),
       PropertyDefinition.builder(CoreProperties.SCM_DISABLED_KEY)
         .name("Disable the SCM Sensor")
         .description("Disable the retrieval of blame information from Source Control Manager")

@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2021 SonarSource SA
+ * Copyright (C) 2009-2022 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -44,7 +44,7 @@ public class EsJvmOptions extends JvmOptions<EsJvmOptions> {
   private static Map<String, String> mandatoryOptions(File tmpDir, Props props) {
     Map<String, String> res = new LinkedHashMap<>(30);
     fromJvmDotOptionsFile(tmpDir, res);
-    fromSystemJvmOptionsClass(res);
+    fromSystemJvmOptionsClass(tmpDir, res);
 
     if (!props.value("sonar.jdbc.url", "").contains("jdbc:h2") && !props.valueAsBoolean("sonar.es.bootstrap.checks.disable")) {
       res.put("-Des.enforce.bootstrap.checks=", "true");
@@ -55,9 +55,7 @@ public class EsJvmOptions extends JvmOptions<EsJvmOptions> {
 
   private static void fromJvmDotOptionsFile(File tmpDir, Map<String, String> res) {
     // GC configuration
-    res.put("-XX:+UseConcMarkSweepGC", "");
-    res.put("-XX:CMSInitiatingOccupancyFraction=", "75");
-    res.put("-XX:+UseCMSInitiatingOccupancyOnly", "");
+    res.put("-XX:+UseG1GC", "");
 
     // (by default ES 6.6.1 uses variable ${ES_TMPDIR} which is replaced by start scripts. Since we start JAR file
     // directly on windows, we specify absolute file as URL (to support space in path) instead
@@ -73,23 +71,12 @@ public class EsJvmOptions extends JvmOptions<EsJvmOptions> {
     // specify an alternative path for JVM fatal error logs (ES 6.6.1 default is "logs/hs_err_pid%p.log")
     res.put("-XX:ErrorFile=", "../logs/es_hs_err_pid%p.log");
 
-    // JDK 8 GC logging (by default ES 6.6.1 enables them, we don't want to do that in SQ, no one will analyze them anyway)
-    // res.put("8:-XX:+PrintGCDetails", "");
-    // res.put("8:-XX:+PrintGCDateStamps", "");
-    // res.put("8:-XX:+PrintTenuringDistribution", "");
-    // res.put("8:-XX:+PrintGCApplicationStoppedTime", "");
-    // res.put("8:-Xloggc:logs/gc.log", "");
-    // res.put("8:-XX:+UseGCLogFileRotation", "");
-    // res.put("8:-XX:NumberOfGCLogFiles", "32");
-    // res.put("8:-XX:GCLogFileSize", "64m");
-    // JDK 9+ GC logging
-    // res.put("9-:-Xlog:gc*,gc+age=trace,safepoint:file=logs/gc.log:utctime,pid,tags:filecount=32,filesize=64m", "");
   }
 
   /**
    * JVM options from class "org.elasticsearch.tools.launchers.SystemJvmOptions"
    */
-  private static void fromSystemJvmOptionsClass(Map<String, String> res) {
+  private static void fromSystemJvmOptionsClass(File tmpDir, Map<String, String> res) {
     /*
      * Cache ttl in seconds for positive DNS lookups noting that this overrides the JDK security property networkaddress.cache.ttl;
      * can be set to -1 to cache forever.
@@ -110,6 +97,7 @@ public class EsJvmOptions extends JvmOptions<EsJvmOptions> {
     res.put("-Dfile.encoding=", "UTF-8");
     // use our provided JNA always versus the system one
     res.put("-Djna.nosys=", "true");
+    res.put("-Djna.tmpdir=", tmpDir.getAbsolutePath());
     /*
      * Turn off a JDK optimization that throws away stack traces for common exceptions because stack traces are important for
      * debugging.
@@ -123,6 +111,7 @@ public class EsJvmOptions extends JvmOptions<EsJvmOptions> {
     // log4j 2
     res.put("-Dlog4j.shutdownHookEnabled=", "false");
     res.put("-Dlog4j2.disable.jmx=", "true");
+    res.put("-Dlog4j2.formatMsgNoLookups=", "true");
     /*
      * Due to internationalization enhancements in JDK 9 Elasticsearch need to set the provider to COMPAT otherwise time/date
      * parsing will break in an incompatible way for some date patterns and locales.

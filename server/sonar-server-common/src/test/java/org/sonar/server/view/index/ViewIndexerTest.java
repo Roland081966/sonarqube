@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2021 SonarSource SA
+ * Copyright (C) 2009-2022 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -56,6 +56,11 @@ public class ViewIndexerTest {
   private final DbClient dbClient = db.getDbClient();
   private final DbSession dbSession = db.getSession();
   private final ViewIndexer underTest = new ViewIndexer(dbClient, es.client());
+
+  @Test
+  public void getIndexTypes() {
+    assertThat(underTest.getIndexTypes()).containsExactly(TYPE_VIEW);
+  }
 
   @Test
   public void index_nothing() {

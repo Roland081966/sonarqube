@@ -4,21 +4,19 @@ gcp_credentials: ENCRYPTED[!e5f7207bd8d02d383733bef47e18296ac32e3b7d22eb480354e8
 env:
   GRADLE_OPTS: -Dorg.gradle.daemon=false -Dorg.gradle.jvmargs="-XX:+PrintFlagsFinal -XshowSettings:vm -XX:+HeapDumpOnOutOfMemoryError -XX:+UnlockExperimentalVMOptions -Djava.security.egd=file:/dev/./urandom -Dfile.encoding=UTF8 -Duser.language=en -Duser.country=US"
   # to be replaced by other credentials
-  ARTIFACTORY_PRIVATE_USERNAME: repox-private-reader
-  ARTIFACTORY_PRIVATE_PASSWORD: ENCRYPTED[!35ca4446564213d4fd2d1a96e42a871d5de6e6aac4e1dd3e89342892a60a2badf74a966bcc8e885e9c9d09a775ffe4c0!]
+  ARTIFACTORY_PRIVATE_USERNAME: repox-private-reader-e2882e
+  ARTIFACTORY_PRIVATE_PASSWORD: ENCRYPTED[!815fc7526a6579b7d974d1c41b5c247cfed8c88fb2c7b41ec5d3d54244701186da777c4003476b5b9fa208c8b8f208dc!]
   ARTIFACTORY_DEPLOY_USERNAME: repox-qa-deployer
   ARTIFACTORY_DEPLOY_PASSWORD: ENCRYPTED[!d484e19f33c9ce63b165f70e414a33b1ac6c215a126791aacbf8059626caf0fd8a78e999a20af5c1a4ba01c0b0247921!]
   ARTIFACTORY_API_KEY: ENCRYPTED[60f92cec4bf8446867dce41fe8dc77457f10065b82a24bfa3924d496aa1c14b89b531b86c3a34274abb12cf9a4cb36c4]
   # download licenses for testing commercial editions
-  GITHUB_TOKEN: ENCRYPTED[!f272985ea5b49b3cf9c414b98de6a8e9096be47bfcee52f33311ba3131a2af637c1b956f49585b7757dd84b7c030233a!]
-  # use a permanent GitHub access token to perform a clone (by default CirrusCI uses a temporary one)
-  CIRRUS_REPO_CLONE_TOKEN: ENCRYPTED[f20fee6519296187a473964e60afb08a1bbdc889a624fad0297b41a21d8697f8d2da4d2d245194ade630dcf46b4b581e]
+  GITHUB_TOKEN: ENCRYPTED[!f458126aa9ed2ac526f220c5acb51dd9cc255726b34761a56fc78d4294c11089502a882888cef0ca7dd4085e72e611a5!]
   # notifications to burgr
   BURGR_URL: ENCRYPTED[24fba83587c1e9ed372b6cfdf12e4739ebe3b6e5b5082f1a2a742e840dd2e4b61fd5e281bf2632b22b3ad346c650c05c]
   BURGR_USERNAME: ENCRYPTED[cf7bfb936025fb763013bbfef0ab5723c0d9b53f135d79af36f9defa933f4b5fc72842bd83a97ce9b614503c1b77e6da]
   BURGR_PASSWORD: ENCRYPTED[bc554fc6a06c9f14cc9924cefad0a69e962a905b6d1609fc9357d458b45fc52ac74c960ad9c7382a0691433fa9dcd483]
   # analysis on next.sonarqube.com
-  SONARQUBE_NEXT_TOKEN: ENCRYPTED[e3d98fa0ecceb015e9803d47f78c3040f5a710d678a631107635d69f650d4e53ecaf2e2334cc1fe0c47037ec915dcda0]
+  SONARQUBE_NEXT_TOKEN: ENCRYPTED[!0d599f9fb1613db33388821ca04af23f090729902b4421ad0a53cea8393d1e9039f2e47d65a246781b0e2c3718c172a1!]
   # to trigger docs deployment
   BUDDY_WORKS_TOKEN: ENCRYPTED[9ba648f3167b6f0c0befbba2f816bfffd53260fef06fb0fe8bba0a19ae4808c8b1567c5dcee2a2ee5299a5969058f495]
 
@@ -35,8 +33,7 @@ only_default_depending_on_build_template: &ONLY_DEFAUT_DEPENDING_ON_BUILD_TEMPLA
   only_if: >-
            $CIRRUS_BRANCH !=~ "dogfood/.*" &&
            $CIRRUS_BRANCH != "public_master" &&
-           $CIRRUS_BRANCH != "branch-nightly-build" &&
-           $CIRRUS_CRON == ""
+           $CIRRUS_BRANCH != "branch-nightly-build"
 
 docker_build_container_template: &GKE_CONTAINER_TEMPLATE
   dockerfile: private/docker/Dockerfile-build
@@ -97,8 +94,7 @@ build_task:
   <<: *NODE_MODULES_CACHE_TEMPLATE
   only_if: >-
            $CIRRUS_BRANCH !=~ "dogfood/.*" &&
-           $CIRRUS_BRANCH != "public_master" &&
-           $CIRRUS_CRON == ""
+           $CIRRUS_BRANCH != "public_master"
   timeout_in: 90m
   gke_container:
     <<: *GKE_CONTAINER_TEMPLATE
@@ -112,6 +108,8 @@ build_task:
     ORG_GRADLE_PROJECT_signingKey: ENCRYPTED[!cc216dfe592f79db8006f2a591f8f98b40aa2b078e92025623594976fd32f6864c1e6b6ba74b50647f608e2418e6c336!]
     ORG_GRADLE_PROJECT_signingPassword: ENCRYPTED[!314a8fc344f45e462dd5e8dccd741d7562283a825e78ebca27d4ae9db8e65ce618e7f6aece386b2782a5abe5171467bd!]
     ORG_GRADLE_PROJECT_signingKeyId: 0x7DCD4258
+  elasticsearch_distribution_cache:
+    folder: sonar-application/build/elasticsearch-**.tar.gz
   script:
     - ./private/cirrus/cirrus-build.sh
   on_failure:
@@ -479,30 +477,27 @@ upgd_oracle12_task:
   on_failure:
     <<: *REPORTS_JUNIT_ON_FAILURE_TEMPLATE
 
-# Software Composition Analysis (SCA): check potential vulnerabilities in dependencies.
-# Note that license compliance of dependencies is not checked for now.
-owasp_check_task:
+ws_scan_task:
+  depends_on: build
   only_if: >-
-           $CIRRUS_CRON == "nightly" ||
-           $CIRRUS_CRON == "weekly-latest" ||
-           $CIRRUS_CRON == "weekly-lts" ||
-           changesInclude('private/owasp/*.xml')
+    $CIRRUS_BRANCH == 'master' ||
+    $CIRRUS_BRANCH =~ 'branch.*'
   timeout_in: 30m
   gke_container:
     <<: *GKE_CONTAINER_TEMPLATE
-    cpu: 1.7
+    cpu: 2
     memory: 4Gb
-  environment:
-    # No need to clone the full history.
-    # Depth of 1 is not enough because it would fail the build in case of consecutive pushes
-    # (example of error: "Hard resetting to c968ecaf7a1942dacecd78480b3751ac74d53c33...Failed to force reset to c968ecaf7a1942dacecd78480b3751ac74d53c33: object not found!")
-    CIRRUS_CLONE_DEPTH: 50
+  env:
+    WS_APIKEY: ENCRYPTED[308f809a4051b3225bed52131b32fb52895bc5a12c23e901f35b1d1e9d80bcaf75a1023c0dd171994bdbe790b4055e66]
+    WS_WSS_URL: "https://saas-eu.whitesourcesoftware.com/agent"
+    WS_USERKEY: ENCRYPTED[747f9c9006cf9859fd5f02bad85a044c5c0f32d12190deb624d480ad6d86b2f114da136e068645281e9e83e2f0727ab2]
     SLACK_WEBHOOK_SQ: ENCRYPTED[dec8e4350cbea3b94d63098558bcb3ae9e79b71c2b6286fcfb9eb80c0953b6448b10f7271b07b5e75e52f362c25d7a8f]
-  script:
-    - gradle dependencyCheckAggregate
+  whitesource_script:
+    - ./private/cirrus/cirrus-whitesource-scan.sh
+  allow_failures: "true"
   on_failure:
     slack_notification_script:
-      - ./private/cirrus/cirrus-owasp-notification.sh
+      - ./private/cirrus/cirrus-whitesource-notifications.sh
   always:
-    reports_artifacts:
-      path: "build/reports/*"
+    ws_artifacts:
+      path: "whitesource/**/*"

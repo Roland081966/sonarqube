@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2021 SonarSource SA
+ * Copyright (C) 2009-2022 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -619,6 +619,44 @@ public class ValuesActionTest {
     ValuesWsResponse result = executeRequestForGlobalProperties();
 
     assertFieldValues(result.getSettings(0), ImmutableMap.of("key", "key1", "secret.secured", "123456"));
+  }
+
+  @Test
+  public void return_admin_only_settings_in_property_set_when_system_admin() {
+    String anyAdminOnlySettingKey = SettingsWsSupport.ADMIN_ONLY_SETTINGS.iterator().next();
+    logInAsAdmin();
+    definitions.addComponent(PropertyDefinition
+      .builder(anyAdminOnlySettingKey)
+      .type(PropertyType.PROPERTY_SET)
+      .fields(asList(
+        PropertyFieldDefinition.build(anyAdminOnlySettingKey).name("Key admnin only").build(),
+        PropertyFieldDefinition.build(anyAdminOnlySettingKey).name("Value admin only").build()))
+      .build());
+    ImmutableMap<String, String> keyValuePairs = ImmutableMap.of(anyAdminOnlySettingKey, "test_val");
+    propertyDb.insertPropertySet(anyAdminOnlySettingKey, null, keyValuePairs);
+
+    ValuesWsResponse result = executeRequestForGlobalProperties();
+
+    assertFieldValues(result.getSettings(0), keyValuePairs);
+  }
+
+  @Test
+  public void return_admin_only_settings_in_property_not_set_when_simple_user() {
+    String anyAdminOnlySettingKey = SettingsWsSupport.ADMIN_ONLY_SETTINGS.iterator().next();
+    logIn();
+    definitions.addComponent(PropertyDefinition
+      .builder(anyAdminOnlySettingKey)
+      .type(PropertyType.PROPERTY_SET)
+      .fields(asList(
+        PropertyFieldDefinition.build(anyAdminOnlySettingKey).name("Key admnin only").build(),
+        PropertyFieldDefinition.build(anyAdminOnlySettingKey).name("Value admin only").build()))
+      .build());
+    ImmutableMap<String, String> keyValuePairs = ImmutableMap.of(anyAdminOnlySettingKey, "test_val");
+    propertyDb.insertPropertySet(anyAdminOnlySettingKey, null, keyValuePairs);
+
+    ValuesWsResponse result = executeRequestForGlobalProperties();
+
+    assertThat(result.getSettingsList()).isEmpty();
   }
 
   @Test

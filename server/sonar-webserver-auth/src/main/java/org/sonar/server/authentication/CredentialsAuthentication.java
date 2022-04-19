@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2021 SonarSource SA
+ * Copyright (C) 2009-2022 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -67,10 +67,12 @@ public class CredentialsAuthentication {
     if (externalUser.isPresent()) {
       return externalUser.get();
     }
+    localAuthentication.generateHashToAvoidEnumerationAttack();
     throw AuthenticationException.newBuilder()
       .setSource(Source.local(method))
       .setLogin(credentials.getLogin())
       .setMessage(localUser != null && !localUser.isLocal() ? "User is not local" : "No active user for login")
       .build();
   }
+
 }

@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2021 SonarSource SA
+ * Copyright (C) 2009-2022 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -249,7 +249,8 @@ public class ComponentDao implements Dao {
   }
 
   public List<String> selectProjectsFromView(DbSession session, String viewUuid, String projectViewUuid) {
-    return mapper(session).selectProjectsFromView("%." + viewUuid + ".%", projectViewUuid);
+    String escapedViewUuid = viewUuid.replace("_", "\\_").replace("%", "\\%");
+    return mapper(session).selectProjectsFromView("%." + escapedViewUuid + ".%", projectViewUuid);
   }
 
   /**

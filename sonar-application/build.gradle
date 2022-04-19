@@ -1,6 +1,12 @@
+import groovy.json.JsonOutput
+import groovy.json.JsonSlurper
 import org.apache.tools.ant.filters.ReplaceTokens
 
-apply plugin: 'com.github.johnrengelman.shadow'
+plugins {
+  id "com.github.hierynomus.license-report"
+  id "com.github.johnrengelman.shadow"
+  id "de.undercouch.download"
+}
 
 sonarqube {
   properties {
@@ -26,6 +32,8 @@ configurations {
   bundledPlugin {
     transitive = false
   }
+
+  appLicenses.extendsFrom(compile, web, scanner, jsw, jdbc_mssql, jdbc_postgresql, jdbc_h2)
 }
 
 jar.enabled = false
@@ -66,50 +74,119 @@ dependencies {
 // declare dependencies in configuration bundledPlugin to be packaged in lib/extensions
 apply from: 'bundled_plugins.gradle'
 
-task zip(type: Zip, dependsOn: [configurations.compile]) {
+downloadLicenses {
+    dependencyConfiguration = 'appLicenses'
+}
+
+task verifyElasticSearchDownload(type: Verify) {
+  src new File(buildDir, "$elasticsearchDownloadUrlFile")
+  algorithm 'SHA-512'
+  checksum elasticsearchDownloadSha512
+}
+
+task downloadElasticSearch(type: Download) {
+  def artifactoryUsername = System.env.'ARTIFACTORY_PRIVATE_USERNAME' ?: (project.hasProperty('artifactoryUsername') ? project.getProperty('artifactoryUsername') : '')
+  def artifactoryPassword = System.env.'ARTIFACTORY_PRIVATE_PASSWORD' ?: (project.hasProperty('artifactoryPassword') ? project.getProperty('artifactoryPassword') : '')
+  if (artifactoryUsername && artifactoryPassword) {
+    src "$elasticsearchDownloadRepoxUrlPath$elasticsearchDownloadUrlFile"
+    username artifactoryUsername
+    password artifactoryPassword
+  } else {
+    src "$elasticsearchDownloadUrlPath$elasticsearchDownloadUrlFile"
+  }
+  dest "$buildDir/$elasticsearchDownloadUrlFile"
+  onlyIfModified true
+  finalizedBy verifyElasticSearchDownload
+}
+
+
+task zip(type: Zip, dependsOn: [configurations.compile, tasks.downloadLicenses, downloadElasticSearch, verifyElasticSearchDownload]) {
   duplicatesStrategy DuplicatesStrategy.EXCLUDE
-  def archiveDir = "sonarqube-$version"
+  def archiveDir = "sonarqube-$project.version"
 
   into("${archiveDir}/") {
-    from file('src/main/assembly')
+    from(tasks.downloadLicenses.outputs) {
+      include 'dependency-license.json'
+      eachFile { jsonFile ->
+        def json = new JsonSlurper().parse(jsonFile.file)
+        json.dependencies.each { dependency ->
+          if (dependency.licenses.size() > 1) {
+            def idx = dependency.licenses.findIndexOf { it.name == "Elastic License 2.0" }
+            if (idx >= 0) {
+              dependency.licenses = [dependency.licenses[idx]]
+            }
+          }
+        }
+        json.dependencies.sort { it.name }
+        def jsonText = JsonOutput.toJson(json)
+        jsonFile.file.text = JsonOutput.prettyPrint(jsonText)
+      }
+    }
+    from(file('src/main/assembly')) {
       exclude 'conf/sonar.properties'
       exclude 'conf/wrapper.conf'
       exclude 'elasticsearch-patch'
-      // elasticsearch script will be replaced by patched version below
-      exclude 'elasticsearch/bin/elasticsearch'
-      exclude 'elasticsearch/bin/elasticsearch-cli'
-      exclude 'elasticsearch/bin/elasticsearch-keystore'
-      exclude 'elasticsearch/bin/elasticsearch-node'
-      exclude 'elasticsearch/bin/elasticsearch-shard'
-      exclude 'elasticsearch/lib/tools/**'
-      exclude 'elasticsearch/modules/aggs-matrix-stats/**'
-      exclude 'elasticsearch/modules/geo/**'
-      exclude 'elasticsearch/modules/ingest-common/**'
-      exclude 'elasticsearch/modules/ingest-geoip/**'
-      exclude 'elasticsearch/modules/ingest-user-agent/**'
-      exclude 'elasticsearch/modules/kibana/**'
-      exclude 'elasticsearch/modules/lang-expression/**'
-      exclude 'elasticsearch/modules/lang-mustache/**'
-      exclude 'elasticsearch/modules/mapper-extras/**'
-      exclude 'elasticsearch/modules/rank-eval/**'
-      exclude 'elasticsearch/modules/reindex/**'
-      exclude 'elasticsearch/modules/repository-url/**'
-      exclude 'elasticsearch/modules/tasks/**'
-      exclude 'elasticsearch/modules/constant-keyword/**'
-      exclude 'elasticsearch/modules/flattened/**'
-      exclude 'elasticsearch/modules/frozen-indices/**'
-      exclude 'elasticsearch/modules/mapper-version/**'
-      exclude 'elasticsearch/modules/repositories-metering-api/**'
-      exclude 'elasticsearch/modules/repository-encrypted/**'
-      exclude 'elasticsearch/modules/search-business-rules/**'
-      exclude 'elasticsearch/modules/searchable-snapshots/**'
-      exclude 'elasticsearch/modules/snapshot-repo-test-kit/**'
-      exclude 'elasticsearch/modules/spatial/**'
-      exclude 'elasticsearch/modules/transform/**'
-      exclude 'elasticsearch/modules/unsigned-long/**'
-      exclude 'elasticsearch/modules/vectors/**'
-      exclude 'elasticsearch/modules/wildcard/**'
-      exclude 'elasticsearch/modules/x-pack-*/**'
+    }
+  }
+
+  from(tarTree(downloadElasticSearch.dest)) {
+    eachFile { fcd ->
+      def path = fcd.relativePath.segments - fcd.relativeSourcePath.segments + fcd.relativeSourcePath.segments.drop(1)
+      fcd.relativePath = new RelativePath(true, *path)
+    }
+    into("${archiveDir}/elasticsearch")
+    // elasticsearch script will be replaced by patched version below
+    exclude '**/bin/elasticsearch'
+    exclude '**/bin/elasticsearch-certgen'
+    exclude '**/bin/elasticsearch-certutil'
+    exclude '**/bin/elasticsearch-cli'
+    exclude '**/bin/elasticsearch-croneval'
+    exclude '**/bin/elasticsearch-geoip'
+    exclude '**/bin/elasticsearch-keystore'
+    exclude '**/bin/elasticsearch-migrate'
+    exclude '**/bin/elasticsearch-node'
+    exclude '**/bin/elasticsearch-plugin'
+    exclude '**/bin/elasticsearch-saml-metadata'
+    exclude '**/bin/elasticsearch-service-tokens'
+    exclude '**/bin/elasticsearch-setup-passwords'
+    exclude '**/bin/elasticsearch-shard'
+    exclude '**/bin/elasticsearch-sql-cli*'
+    exclude '**/bin/elasticsearch-syskeygen'
+    exclude '**/bin/elasticsearch-users'
+    exclude '**/bin/x-pack-env'
+    exclude '**/bin/x-pack-security-env'
+    exclude '**/bin/x-pack-watcher-env'
+    exclude '**/jdk/**'
+    exclude '**/lib/tools/**'
+    exclude '**/modules/aggs-matrix-stats/**'
+    exclude '**/modules/constant-keyword/**'
+    exclude '**/modules/frozen-indices/**'
+    exclude '**/modules/ingest-common/**'
+    exclude '**/modules/ingest-geoip/**'
+    exclude '**/modules/ingest-user-agent/**'
+    exclude '**/modules/kibana/**'
+    exclude '**/modules/lang-expression/**'
+    exclude '**/modules/lang-mustache/**'
+    exclude '**/modules/legacy-geo/**'
+    exclude '**/modules/mapper-extras/**'
+    exclude '**/modules/mapper-version/**'
+    exclude '**/modules/percolator/**'
+    exclude '**/modules/rank-eval/**'
+    exclude '**/modules/repositories-metering-api/**'
+    exclude '**/modules/repository-encrypted/**'
+    exclude '**/modules/repository-url/**'
+    exclude '**/modules/runtime-fields-common/**'
+    exclude '**/modules/search-business-rules/**'
+    exclude '**/modules/searchable-snapshots/**'
+    exclude '**/modules/snapshot-repo-test-kit/**'
+    exclude '**/modules/spatial/**'
+    exclude '**/modules/transform/**'
+    exclude '**/modules/unsigned-long/**'
+    exclude '**/modules/vector-tile/**'
+    exclude '**/modules/vectors/**'
+    exclude '**/modules/wildcard/**'
+    exclude '**/modules/x-pack-*/**'
+    includeEmptyDirs = false
   }
 
   into("${archiveDir}/conf/") {
@@ -129,7 +206,7 @@ task zip(type: Zip, dependsOn: [configurations.compile]) {
             'sqversion': version
     ])
   }
-  
+
   into("${archiveDir}/elasticsearch/") {
     from file('src/main/assembly/elasticsearch-patch')
       include 'bin/elasticsearch'
@@ -185,8 +262,8 @@ zip.doFirst {
 }
 // Check the size of the archive
 zip.doLast {
-  def minLength = 270000000
-  def maxLength = 290000000
+  def minLength = 260000000
+  def maxLength = 275000000
 
   def length = archiveFile.get().asFile.length()
   if (length < minLength)

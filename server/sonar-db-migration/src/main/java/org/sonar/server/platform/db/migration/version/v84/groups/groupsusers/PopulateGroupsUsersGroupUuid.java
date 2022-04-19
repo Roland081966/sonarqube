@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2021 SonarSource SA
+ * Copyright (C) 2009-2022 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -42,7 +42,7 @@ public class PopulateGroupsUsersGroupUuid extends DataChange {
     massUpdate.update("delete from groups_users where user_id = ? and group_id = ?");
 
     massUpdate.execute((row, update) -> {
-      update.setString(1, row.getString(1));
+      update.setLong(1, row.getLong(1));
       update.setLong(2, row.getLong(2));
 
       return true;

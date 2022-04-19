@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2021 SonarSource SA
+ * Copyright (C) 2009-2022 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -390,7 +390,9 @@ public class EsSettingsTest {
 
     Map<String, String> outputParams = settings.build();
 
-    assertThat(outputParams).containsEntry("xpack.security.transport.ssl.enabled", "true")
+    assertThat(outputParams)
+      .containsEntry("xpack.security.transport.ssl.enabled", "true")
+      .containsEntry("xpack.security.transport.ssl.supported_protocols", "TLSv1.3,TLSv1.2")
       .containsEntry("xpack.security.transport.ssl.keystore.path", keystore.getName())
       .containsEntry("xpack.security.transport.ssl.truststore.path", truststore.getName());
   }

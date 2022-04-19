@@ -92,10 +92,7 @@ When installing SonarQube, a default user with Administer System permission is c
 * Password: admin
 
 ## Reinstating Admin Access
-If you changed and then lost the `admin` password, you can reset it using the following query:
-```
-update users set crypted_password='100000$t2h8AtNs1AlCHuLobDjHQTn9XppwTIx88UjqUm4s8RsfTuXQHSd/fpFexAnewwPsO6jGFQUv/24DnO55hY6Xew==', salt='k9x9eN127/3e/hf38iNiKwVfaVk=', hash_method='PBKDF2', reset_password='true', user_local='true' where login='admin';
-```
+
 If you've deleted `admin` and subsequently locked out the other users with global administrative permissions, you'll need to re-grant `admin` to a user with the following query:
 ```
 INSERT INTO user_roles(uuid, user_uuid, role) 
@@ -104,13 +101,24 @@ VALUES ('random-uuid',
 'admin');
 ```
 
+If you changed and then lost the `admin` password, you can reset it using the following query, depending on the database engine:
+
+### PostgreSQL and Microsoft SQL Server
+```
+update users set crypted_password='100000$t2h8AtNs1AlCHuLobDjHQTn9XppwTIx88UjqUm4s8RsfTuXQHSd/fpFexAnewwPsO6jGFQUv/24DnO55hY6Xew==', salt='k9x9eN127/3e/hf38iNiKwVfaVk=', hash_method='PBKDF2', reset_password='true', user_local='true' where login='admin';
+```
+### Oracle
+```
+update users set crypted_password='100000$t2h8AtNs1AlCHuLobDjHQTn9XppwTIx88UjqUm4s8RsfTuXQHSd/fpFexAnewwPsO6jGFQUv/24DnO55hY6Xew==', salt='k9x9eN127/3e/hf38iNiKwVfaVk=', hash_method='PBKDF2', reset_password=1, user_local=1 where login='admin';
+```
+
 ## Authorization
 The way authorization is implemented in SonarQube is pretty standard. It is possible to create as many users and groups of users as needed. The users can then be attached (or not) to (multiple) groups. Groups and/or users are then given (multiple) permissions. The permissions grant access to projects, services, and functionalities.
 
 To administer groups and users, choose **Administration > Security**, and use the sub-menu items.
 
 ### User
-Multiple integrations that allow the delegation of authentication are available (see the [Plugin Library](https://redirect.sonarsource.com/doc/plugin-library.html) and [Other Plugins](https://docs.sonarqube.org/display/PLUG/Other+Plugins), but you can manually create and edit users at **[Settings > Security > Users](/#sonarqube-admin#/admin/users)**. For manually-created users, login and password can be set at creation. Manually-created users can edit their passwords.
+Multiple integrations that allow the delegation of authentication are available (see the [Plugin Library](https://docs.sonarqube.org/8.9/instance-administration/plugin-version-matrix/) but you can manually create and edit users at **[Settings > Security > Users](/#sonarqube-admin#/admin/users)**. For manually-created users, login and password can be set at creation. Manually-created users can edit their passwords.
 
 During both user creation and edit, you can set an account's screen name, email address. User login and email address will be implicitly recognized by the Issue Assignment feature as SCM accounts if applicable, but you can set additional SCM accounts explicitly. 
 

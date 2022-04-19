@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2021 SonarSource SA
+ * Copyright (C) 2009-2022 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -26,6 +26,8 @@ import java.util.Set;
 import org.sonar.api.utils.System2;
 import org.sonar.db.Dao;
 import org.sonar.db.DbSession;
+
+import static org.sonar.db.DatabaseUtils.executeLargeInputs;
 
 public class ProjectDao implements Dao {
   private final System2 system2;
@@ -65,7 +67,8 @@ public class ProjectDao implements Dao {
     if (keys.isEmpty()) {
       return Collections.emptyList();
     }
-    return mapper(session).selectApplicationsByKeys(keys);
+
+    return executeLargeInputs(keys, partition -> mapper(session).selectApplicationsByKeys(partition));
   }
 
   public List<ProjectDto> selectProjects(DbSession session) {

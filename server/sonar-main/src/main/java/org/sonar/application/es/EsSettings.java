@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2021 SonarSource SA
+ * Copyright (C) 2009-2022 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -118,6 +118,7 @@ public class EsSettings {
 
       builder.put("xpack.security.enabled", "true");
       builder.put("xpack.security.transport.ssl.enabled", "true");
+      builder.put("xpack.security.transport.ssl.supported_protocols", "TLSv1.3,TLSv1.2");
       builder.put("xpack.security.transport.ssl.verification_mode", "certificate");
       builder.put("xpack.security.transport.ssl.keystore.path", clusterESKeystoreFileName);
       builder.put("xpack.security.transport.ssl.truststore.path", clusterESTruststoreFileName);

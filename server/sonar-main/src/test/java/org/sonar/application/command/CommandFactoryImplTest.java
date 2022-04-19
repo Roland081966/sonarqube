@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2021 SonarSource SA
+ * Copyright (C) 2009-2022 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -135,7 +135,8 @@ public class CommandFactoryImplTest {
     assertThat(esConfig.getHttpPort()).isEqualTo(9001);
     assertThat(esConfig.getEsJvmOptions().getAll())
       // enforced values
-      .contains("-XX:+UseConcMarkSweepGC", "-Dfile.encoding=UTF-8")
+      .contains("-XX:+UseG1GC")
+      .contains("-Dfile.encoding=UTF-8")
       // default settings
       .contains("-Xms512m", "-Xmx512m", "-XX:+HeapDumpOnOutOfMemoryError");
     assertThat(esConfig.getEsYmlSettings()).isNotNull();
@@ -146,7 +147,7 @@ public class CommandFactoryImplTest {
     assertThat(esCommand.getEnvVariables())
       .contains(entry("ES_PATH_CONF", esConfDir.getAbsolutePath()))
       .contains(entry("ES_JVM_OPTIONS", new File(esConfDir, "jvm.options").getAbsolutePath()))
-      .containsKey("JAVA_HOME");
+      .containsKey("ES_JAVA_HOME");
     assertThat(esCommand.getSuppressedEnvVariables()).containsOnly("JAVA_TOOL_OPTIONS", "ES_JAVA_OPTS");
 
     assertThat(esConfig.getEsJvmOptions().getAll())
@@ -170,7 +171,8 @@ public class CommandFactoryImplTest {
     assertThat(esConfig.getHttpPort()).isEqualTo(9001);
     assertThat(esConfig.getEsJvmOptions().getAll())
       // enforced values
-      .contains("-XX:+UseConcMarkSweepGC", "-Dfile.encoding=UTF-8")
+      .contains("-XX:+UseG1GC")
+      .contains("-Dfile.encoding=UTF-8")
       // default settings
       .contains("-Xms512m", "-Xmx512m", "-XX:+HeapDumpOnOutOfMemoryError");
     assertThat(esConfig.getEsYmlSettings()).isNotNull();
@@ -182,7 +184,7 @@ public class CommandFactoryImplTest {
     assertThat(esCommand.getArguments()).isEmpty();
     assertThat(esCommand.getEnvVariables())
       .contains(entry("ES_JVM_OPTIONS", new File(esConfDir, "jvm.options").getAbsolutePath()))
-      .containsKey("JAVA_HOME");
+      .containsKey("ES_JAVA_HOME");
     assertThat(esCommand.getSuppressedEnvVariables()).containsOnly("JAVA_TOOL_OPTIONS", "ES_JAVA_OPTS");
 
     assertThat(esConfig.getEsJvmOptions().getAll())
@@ -210,7 +212,8 @@ public class CommandFactoryImplTest {
     assertThat(esConfig.getHttpPort()).isEqualTo(1234);
     assertThat(esConfig.getEsJvmOptions().getAll())
       // enforced values
-      .contains("-XX:+UseConcMarkSweepGC", "-Dfile.encoding=UTF-8")
+      .contains("-XX:+UseG1GC")
+      .contains("-Dfile.encoding=UTF-8")
       .contains("-Djava.io.tmpdir=" + tempDir.getAbsolutePath())
       // user settings
       .contains("-Xms10G", "-Xmx10G")

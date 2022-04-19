@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2021 SonarSource SA
+ * Copyright (C) 2009-2022 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -31,7 +31,7 @@ import org.elasticsearch.action.search.SearchScrollRequest;
 import org.elasticsearch.client.Requests;
 import org.elasticsearch.client.indices.CreateIndexRequest;
 import org.elasticsearch.client.indices.GetIndexRequest;
-import org.elasticsearch.common.unit.TimeValue;
+import org.elasticsearch.core.TimeValue;
 import org.junit.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -50,7 +50,7 @@ public class EsRequestDetailsTest {
           + " ignore_throttled=true], types=[type], routing='null', preference='null', requestCache=null,"
           + " scroll=null, maxConcurrentShardRequests=0, batchedReduceSize=512, preFilterShardSize=null,"
           + " allowPartialSearchResults=null, localClusterAlias=null, getOrCreateAbsoluteStartMillis=-1,"
-          + " ccsMinimizeRoundtrips=true, source={}}' on indices '[index]' on types '[type]'");
+          + " ccsMinimizeRoundtrips=true, enableFieldsEmulation=false, source={}}' on indices '[index]' on types '[type]'");
   }
 
   @Test

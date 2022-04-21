@@ -34,6 +34,7 @@ allprojects {
 
   ext.versionInSources = version
   ext.buildNumber = System.getProperty("buildNumber")
+  println ("Build Number is set to ${ext.buildNumber}")
   // when no buildNumber is provided, then project version must end with '-SNAPSHOT'
   if (ext.buildNumber == null) {
       version = "${version}-SNAPSHOT".toString()

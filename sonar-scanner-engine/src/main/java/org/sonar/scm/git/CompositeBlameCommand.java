@@ -69,7 +69,7 @@ public class CompositeBlameCommand extends BlameCommand {
   private boolean nativeGitEnabled = false;
   private final boolean analyseSubmodules;
 
-  private final BlameStrategy blameStrategy;
+  private final BlameStrategy  blameStrategy;
 
   public CompositeBlameCommand(AnalysisWarnings analysisWarnings, PathResolver pathResolver, JGitBlameCommand jgitCmd,
     NativeGitBlameCommand nativeCmd, BlameStrategy blameStrategy, Configuration configuration) {

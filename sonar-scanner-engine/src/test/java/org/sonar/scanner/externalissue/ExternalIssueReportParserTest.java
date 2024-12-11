@@ -19,10 +19,12 @@
  */
 package org.sonar.scanner.externalissue;
 
+import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import org.junit.Test;
 
+import static java.lang.String.format;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -71,10 +73,10 @@ public class ExternalIssueReportParserTest {
   public void parse_whenInvalidDeprecatedFormat_shouldFail() {
     reportPath = Paths.get(DEPRECATED_REPORTS_LOCATION + "report_invalid_json.json");
 
+    String expectedPath = "src/test/resources/org/sonar/scanner/externalissue/report_invalid_json.json".replace('/', File.separatorChar);
     assertThatThrownBy(() -> externalIssueReportParser.parse(reportPath))
       .isInstanceOf(IllegalStateException.class)
-      .hasMessage("Failed to read external issues report 'src/test/resources/org/sonar/scanner/externalissue/report_invalid_json.json': " +
-        "invalid JSON syntax");
+      .hasMessage(format("Failed to read external issues report '%s': invalid JSON syntax", expectedPath));
   }
 
   @Test

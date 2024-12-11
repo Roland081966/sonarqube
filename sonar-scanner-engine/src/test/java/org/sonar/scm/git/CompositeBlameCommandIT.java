@@ -73,7 +73,8 @@ class CompositeBlameCommandIT {
   @ParameterizedTest
   @MethodSource("namesOfTheTestRepositoriesWithBlameAlgorithm")
   void testThatBlameAlgorithmOutputsTheSameDataAsGitNativeBlame(String folder, BlameAlgorithmEnum blameAlgorithm) throws Exception {
-    CompositeBlameCommand underTest = new CompositeBlameCommand(analysisWarnings, new PathResolver(), jGitBlameCommand, nativeGitBlameCommand, (p, f) -> blameAlgorithm);
+    CompositeBlameCommand underTest = new CompositeBlameCommand(analysisWarnings, new PathResolver(), jGitBlameCommand,
+            nativeGitBlameCommand, (p, f) -> blameAlgorithm, mock(org.sonar.api.config.Configuration.class));
 
     TestBlameOutput output = new TestBlameOutput();
     File gitFolder = unzipGitRepository(folder);

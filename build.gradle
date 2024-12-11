@@ -43,7 +43,7 @@ allprojects {
   ext.buildNumber = System.getProperty("buildNumber")
   // when no buildNumber is provided, then project version must end with '-SNAPSHOT'
   if (ext.buildNumber == null) {
-      version = "${version}-SNAPSHOT".toString()
+      version = "${version}.1".toString()
       ext.versionWithoutBuildNumber = version
   } else {
       ext.versionWithoutBuildNumber = version
@@ -178,7 +178,7 @@ apply plugin: 'org.sonarqube'
 sonar {
     properties {
         property 'sonar.projectName', projectTitle
-        property 'sonar.projectVersion', "${versionInSources}-SNAPSHOT"
+        property 'sonar.projectVersion', "${versionInSources}.1"
         property 'sonar.buildString', version
     }
 }

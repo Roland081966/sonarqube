@@ -193,8 +193,8 @@ public class LanguageDetectionTest {
 
     assertThat(detectLanguageKey(detection, "Foo.java")).isEqualTo("java");
     assertThat(detectLanguageKey(detection, "Foo.java")).isEqualTo("java");
-    verify(languageCacheSpy, times(1)).put(endsWith("/Foo.java"), any(org.sonar.scanner.repository.language.Language.class));
-    verify(languageCacheSpy, times(2)).get(endsWith("/Foo.java"));
+    verify(languageCacheSpy, times(1)).put(endsWith(File.separator + "Foo.java"), any(org.sonar.scanner.repository.language.Language.class));
+    verify(languageCacheSpy, times(2)).get(endsWith(File.separator + "Foo.java"));
   }
 
   private static Map<String, org.sonar.scanner.repository.language.Language> spyInternalLanguageCache(LanguageDetection detection) {

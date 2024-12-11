@@ -97,7 +97,7 @@ public class CompositeBlameCommandTest {
   public void use_jgit_if_native_git_disabled() throws IOException {
     logTester.setLevel(Level.DEBUG);
     NativeGitBlameCommand gitCmd = new NativeGitBlameCommand("invalidcommandnotfound", System2.INSTANCE, processWrapperFactory);
-    BlameCommand blameCmd = new CompositeBlameCommand(analysisWarnings, pathResolver, jGitBlameCommand, gitCmd, (p, f) -> GIT_NATIVE_BLAME);
+    BlameCommand blameCmd = new CompositeBlameCommand(analysisWarnings, pathResolver, jGitBlameCommand, gitCmd, (p, f) -> GIT_NATIVE_BLAME, mock(org.sonar.api.config.Configuration.class));
     File projectDir = createNewTempFolder();
     javaUnzip("dummy-git.zip", projectDir);
 
@@ -115,7 +115,7 @@ public class CompositeBlameCommandTest {
   public void blame_shouldCallStrategyWithCorrectSpecifications() throws IOException {
 
     BlameStrategy strategyMock = mock(BlameStrategy.class);
-    BlameCommand blameCmd = new CompositeBlameCommand(analysisWarnings, pathResolver, jGitBlameCommand, nativeGitBlameCommand, strategyMock);
+    BlameCommand blameCmd = new CompositeBlameCommand(analysisWarnings, pathResolver, jGitBlameCommand, nativeGitBlameCommand, strategyMock, mock(org.sonar.api.config.Configuration.class));
 
     File projectDir = createNewTempFolder();
     javaUnzip("dummy-git.zip", projectDir);
@@ -132,7 +132,7 @@ public class CompositeBlameCommandTest {
   public void fallback_to_jgit_if_native_git_fails() throws Exception {
     logTester.setLevel(Level.DEBUG);
     NativeGitBlameCommand gitCmd = mock(NativeGitBlameCommand.class);
-    BlameCommand blameCmd = new CompositeBlameCommand(analysisWarnings, pathResolver, jGitBlameCommand, gitCmd, (p, f) -> GIT_NATIVE_BLAME);
+    BlameCommand blameCmd = new CompositeBlameCommand(analysisWarnings, pathResolver, jGitBlameCommand, gitCmd, (p, f) -> GIT_NATIVE_BLAME, mock(org.sonar.api.config.Configuration.class));
     File projectDir = createNewTempFolder();
     javaUnzip("dummy-git.zip", projectDir);
 
@@ -161,7 +161,7 @@ public class CompositeBlameCommandTest {
     }
 
     JGitBlameCommand jgit = mock(JGitBlameCommand.class);
-    BlameCommand blameCmd = new CompositeBlameCommand(analysisWarnings, pathResolver, jgit, nativeGitBlameCommand, (p, f) -> strategy);
+    BlameCommand blameCmd = new CompositeBlameCommand(analysisWarnings, pathResolver, jgit, nativeGitBlameCommand, (p, f) -> strategy, mock(org.sonar.api.config.Configuration.class));
     File projectDir = createNewTempFolder();
     javaUnzip("dummy-git.zip", projectDir);
 
@@ -180,7 +180,7 @@ public class CompositeBlameCommandTest {
     assumeTrue(nativeGitBlameCommand.checkIfEnabled());
 
     JGitBlameCommand jgit = mock(JGitBlameCommand.class);
-    BlameCommand blameCmd = new CompositeBlameCommand(analysisWarnings, pathResolver, jgit, nativeGitBlameCommand, (p, f) -> strategy);
+    BlameCommand blameCmd = new CompositeBlameCommand(analysisWarnings, pathResolver, jgit, nativeGitBlameCommand, (p, f) -> strategy, mock(org.sonar.api.config.Configuration.class));
     File projectDir = createNewTempFolder();
     javaUnzip("no-head-git.zip", projectDir);
 
@@ -199,7 +199,7 @@ public class CompositeBlameCommandTest {
   @Test
   @UseDataProvider("blameAlgorithms")
   public void return_early_when_shallow_clone_detected(BlameAlgorithmEnum strategy) throws IOException {
-    CompositeBlameCommand blameCommand = new CompositeBlameCommand(analysisWarnings, pathResolver, jGitBlameCommand, nativeGitBlameCommand, (p, f) -> strategy);
+    CompositeBlameCommand blameCommand = new CompositeBlameCommand(analysisWarnings, pathResolver, jGitBlameCommand, nativeGitBlameCommand, (p, f) -> strategy, mock(org.sonar.api.config.Configuration.class));
 
     File projectDir = createNewTempFolder();
     javaUnzip("shallow-git.zip", projectDir);
@@ -216,7 +216,7 @@ public class CompositeBlameCommandTest {
 
   @Test
   public void fail_if_not_git_project() throws IOException {
-    CompositeBlameCommand blameCommand = new CompositeBlameCommand(analysisWarnings, pathResolver, jGitBlameCommand, nativeGitBlameCommand, (p, f) -> GIT_FILES_BLAME);
+    CompositeBlameCommand blameCommand = new CompositeBlameCommand(analysisWarnings, pathResolver, jGitBlameCommand, nativeGitBlameCommand, (p, f) -> GIT_FILES_BLAME, mock(org.sonar.api.config.Configuration.class));
 
     File projectDir = createNewTempFolder();
     javaUnzip("dummy-git.zip", projectDir);
@@ -238,7 +238,7 @@ public class CompositeBlameCommandTest {
   @Test
   @UseDataProvider("blameAlgorithms")
   public void dont_fail_with_symlink(BlameAlgorithmEnum strategy) throws IOException {
-    CompositeBlameCommand blameCommand = new CompositeBlameCommand(analysisWarnings, pathResolver, jGitBlameCommand, nativeGitBlameCommand, (p, f) -> strategy);
+    CompositeBlameCommand blameCommand = new CompositeBlameCommand(analysisWarnings, pathResolver, jGitBlameCommand, nativeGitBlameCommand, (p, f) -> strategy, mock(org.sonar.api.config.Configuration.class));
 
     assumeTrue(!System2.INSTANCE.isOsWindows());
     File projectDir = createNewTempFolder();
@@ -266,7 +266,7 @@ public class CompositeBlameCommandTest {
 
   @Test
   public void return_early_when_clone_with_reference_detected() throws IOException {
-    CompositeBlameCommand blameCommand = new CompositeBlameCommand(analysisWarnings, pathResolver, jGitBlameCommand, nativeGitBlameCommand, (p, f) -> GIT_FILES_BLAME);
+    CompositeBlameCommand blameCommand = new CompositeBlameCommand(analysisWarnings, pathResolver, jGitBlameCommand, nativeGitBlameCommand, (p, f) -> GIT_FILES_BLAME, mock(org.sonar.api.config.Configuration.class));
 
     File projectDir = createNewTempFolder();
     javaUnzip("dummy-git-reference-clone.zip", projectDir);
@@ -297,7 +297,7 @@ public class CompositeBlameCommandTest {
   @Test
   @UseDataProvider("blameAlgorithms")
   public void blame_on_nested_module(BlameAlgorithmEnum strategy) throws IOException {
-    CompositeBlameCommand blameCommand = new CompositeBlameCommand(analysisWarnings, pathResolver, jGitBlameCommand, nativeGitBlameCommand, (p, f) -> strategy);
+    CompositeBlameCommand blameCommand = new CompositeBlameCommand(analysisWarnings, pathResolver, jGitBlameCommand, nativeGitBlameCommand, (p, f) -> strategy, mock(org.sonar.api.config.Configuration.class));
     File projectDir = createNewTempFolder();
     javaUnzip("dummy-git-nested.zip", projectDir);
     File baseDir = new File(projectDir, "dummy-git-nested/dummy-project");

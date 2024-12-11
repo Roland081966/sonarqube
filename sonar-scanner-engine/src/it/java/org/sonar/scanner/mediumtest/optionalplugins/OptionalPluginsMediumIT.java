@@ -92,7 +92,7 @@ public class OptionalPluginsMediumIT {
     assertThat(logTester.logs()).contains("'xources/hello/xoo_exclude3.xoo' excluded by org.sonar.scanner.mediumtest.optionalplugins" +
       ".OptionalPluginsMediumIT$OptionalPlugin$OptionalXooFileFilter");
     assertThat(logTester.logs()).contains("'xources/hello/xoo_exclude.xoo' excluded by org.sonar.xoo.extensions.XooExcludeFileFilter");
-    assertThat(logTester.logs()).contains("'xources/hello/HelloJava.xoo' indexed with language 'xoo'");
+      assertThat(logTester.logs()).contains("'xources/hello/HelloJava.xoo' indexed with language 'xoo'".replace('/', File.separatorChar));
 
     assertThat(result.inputFile("xources/hello/xoo_exclude.xoo")).isNull();
     assertThat(result.inputFile("xources/hello/xoo_exclude2.xoo")).isNull();

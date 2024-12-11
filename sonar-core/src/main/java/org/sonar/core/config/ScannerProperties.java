@@ -30,6 +30,8 @@ import static org.sonar.api.PropertyType.INTEGER;
 
 public class ScannerProperties {
 
+  public static final String INCLUDE_SCM_SUBMODULES = "sonar.scm.submodules.included";
+
   public static final String BRANCHES_DOC_LINK_SUFFIX = "/analyzing-source-code/branches/branch-analysis/";
 
   public static final String BRANCH_NAME = "sonar.branch.name";
@@ -48,6 +50,15 @@ public class ScannerProperties {
 
   public static List<PropertyDefinition> all() {
     return asList(
+      PropertyDefinition.builder(INCLUDE_SCM_SUBMODULES)
+              .name("Include submodules in SCM Sensor")
+              .description("Enable the retrieval of blame information for submodules from Source Control Manager")
+              .category(CoreProperties.CATEGORY_SCM)
+              .subCategory("Git")
+              .type(BOOLEAN)
+              .onQualifiers(Qualifiers.PROJECT, Qualifiers.APP)
+              .defaultValue("false")
+              .build(),
       PropertyDefinition.builder(CoreProperties.SCM_DISABLED_KEY)
         .name("Disable the SCM Sensor")
         .description("Disable the retrieval of blame information from Source Control Manager")

@@ -41,10 +41,7 @@ import org.apache.commons.lang3.SystemUtils;
 import org.eclipse.jgit.api.DiffCommand;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.GitAPIException;
-import org.eclipse.jgit.lib.ObjectId;
-import org.eclipse.jgit.lib.RefDatabase;
-import org.eclipse.jgit.lib.Repository;
-import org.eclipse.jgit.lib.RepositoryBuilder;
+import org.eclipse.jgit.lib.*;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 import org.eclipse.jgit.treewalk.AbstractTreeIterator;
@@ -147,7 +144,7 @@ public class GitScmProviderTest {
   public void returnImplem() {
     JGitBlameCommand jblameCommand = new JGitBlameCommand();
     NativeGitBlameCommand nativeBlameCommand = new NativeGitBlameCommand(System2.INSTANCE, new ProcessWrapperFactory());
-    CompositeBlameCommand compositeBlameCommand = new CompositeBlameCommand(analysisWarnings, new PathResolver(), jblameCommand, nativeBlameCommand, new DefaultBlameStrategy(mock(Configuration.class)));
+    CompositeBlameCommand compositeBlameCommand = new CompositeBlameCommand(analysisWarnings, new PathResolver(), jblameCommand, nativeBlameCommand, new DefaultBlameStrategy(mock(Configuration.class)), mock(org.sonar.api.config.Configuration.class));
     GitScmProvider gitScmProvider = new GitScmProvider(compositeBlameCommand, analysisWarnings, gitIgnoreCommand, system2, documentationLinkGenerator);
 
     assertThat(gitScmProvider.blameCommand()).isEqualTo(compositeBlameCommand);
@@ -332,6 +329,8 @@ public class GitScmProviderTest {
     Path submodule2Path = mainFolderWithAllSubmodules.toPath().resolve("sub1/sub2");
     Repository submodule2 = new RepositoryBuilder().findGitDir(submodule2Path.toFile()).build();
     Git gitForSubmodule2 = new Git(submodule2);
+    StoredConfig config = gitForSubmodule2.getRepository().getConfig();
+    config.setBoolean(ConfigConstants.CONFIG_COMMIT_SECTION, null, "gpgsign", false);
 
     gitForSubmodule2.branchCreate().setName("develop").call();
     gitForSubmodule2.checkout().setName("develop").call();

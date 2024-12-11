@@ -109,9 +109,10 @@ public class BatchIndexTest {
     File homeDir = temp.newFolder();
     when(fs.getHomeDir()).thenReturn(homeDir);
 
+    String expectedPath = File.separator + "lib" + File.separator + "scanner";
     BatchIndex batchIndex = new BatchIndex(fs);
     assertThatThrownBy(batchIndex::start)
       .isInstanceOf(IllegalStateException.class)
-      .hasMessage(format("%s/lib/scanner folder not found", homeDir.getAbsolutePath()));
+      .hasMessage(format("%s%s folder not found", homeDir.getAbsolutePath(), expectedPath));
   }
 }

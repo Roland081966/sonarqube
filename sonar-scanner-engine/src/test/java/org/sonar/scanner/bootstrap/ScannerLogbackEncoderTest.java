@@ -69,10 +69,13 @@ class ScannerLogbackEncoderTest {
     when(logEvent.getThrowableProxy()).thenReturn(new ThrowableProxy(new IllegalArgumentException("foo")));
 
     var bytes = underTest.encode(logEvent);
-
+    String lineSeparator = "\\n";
+    if ( System.lineSeparator().length() > 1 ) {
+      lineSeparator = "\\r\\n";
+    }
     assertThat(new String(bytes, StandardCharsets.UTF_8))
       .startsWith(
-        "{\"level\":\"DEBUG\",\"message\":\"message\",\"stacktrace\":\"java.lang.IllegalArgumentException: foo\\n\\tat org.sonar.scanner.bootstrap.ScannerLogbackEncoderTest.should_encode_with_stacktrace");
+        "{\"level\":\"DEBUG\",\"message\":\"message\",\"stacktrace\":\"java.lang.IllegalArgumentException: foo" + lineSeparator + "\\tat org.sonar.scanner.bootstrap.ScannerLogbackEncoderTest.should_encode_with_stacktrace");
   }
 
 }

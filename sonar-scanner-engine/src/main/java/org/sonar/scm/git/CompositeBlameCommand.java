@@ -40,10 +40,12 @@ import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.revwalk.RevWalk;
+import org.eclipse.jgit.submodule.SubmoduleWalk;
 import org.eclipse.jgit.treewalk.TreeWalk;
 import org.sonar.api.batch.fs.InputFile;
 import org.sonar.api.batch.scm.BlameCommand;
 import org.sonar.api.batch.scm.BlameLine;
+import org.sonar.api.config.Configuration;
 import org.sonar.api.notifications.AnalysisWarnings;
 import org.sonar.api.scan.filesystem.PathResolver;
 import org.sonar.api.utils.log.Logger;
@@ -65,16 +67,20 @@ public class CompositeBlameCommand extends BlameCommand {
   private final JGitBlameCommand jgitCmd;
   private final NativeGitBlameCommand nativeCmd;
   private boolean nativeGitEnabled = false;
+  private final boolean analyseSubmodules;
 
   private final BlameStrategy blameStrategy;
 
   public CompositeBlameCommand(AnalysisWarnings analysisWarnings, PathResolver pathResolver, JGitBlameCommand jgitCmd,
-    NativeGitBlameCommand nativeCmd, BlameStrategy blameStrategy) {
+    NativeGitBlameCommand nativeCmd, BlameStrategy blameStrategy, Configuration configuration) {
     this.analysisWarnings = analysisWarnings;
     this.pathResolver = pathResolver;
     this.blameStrategy = blameStrategy;
     this.jgitCmd = jgitCmd;
     this.nativeCmd = nativeCmd;
+    analyseSubmodules = GitScmConfiguration.subModuleAnalysisEnabled(configuration);
+
+    LOG.info("SCM submodules analysis and retrieving blame information is {}", analyseSubmodules ? "enabled" : "disabled");
   }
 
   @Override
@@ -96,7 +102,7 @@ public class CompositeBlameCommand extends BlameCommand {
       if (blameAlgorithmEnum == GIT_FILES_BLAME) {
         blameWithFilesGitCommand(output, repo, inputFileByGitRelativePath);
       } else {
-        blameWithNativeGitCommand(output, repo, inputFileByGitRelativePath, gitBaseDir);
+        blameWithNativeGitCommand(input , output, repo, inputFileByGitRelativePath, gitBaseDir);
       }
     }
   }
@@ -114,7 +120,7 @@ public class CompositeBlameCommand extends BlameCommand {
     return inputFileByGitRelativePath;
   }
 
-  private void blameWithNativeGitCommand(BlameOutput output, Repository repo, Map<String, InputFile> inputFileByGitRelativePath, File gitBaseDir) {
+  private void blameWithNativeGitCommand(BlameInput input, BlameOutput output, Repository repo, Map<String, InputFile> inputFileByGitRelativePath, File gitBaseDir) {
     try (Git git = Git.wrap(repo)) {
       nativeGitEnabled = nativeCmd.checkIfEnabled();
       ExecutorService executorService = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors(), new GitThreadFactory());
@@ -126,12 +132,46 @@ public class CompositeBlameCommand extends BlameCommand {
         executorService.submit(() -> blame(output, git, gitBaseDir, inputFile, filename));
       }
 
-      executorService.shutdown();
+      waitForExecuterServiceShutdown(executorService, "Git blame for root repository interrupted");
+
       try {
-        executorService.awaitTermination(Long.MAX_VALUE, TimeUnit.SECONDS);
-      } catch (InterruptedException e) {
-        LOG.info("Git blame interrupted", e);
-        Thread.currentThread().interrupt();
+        if (!git.submoduleStatus().call().isEmpty() && analyseSubmodules) {
+
+          LOG.debug("Collecting blame information from submodules");
+          LOG.debug("Submodules available {}", git.submoduleStatus().call().toString());
+
+          ExecutorService subModulesExecutorService = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors(), new GitThreadFactory());
+
+          for (String submodule : git.submoduleStatus().call().keySet()) {
+
+            LOG.debug("Trying to collect blame information from submodule {}", submodule);
+
+            Repository submoduleRepository = SubmoduleWalk.getSubmoduleRepository(repo, submodule);
+            if (submoduleRepository != null) {
+
+              Set<String>  committedFiles = collectAllCommittedFiles(submoduleRepository);
+              Git subModuleGit = Git.wrap(submoduleRepository);
+              File subModuleWorkTree = submoduleRepository.getWorkTree();
+
+              for (InputFile inputFile : input.filesToBlame()) {
+
+                String filename = pathResolver.relativePath(gitBaseDir, inputFile.file());
+                if (filename == null || !committedFiles.contains(filename)) {
+                  continue;
+                }
+
+                // exceptions thrown by the blame method will be ignored
+                subModulesExecutorService.submit(() -> blame(output, subModuleGit, subModuleWorkTree, inputFile, filename));
+              }
+            } else {
+              LOG.info("Submodule {} given, failed to get submodule repository, is it not checked out?", submodule);
+            }
+          }
+
+          waitForExecuterServiceShutdown(subModulesExecutorService, "Git blame for submodules interrupted");
+        }
+      } catch (GitAPIException | IOException e) {
+        throw new RuntimeException(e);
       }
     }
   }
@@ -248,6 +288,17 @@ public class CompositeBlameCommand extends BlameCommand {
         linesList.add(linesList.get(linesList.size() - 1));
       }
       output.blameResult(file, linesList);
+    }
+  }
+
+  private static void waitForExecuterServiceShutdown(ExecutorService executorService, String logMessage) {
+
+    try {
+      executorService.shutdown();
+      executorService.awaitTermination(Long.MAX_VALUE, TimeUnit.SECONDS);
+    } catch (InterruptedException e) {
+      LOG.info(logMessage, e);
+      Thread.currentThread().interrupt();
     }
   }
 

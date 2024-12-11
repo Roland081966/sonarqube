@@ -19,6 +19,7 @@
  */
 package org.sonar.server.issue.ws.anticipatedtransition;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -125,7 +126,8 @@ public class AnticipatedTransitionParserTest {
   }
 
   private String readTestResourceFile(String fileName) throws IOException {
-    return Files.readString(Path.of(getClass().getResource(fileName).getPath()));
+    String sanitizedFilePath = getClass().getResource(fileName).getPath().substring(1).replace("/", File.separator);
+    return Files.readString(Path.of(sanitizedFilePath));
   }
 
 }

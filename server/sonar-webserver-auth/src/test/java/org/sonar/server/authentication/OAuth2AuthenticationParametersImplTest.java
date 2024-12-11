@@ -22,8 +22,13 @@ package org.sonar.server.authentication;
 import com.tngtech.java.junit.dataprovider.DataProvider;
 import com.tngtech.java.junit.dataprovider.DataProviderRunner;
 import com.tngtech.java.junit.dataprovider.UseDataProvider;
+
+import java.io.File;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 import javax.annotation.Nullable;
+
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -110,7 +115,7 @@ public class OAuth2AuthenticationParametersImplTest {
   public void get_return_to_parameter() {
     when(request.getCookies()).thenReturn(new Cookie[]{wrapCookie(AUTHENTICATION_COOKIE_NAME, "{\"return_to\":\"/admin/settings\"}")});
 
-    Optional<String> redirection = underTest.getReturnTo(request);
+    Optional<String> redirection = getRequestResult();
 
     assertThat(redirection).contains("/admin/settings");
   }
@@ -171,9 +176,23 @@ public class OAuth2AuthenticationParametersImplTest {
   public void getReturnTo_whenContainingPathTraversalCharacters_sanitizeThem(String payload, @Nullable String expectedSanitizedUrl) {
     when(request.getCookies()).thenReturn(new Cookie[]{wrapCookie(AUTHENTICATION_COOKIE_NAME, payload)});
 
-    Optional<String> redirection = underTest.getReturnTo(request);
+    Optional<String> redirection = getRequestResult();
 
     assertThat(redirection).isEqualTo(Optional.ofNullable(expectedSanitizedUrl));
+  }
+
+  private Optional<String> getRequestResult() {
+
+    Optional<String> requestResult = underTest.getReturnTo(request);
+    if (requestResult.isPresent()) {
+
+      String redirection = URLDecoder.decode(requestResult.get(), StandardCharsets.UTF_8)
+              .replace(File.separatorChar, '/');
+
+      requestResult = redirection.describeConstable();
+    }
+
+    return requestResult;
   }
 
   private JavaxHttpRequest.JavaxCookie wrapCookie(String name, String value) {

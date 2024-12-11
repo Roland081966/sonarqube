@@ -37,7 +37,7 @@ public class ResourceUtilsTest {
   public void whenReadValidClasspathResource_thenReadIt() {
     String result = ResourceUtils.readClasspathResource(ResourceUtilsTest.class, "classpath_resource.txt");
     assertThat(result)
-      .isEqualTo("OK\n");
+      .startsWith("OK" + System.lineSeparator());
   }
 
   @Test

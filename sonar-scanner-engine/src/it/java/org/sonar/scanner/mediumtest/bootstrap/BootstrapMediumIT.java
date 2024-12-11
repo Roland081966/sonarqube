@@ -143,11 +143,16 @@ class BootstrapMediumIT {
    */
   @Test
   void should_complete_successfully(@TempDir Path baseDir) {
-    var exitCode = ScannerMain.run(new ByteArrayInputStream(("{\"scannerProperties\": ["
-      + "{\"key\": \"sonar.host.url\", \"value\": \"" + sonarqube.baseUrl() + "\"},"
-      + "{\"key\": \"sonar.projectKey\", \"value\": \"" + PROJECT_KEY + "\"},"
-      + "{\"key\": \"sonar.projectBaseDir\", \"value\": \"" + baseDir + "\"}"
-      + "]}").getBytes()));
+
+    String arguments = "{\"scannerProperties\": ["
+            + "{\"key\": \"sonar.host.url\", \"value\": \"" + sonarqube.baseUrl() + "\"},"
+            + "{\"key\": \"sonar.projectKey\", \"value\": \"" + PROJECT_KEY + "\"},"
+            + "{\"key\": \"sonar.projectBaseDir\", \"value\": \"" + baseDir + "\"}"
+            + "]}";
+
+    arguments = arguments.replace("\\", "\\\\");
+
+    var exitCode = ScannerMain.run(new ByteArrayInputStream((arguments).getBytes()));
 
     assertThat(exitCode).isZero();
     assertThat(logTester.logs()).contains("SonarScanner Engine completed successfully");
@@ -155,10 +160,15 @@ class BootstrapMediumIT {
 
   @Test
   void should_unwrap_message_exception_without_stacktrace(@TempDir Path baseDir) {
-    var exitCode = ScannerMain.run(new ByteArrayInputStream(("{\"scannerProperties\": ["
-      + "{\"key\": \"sonar.host.url\", \"value\": \"" + sonarqube.baseUrl() + "\"},"
-      + "{\"key\": \"sonar.projectBaseDir\", \"value\": \"" + baseDir + "\"}"
-      + "]}").getBytes()));
+
+    String arguments = "{\"scannerProperties\": ["
+            + "{\"key\": \"sonar.host.url\", \"value\": \"" + sonarqube.baseUrl() + "\"},"
+            + "{\"key\": \"sonar.projectBaseDir\", \"value\": \"" + baseDir + "\"}"
+            + "]}";
+
+    arguments = arguments.replace("\\", "\\\\");
+
+    var exitCode = ScannerMain.run(new ByteArrayInputStream((arguments).getBytes()));
 
     assertThat(exitCode).isEqualTo(1);
     assertThat(logTester.getLogs(Level.ERROR)).hasSize(1);
@@ -168,11 +178,16 @@ class BootstrapMediumIT {
 
   @Test
   void should_show_message_exception_stacktrace_in_debug(@TempDir Path baseDir) {
-    var exitCode = ScannerMain.run(new ByteArrayInputStream(("{\"scannerProperties\": ["
-      + "{\"key\": \"sonar.host.url\", \"value\": \"" + sonarqube.baseUrl() + "\"},"
-      + "{\"key\": \"sonar.projectBaseDir\", \"value\": \"" + baseDir + "\"},"
-      + "{\"key\": \"sonar.verbose\", \"value\": \"true\"}"
-      + "]}").getBytes()));
+
+    String arguments = "{\"scannerProperties\": ["
+            + "{\"key\": \"sonar.host.url\", \"value\": \"" + sonarqube.baseUrl() + "\"},"
+            + "{\"key\": \"sonar.projectBaseDir\", \"value\": \"" + baseDir + "\"},"
+            + "{\"key\": \"sonar.verbose\", \"value\": \"true\"}"
+            + "]}";
+
+    arguments = arguments.replace("\\", "\\\\");
+
+    var exitCode = ScannerMain.run(new ByteArrayInputStream((arguments).getBytes()));
 
     assertThat(exitCode).isEqualTo(1);
     assertThat(logTester.getLogs(Level.ERROR)).hasSize(1);
@@ -183,20 +198,28 @@ class BootstrapMediumIT {
   @Test
   void should_enable_verbose(@TempDir Path baseDir) {
 
-    ScannerMain.run(new ByteArrayInputStream(("{\"scannerProperties\": ["
-      + "{\"key\": \"sonar.host.url\", \"value\": \"" + sonarqube.baseUrl() + "\"},"
-      + "{\"key\": \"sonar.projectKey\", \"value\": \"" + PROJECT_KEY + "\"},"
-      + "{\"key\": \"sonar.projectBaseDir\", \"value\": \"" + baseDir + "\"}"
-      + "]}").getBytes()));
+    String arguments = "{\"scannerProperties\": ["
+            + "{\"key\": \"sonar.host.url\", \"value\": \"" + sonarqube.baseUrl() + "\"},"
+            + "{\"key\": \"sonar.projectKey\", \"value\": \"" + PROJECT_KEY + "\"},"
+            + "{\"key\": \"sonar.projectBaseDir\", \"value\": \"" + baseDir + "\"}"
+            + "]}";
+
+    arguments = arguments.replace("\\", "\\\\");
+
+    ScannerMain.run(new ByteArrayInputStream((arguments).getBytes()));
 
     assertThat(logTester.logs(Level.DEBUG)).isEmpty();
 
-    ScannerMain.run(new ByteArrayInputStream(("{\"scannerProperties\": ["
-      + "{\"key\": \"sonar.host.url\", \"value\": \"" + sonarqube.baseUrl() + "\"},"
-      + "{\"key\": \"sonar.projectKey\", \"value\": \"" + PROJECT_KEY + "\"},"
-      + "{\"key\": \"sonar.projectBaseDir\", \"value\": \"" + baseDir + "\"},"
-      + "{\"key\": \"sonar.verbose\", \"value\": \"true\"}"
-      + "]}").getBytes()));
+    arguments = "{\"scannerProperties\": ["
+            + "{\"key\": \"sonar.host.url\", \"value\": \"" + sonarqube.baseUrl() + "\"},"
+            + "{\"key\": \"sonar.projectKey\", \"value\": \"" + PROJECT_KEY + "\"},"
+            + "{\"key\": \"sonar.projectBaseDir\", \"value\": \"" + baseDir + "\"},"
+            + "{\"key\": \"sonar.verbose\", \"value\": \"true\"}"
+            + "]}";
+
+    arguments = arguments.replace("\\", "\\\\");
+
+    ScannerMain.run(new ByteArrayInputStream((arguments).getBytes()));
 
     assertThat(logTester.logs(Level.DEBUG)).isNotEmpty();
   }

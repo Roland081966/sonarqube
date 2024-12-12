@@ -42,15 +42,14 @@ import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.revwalk.RevWalk;
 import org.eclipse.jgit.submodule.SubmoduleWalk;
 import org.eclipse.jgit.treewalk.TreeWalk;
+import org.slf4j.LoggerFactory;
 import org.sonar.api.batch.fs.InputFile;
 import org.sonar.api.batch.scm.BlameCommand;
 import org.sonar.api.batch.scm.BlameLine;
 import org.sonar.api.config.Configuration;
 import org.sonar.api.notifications.AnalysisWarnings;
 import org.sonar.api.scan.filesystem.PathResolver;
-import org.sonar.api.utils.log.Logger;
-import org.sonar.api.utils.log.Loggers;
-import org.sonar.api.utils.log.Profiler;
+import org.sonar.core.util.logs.Profiler;
 import org.sonar.scm.git.blame.BlameResult;
 import org.sonar.scm.git.blame.RepositoryBlameCommand;
 import org.sonar.scm.git.strategy.BlameStrategy;
@@ -60,7 +59,7 @@ import static java.util.Optional.ofNullable;
 import static org.sonar.scm.git.strategy.DefaultBlameStrategy.BlameAlgorithmEnum.GIT_FILES_BLAME;
 
 public class CompositeBlameCommand extends BlameCommand {
-  private static final Logger LOG = Loggers.get(CompositeBlameCommand.class);
+  private static final org.slf4j.Logger LOG = LoggerFactory.getLogger(CompositeBlameCommand.class);
 
   private final AnalysisWarnings analysisWarnings;
   private final PathResolver pathResolver;
@@ -103,7 +102,10 @@ public class CompositeBlameCommand extends BlameCommand {
         blameWithFilesGitCommand(output, repo, inputFileByGitRelativePath);
       } else {
         blameWithNativeGitCommand(input , output, repo, inputFileByGitRelativePath, gitBaseDir);
+
       }
+
+      getBlameInformationForSubModules(input, output, repo, Git.wrap(repo));
     }
   }
 
@@ -132,47 +134,7 @@ public class CompositeBlameCommand extends BlameCommand {
         executorService.submit(() -> blame(output, git, gitBaseDir, inputFile, filename));
       }
 
-      waitForExecuterServiceShutdown(executorService, "Git blame for root repository interrupted");
-
-      try {
-        if (!git.submoduleStatus().call().isEmpty() && analyseSubmodules) {
-
-          LOG.debug("Collecting blame information from submodules");
-          LOG.debug("Submodules available {}", git.submoduleStatus().call().toString());
-
-          ExecutorService subModulesExecutorService = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors(), new GitThreadFactory());
-
-          for (String submodule : git.submoduleStatus().call().keySet()) {
-
-            LOG.debug("Trying to collect blame information from submodule {}", submodule);
-
-            Repository submoduleRepository = SubmoduleWalk.getSubmoduleRepository(repo, submodule);
-            if (submoduleRepository != null) {
-
-              Set<String>  committedFiles = collectAllCommittedFiles(submoduleRepository);
-              Git subModuleGit = Git.wrap(submoduleRepository);
-              File subModuleWorkTree = submoduleRepository.getWorkTree();
-
-              for (InputFile inputFile : input.filesToBlame()) {
-
-                String filename = pathResolver.relativePath(gitBaseDir, inputFile.file());
-                if (filename == null || !committedFiles.contains(filename)) {
-                  continue;
-                }
-
-                // exceptions thrown by the blame method will be ignored
-                subModulesExecutorService.submit(() -> blame(output, subModuleGit, subModuleWorkTree, inputFile, filename));
-              }
-            } else {
-              LOG.info("Submodule {} given, failed to get submodule repository, is it not checked out?", submodule);
-            }
-          }
-
-          waitForExecuterServiceShutdown(subModulesExecutorService, "Git blame for submodules interrupted");
-        }
-      } catch (GitAPIException | IOException e) {
-        throw new RuntimeException(e);
-      }
+      waitForExecutorServiceShutdown(executorService, "Git blame for root repository interrupted");
     }
   }
 
@@ -291,15 +253,57 @@ public class CompositeBlameCommand extends BlameCommand {
     }
   }
 
-  private static void waitForExecuterServiceShutdown(ExecutorService executorService, String logMessage) {
+  private void getBlameInformationForSubModules(BlameInput input, BlameOutput output, Repository repo, Git git) {
+
+    try {
+      if (!git.submoduleStatus().call().isEmpty() && analyseSubmodules) {
+
+        LOG.debug("Collecting blame information from submodules");
+        LOG.debug("Submodules available {}", git.submoduleStatus().call().toString());
+
+        ExecutorService subModulesExecutorService = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors(), new GitThreadFactory());
+
+        for (String submodule : git.submoduleStatus().call().keySet()) {
+
+          LOG.debug("Trying to collect blame information from submodule {}", submodule);
+
+          Repository submoduleRepository = SubmoduleWalk.getSubmoduleRepository(repo, submodule);
+          if (submoduleRepository != null) {
+
+            Git subModuleGit = Git.wrap(submoduleRepository);
+            File subModuleWorkTree = submoduleRepository.getWorkTree();
+            Map<String, InputFile> committedFilesToBlame = getCommittedFilesToBlame(submoduleRepository, subModuleWorkTree, input);
+
+            for (Map.Entry<String,InputFile> entry : committedFilesToBlame.entrySet()) {
+              InputFile inputFile = entry.getValue();
+              String filename = entry.getKey();
+
+              LOG.debug("Collecting blame information for file {}", filename);
+              subModulesExecutorService.submit(() -> blame(output, subModuleGit, subModuleWorkTree, inputFile, filename));
+
+            }
+          } else {
+            LOG.info("Submodule {} given, failed to get submodule repository, is it not checked out?", submodule);
+          }
+        }
+
+        waitForExecutorServiceShutdown(subModulesExecutorService, "Git blame for submodules interrupted");
+      }
+    } catch (GitAPIException | IOException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  private static void waitForExecutorServiceShutdown(ExecutorService executorService, String logMessage) {
 
     try {
       executorService.shutdown();
+
+      //noinspection ResultOfMethodCallIgnored
       executorService.awaitTermination(Long.MAX_VALUE, TimeUnit.SECONDS);
     } catch (InterruptedException e) {
       LOG.info(logMessage, e);
       Thread.currentThread().interrupt();
     }
   }
-
 }

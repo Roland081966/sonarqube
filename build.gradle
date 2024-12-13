@@ -32,8 +32,8 @@ def ghBranch = System.getenv()["GITHUB_BRANCH"]
 def isMainBranch = ghBranch in ['master'] || ghBranch ==~ 'branch-[\\d.]+'
 
 boolean enableBom = System.getenv('CI') == "true" && (isMainBranch) ||
-        System.getProperty("bom") != null ||
-        gradle.startParameter.taskNames.findAll({ it.matches(".*:($bomTasks)") })
+  System.getProperty("bom") != null ||
+  gradle.startParameter.taskNames.findAll({ it.matches(".*:($bomTasks)") })
 
 allprojects {
   apply plugin: 'com.jfrog.artifactory'
@@ -43,11 +43,11 @@ allprojects {
   ext.buildNumber = System.getProperty("buildNumber")
   // when no buildNumber is provided, then project version must end with '-SNAPSHOT'
   if (ext.buildNumber == null) {
-      version = "${version}.1".toString()
-      ext.versionWithoutBuildNumber = version
+    version = "${version}-SNAPSHOT".toString()
+    ext.versionWithoutBuildNumber = version
   } else {
-      ext.versionWithoutBuildNumber = version
-      version = (version.toString().count('.') == 1 ? "${version}.0.${ext.buildNumber}" : "${version}.${ext.buildNumber}").toString()
+    ext.versionWithoutBuildNumber = version
+    version = (version.toString().count('.') == 1 ? "${version}.0.${ext.buildNumber}" : "${version}.${ext.buildNumber}").toString()
   }
 
   task cacheDependencies {
@@ -178,7 +178,7 @@ apply plugin: 'org.sonarqube'
 sonar {
     properties {
         property 'sonar.projectName', projectTitle
-        property 'sonar.projectVersion', "${versionInSources}.1"
+        property 'sonar.projectVersion', "${versionInSources}-SNAPSHOT"
         property 'sonar.buildString', version
     }
 }

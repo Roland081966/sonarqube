@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -30,14 +30,11 @@ import org.sonar.db.DbSession;
 import org.sonar.db.ce.CeTaskMessageDto;
 import org.sonar.db.project.ProjectDto;
 import org.sonar.db.user.UserDismissedMessageDto;
-import org.sonar.db.user.UserDto;
 import org.sonar.server.component.ComponentFinder;
 import org.sonar.server.exceptions.NotFoundException;
 import org.sonar.server.user.UserSession;
 
 import static java.lang.String.format;
-import static java.util.Objects.requireNonNull;
-import static org.sonar.server.exceptions.NotFoundException.checkFound;
 
 public class DismissAnalysisWarningAction implements CeWsAction {
 

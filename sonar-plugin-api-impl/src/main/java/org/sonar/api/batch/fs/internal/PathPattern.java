@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -52,7 +52,7 @@ public abstract class PathPattern {
   public static PathPattern create(String s) {
     String trimmed = StringUtils.trim(s);
     if (StringUtils.startsWithIgnoreCase(trimmed, ABSOLUTE_PATH_PATTERN_PREFIX)) {
-      LOG.warn("Using absolute path pattern is deprecated. Please use relative path instead of '" + trimmed + "'");
+      LOG.warn("Using absolute path pattern is deprecated. Please use relative path instead of '{}'", trimmed);
       return new AbsolutePathPattern(StringUtils.substring(trimmed, ABSOLUTE_PATH_PATTERN_PREFIX.length()));
     }
     return new RelativePathPattern(trimmed);

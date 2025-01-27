@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -84,12 +84,24 @@ public class ActiveRuleDao implements Dao {
   /**
    * Active rule on removed rule are NOT returned
    */
-  public List<OrgActiveRuleDto> selectByProfileUuid(DbSession dbSession, String uuid) {
-    return mapper(dbSession).selectByProfileUuid(uuid);
+  public List<OrgActiveRuleDto> selectByProfileUuid(DbSession dbSession, String profileUuid) {
+    return selectByProfileUuids(dbSession, List.of(profileUuid));
+  }
+
+  /**
+   * Active rule on removed rule are NOT returned
+   */
+  public List<OrgActiveRuleDto> selectByProfileUuids(DbSession dbSession, Collection<String> profileUuids) {
+    return mapper(dbSession).selectByProfileUuids(profileUuids);
   }
 
   public List<OrgActiveRuleDto> selectByTypeAndProfileUuids(DbSession dbSession, List<Integer> types, List<String> uuids) {
     return executeLargeInputs(uuids, chunk -> mapper(dbSession).selectByTypeAndProfileUuids(types, chunk));
+  }
+
+  public List<OrgActiveRuleDto> selectByHotspotAndSoftwareQualityAndProfileUuids(DbSession dbSession, String softwareQuality,
+    List<String> uuids) {
+    return executeLargeInputs(uuids, chunk -> mapper(dbSession).selectByHotspotAndSoftwareQualityAndProfileUuids(softwareQuality, chunk));
   }
 
   public List<OrgActiveRuleDto> selectByProfile(DbSession dbSession, QProfileDto profile) {
@@ -160,6 +172,10 @@ public class ActiveRuleDao implements Dao {
 
   public List<ActiveRuleParamDto> selectParamsByActiveRuleUuids(final DbSession dbSession, List<String> activeRuleUuids) {
     return executeLargeInputs(activeRuleUuids, mapper(dbSession)::selectParamsByActiveRuleUuids);
+  }
+
+  public List<ActiveRuleParamDto> selectAllParamsByProfileUuids(final DbSession dbSession, Collection<String> profileUuids) {
+    return mapper(dbSession).selectAllParamsByProfileUuids(profileUuids);
   }
 
   public ActiveRuleParamDto insertParam(DbSession dbSession, ActiveRuleDto activeRule, ActiveRuleParamDto activeRuleParam) {

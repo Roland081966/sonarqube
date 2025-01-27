@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -51,8 +51,6 @@ public class PostJobsExecutor {
   }
 
   private static void logPostJobs(Collection<PostJobWrapper> postJobs) {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug(() -> "Post-jobs : " + postJobs.stream().map(Object::toString).collect(Collectors.joining(" -> ")));
-    }
+    LOG.debug(() -> "Post-jobs : " + postJobs.stream().map(Object::toString).collect(Collectors.joining(" -> ")));
   }
 }

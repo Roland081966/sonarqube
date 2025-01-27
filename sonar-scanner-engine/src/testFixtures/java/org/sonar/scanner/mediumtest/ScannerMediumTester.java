@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -38,7 +38,7 @@ import java.util.Properties;
 import java.util.Set;
 import javax.annotation.CheckForNull;
 import javax.annotation.Nullable;
-import javax.annotation.Priority;
+import jakarta.annotation.Priority;
 import org.apache.commons.io.FileUtils;
 import org.junit.jupiter.api.extension.AfterTestExecutionCallback;
 import org.junit.jupiter.api.extension.BeforeTestExecutionCallback;
@@ -223,6 +223,7 @@ public class ScannerMediumTester extends ExternalResource implements BeforeTestE
     r.setLanguage(language);
     r.setSeverity(severity);
     r.setDeprecatedKeys(emptySet());
+    r.setQProfileKey("whatever");
 
     activeRules.addActiveRule(r);
     return this;

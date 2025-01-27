@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -26,7 +26,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.slf4j.event.Level;
 import org.sonar.api.testfixtures.log.LogTester;
-import org.sonar.api.utils.log.LoggerLevel;
 import org.sonar.core.metric.ScannerMetrics;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -38,7 +37,7 @@ import static org.sonar.api.measures.Metric.ValueType;
 public class ReportMetricValidatorImplTest {
 
   @Rule
-  public LogTester logTester = new LogTester().setLevel(LoggerLevel.DEBUG);
+  public LogTester logTester = new LogTester().setLevel(Level.DEBUG);
 
   static final String METRIC_KEY = "metric_key";
 

@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -232,7 +232,8 @@ public class RuleCreator {
     if (type == RuleType.SECURITY_HOTSPOT.getDbConstant()) {
       ruleDto.setType(type).setSeverity(severity);
     } else {
-      ruleDto.setCleanCodeAttribute(ofNullable(newRule.getCleanCodeAttribute()).orElse(CleanCodeAttribute.CONVENTIONAL));
+      CleanCodeAttribute cleanCodeAttributeFromTemplate = ofNullable(templateRuleDto.getCleanCodeAttribute()).orElse(CleanCodeAttribute.CONVENTIONAL);
+      ruleDto.setCleanCodeAttribute(ofNullable(newRule.getCleanCodeAttribute()).orElse(cleanCodeAttributeFromTemplate));
 
       if (!CollectionUtils.isEmpty(newRule.getImpacts())) {
         newRule.getImpacts().stream()

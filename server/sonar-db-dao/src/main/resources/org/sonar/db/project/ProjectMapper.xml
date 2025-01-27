@@ -12,6 +12,7 @@
       p.private as isPrivate,
       p.creation_method as creationMethod,
       p.contains_ai_code as containsAiCode,
+      p.detected_ai_code as detectedAiCode,
       p.ai_code_fix_enabled as aiCodeFixEnabled,
       p.created_at as createdAt,
       p.updated_at as updatedAt
@@ -193,6 +194,14 @@
     uuid = #{uuid,jdbcType=VARCHAR}
   </update>
 
+  <update id="updateDetectedAiCode">
+    update projects set
+    detected_ai_code = #{detectedAiCode,jdbcType=BOOLEAN},
+    updated_at = #{updatedAt,jdbcType=BIGINT}
+    where
+    uuid = #{uuid,jdbcType=VARCHAR}
+  </update>
+
   <update id="updateAiCodeFixEnablementForAllProjects">
     update projects set
     ai_code_fix_enabled = #{aiCodeFixEnabled,jdbcType=BOOLEAN},
@@ -224,6 +233,12 @@
     select count(p.uuid)
     from projects p
     where p.qualifier = 'TRK'
+  </select>
+
+  <select id="countApplications" resultType="int">
+    select count(p.uuid)
+    from projects p
+    where p.qualifier = 'APP'
   </select>
 
   <select id="countProjectsByAiCodeFixEnablement" resultType="int">

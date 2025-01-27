@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -131,7 +131,7 @@ public class CreateActionIT {
     TestRequest request = ws.newRequest();
     Optional.ofNullable(nameParameter).ifPresent(t -> request.setParam(PARAM_NAME, ""));
 
-    assertThatThrownBy(() -> request.execute())
+    assertThatThrownBy(request::execute)
       .isInstanceOf(IllegalArgumentException.class)
       .hasMessageContaining("The 'name' parameter is missing");
   }

@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -36,7 +36,6 @@ import org.junit.Test;
 import org.slf4j.event.Level;
 import org.sonar.api.impl.utils.TestSystem2;
 import org.sonar.api.testfixtures.log.LogTester;
-import org.sonar.api.utils.log.LoggerLevel;
 import org.sonar.db.DbTester;
 import org.sonar.server.es.BulkIndexer.Size;
 import org.sonar.server.es.newindex.FakeIndexDefinition;
@@ -167,7 +166,7 @@ public class BulkIndexerIT {
 
   @Test
   public void log_requests_when_TRACE_level_is_enabled() {
-    logTester.setLevel(LoggerLevel.TRACE);
+    logTester.setLevel(Level.TRACE);
 
     BulkIndexer indexer = new BulkIndexer(es.client(), TYPE_FAKE, Size.REGULAR, new FakeListener());
     indexer.start();
@@ -180,7 +179,6 @@ public class BulkIndexerIT {
       .stream()
       .filter(log -> log.contains("Bulk[2 index requests on fakes/_doc, 1 delete requests on fakes/_doc]"))
       .count()).isNotZero();
-
   }
 
   private static class FakeListener implements IndexingListener {
@@ -205,7 +203,7 @@ public class BulkIndexerIT {
   private int replicas() {
     try {
       GetSettingsResponse settingsResp = es.client().nativeClient().indices()
-          .getSettings(new GetSettingsRequest().indices(INDEX), RequestOptions.DEFAULT);
+        .getSettings(new GetSettingsRequest().indices(INDEX), RequestOptions.DEFAULT);
       return Integer.parseInt(settingsResp.getSetting(INDEX, IndexMetadata.SETTING_NUMBER_OF_REPLICAS));
     } catch (IOException e) {
       throw new IllegalStateException("Could not get index settings", e);

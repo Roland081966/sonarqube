@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -225,6 +225,7 @@ public class TelemetryDataJsonWriter {
         json.beginObject();
         json.prop("uuid", qualityGate.uuid());
         json.prop("caycStatus", qualityGate.caycStatus());
+        json.prop("aicaQualified", qualityGate.aicaQualified());
         json.name("conditions");
         json.beginArray();
         qualityGate.conditions().forEach(condition -> {

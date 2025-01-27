@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -21,8 +21,8 @@ package org.sonar.server.v2.api.email.config.request;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import javax.annotation.Nullable;
-import javax.validation.constraints.NotEmpty;
-import javax.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
 import org.sonar.server.v2.api.email.config.resource.EmailConfigurationAuthMethod;
 import org.sonar.server.v2.api.email.config.resource.EmailConfigurationSecurityProtocol;
 

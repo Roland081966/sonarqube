@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -77,11 +77,10 @@ public class GenericCoverageSensor implements ProjectSensor {
       parser.parse(reportFile, context);
       LOG.info("Imported coverage data for {} files", parser.numberOfMatchedFiles());
       int numberOfUnknownFiles = parser.numberOfUnknownFiles();
-      if (numberOfUnknownFiles > 0) {
-        LOG.info("Coverage data ignored for " + numberOfUnknownFiles + " unknown files, including:\n" + parser.firstUnknownFiles().stream().collect(Collectors.joining("\n")));
+      if (numberOfUnknownFiles > 0 && LOG.isInfoEnabled()) {
+        LOG.info("Coverage data ignored for {} unknown files, including:\n{}", numberOfUnknownFiles, parser.firstUnknownFiles().stream().collect(Collectors.joining("\n")));
       }
     }
-
   }
 
   Set<String> loadReportPaths() {

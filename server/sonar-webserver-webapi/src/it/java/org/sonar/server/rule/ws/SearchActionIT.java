@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -159,7 +159,7 @@ class SearchActionIT {
     assertThat(def.since()).isEqualTo("4.4");
     assertThat(def.isInternal()).isFalse();
     assertThat(def.responseExampleAsString()).isNotEmpty();
-    assertThat(def.params()).hasSize(32);
+    assertThat(def.params()).hasSize(33);
 
     WebService.Param compareToProfile = def.param("compareToProfile");
     assertThat(compareToProfile.since()).isEqualTo("6.5");
@@ -378,7 +378,6 @@ class SearchActionIT {
 
     // not returned fields
     assertThat(result.hasGapDescription()).isFalse();
-    assertThat(result.hasHtmlDesc()).isFalse();
     assertThat(result.hasIsTemplate()).isFalse();
     assertThat(result.hasLang()).isFalse();
     assertThat(result.hasName()).isFalse();

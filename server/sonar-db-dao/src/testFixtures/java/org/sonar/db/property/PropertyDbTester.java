@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -26,7 +26,6 @@ import java.util.Map;
 import java.util.Optional;
 import javax.annotation.Nullable;
 import org.sonar.db.DbClient;
-import org.sonar.db.DbSession;
 import org.sonar.db.DbTester;
 import org.sonar.db.entity.EntityDto;
 
@@ -67,9 +66,9 @@ public class PropertyDbTester {
 
   public void insertProperty(String propKey, String propValue, @Nullable String componentUuid) {
     insertProperties(singletonList(new PropertyDto()
-        .setKey(propKey)
-        .setValue(propValue)
-        .setEntityUuid(componentUuid)),
+      .setKey(propKey)
+      .setValue(propValue)
+      .setEntityUuid(componentUuid)),
       null, null, null, null);
   }
 

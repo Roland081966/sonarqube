@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -45,7 +45,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
 
 @RunWith(DataProviderRunner.class)
 public class CeServerTest {
@@ -55,7 +54,6 @@ public class CeServerTest {
   private CeServer underTest = null;
   private Thread waitingThread = null;
   private final MinimumViableSystem minimumViableSystem = mock(MinimumViableSystem.class, Mockito.RETURNS_MOCKS);
-  private final CeSecurityManager ceSecurityManager = mock(CeSecurityManager.class);
 
   @After
   public void tearDown() throws Exception {
@@ -74,12 +72,6 @@ public class CeServerTest {
     assertThat(ceThreadExists()).isFalse();
     newCeServer();
     assertThat(ceThreadExists()).isFalse();
-  }
-
-  @Test
-  public void constructor_calls_ceSecurityManager() {
-    newCeServer();
-    verify(ceSecurityManager).apply();
   }
 
   @Test
@@ -269,7 +261,7 @@ public class CeServerTest {
 
   private CeServer newCeServer(ComputeEngine computeEngine) {
     checkState(this.underTest == null, "Only one CeServer can be created per test method");
-    this.underTest = new CeServer(computeEngine, minimumViableSystem, ceSecurityManager);
+    this.underTest = new CeServer(computeEngine, minimumViableSystem);
     return underTest;
   }
 

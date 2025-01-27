@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -131,6 +131,7 @@ public class DefaultUserController implements UserController {
     updateRequest.getScmAccounts().applyIfDefined(update::setScmAccounts);
     updateRequest.getExternalProvider().applyIfDefined(update::setExternalIdentityProvider);
     updateRequest.getExternalLogin().applyIfDefined(update::setExternalIdentityProviderLogin);
+    updateRequest.getExternalId().applyIfDefined(update::setExternalIdentityProviderId);
     return update;
   }
 

@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -231,12 +231,11 @@ public class ProcessLauncherImpl implements ProcessLauncher {
   }
 
   private static <T extends AbstractCommand> void logLaunchedCommand(AbstractCommand<T> command, ProcessBuilder processBuilder) {
-    if (LOG.isInfoEnabled()) {
-      LOG.info("Launch process[{}] from [{}]: {}",
-        command.getProcessId(),
-        command.getWorkDir().getAbsolutePath(),
-        String.join(" ", processBuilder.command()));
-    }
+    LOG.atInfo()
+      .addArgument(command::getProcessId)
+      .addArgument(() -> command.getWorkDir().getAbsolutePath())
+      .addArgument(() -> String.join(" ", processBuilder.command()))
+      .log("Launch process[{}] from [{}]: {}");
   }
 
   private <T extends JvmOptions> ProcessBuilder create(JavaCommand<T> javaCommand) {

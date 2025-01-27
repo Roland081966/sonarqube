@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -21,7 +21,7 @@ package org.sonar.server.pushapi.sonarlint;
 
 import java.util.Objects;
 import java.util.Set;
-import javax.servlet.AsyncContext;
+import jakarta.servlet.AsyncContext;
 import org.sonar.server.pushapi.ServerPushClient;
 
 public class SonarLintClient extends ServerPushClient {

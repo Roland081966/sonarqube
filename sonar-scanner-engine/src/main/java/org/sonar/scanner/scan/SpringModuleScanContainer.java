@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -19,7 +19,7 @@
  */
 package org.sonar.scanner.scan;
 
-import javax.annotation.Priority;
+import jakarta.annotation.Priority;
 import org.sonar.api.batch.fs.internal.DefaultInputModule;
 import org.sonar.api.scan.filesystem.FileExclusions;
 import org.sonar.scanner.bootstrap.ExtensionInstaller;

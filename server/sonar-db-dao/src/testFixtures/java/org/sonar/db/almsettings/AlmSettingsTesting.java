@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -101,12 +101,13 @@ public class AlmSettingsTesting {
       .setMonorepo(monorepo);
   }
 
-  static ProjectAlmSettingDto newAzureProjectAlmSettingDto(AlmSettingDto azureAlmSetting, ProjectDto project) {
+  public static ProjectAlmSettingDto newAzureProjectAlmSettingDto(AlmSettingDto azureAlmSetting, ProjectDto project) {
     return new ProjectAlmSettingDto()
       .setAlmSettingUuid(azureAlmSetting.getUuid())
       .setProjectUuid(project.getUuid())
       .setAlmSlug(secure().nextAlphanumeric(256))
       .setAlmRepo(secure().nextAlphanumeric(256))
+      .setInlineAnnotationsEnabled(true)
       .setMonorepo(false);
   }
 

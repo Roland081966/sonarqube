@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -29,7 +29,7 @@ import org.sonar.api.server.ServerSide;
 import org.sonar.auth.github.AppInstallationToken;
 import org.sonar.auth.github.GitHubSettings;
 import org.sonar.auth.github.GithubAppConfiguration;
-import org.sonar.auth.github.client.GithubApplicationClient;
+import org.sonar.auth.github.GithubApplicationClient;
 import org.sonar.db.DbClient;
 import org.sonar.db.DbSession;
 import org.sonar.db.alm.setting.ALM;

@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -61,10 +61,6 @@ import static org.sonar.ce.task.projectanalysis.component.ReportComponent.builde
 import static org.sonar.ce.task.projectanalysis.measure.Measure.newMeasureBuilder;
 import static org.sonar.ce.task.projectanalysis.measure.MeasureRepoEntry.entryOf;
 import static org.sonar.ce.task.projectanalysis.measure.MeasureRepoEntry.toEntries;
-import static org.sonar.server.measure.Rating.A;
-import static org.sonar.server.measure.Rating.C;
-import static org.sonar.server.measure.Rating.D;
-import static org.sonar.server.measure.Rating.E;
 import static org.sonar.core.metric.SoftwareQualitiesMetrics.EFFORT_TO_REACH_SOFTWARE_QUALITY_MAINTAINABILITY_RATING_A;
 import static org.sonar.core.metric.SoftwareQualitiesMetrics.EFFORT_TO_REACH_SOFTWARE_QUALITY_MAINTAINABILITY_RATING_A_KEY;
 import static org.sonar.core.metric.SoftwareQualitiesMetrics.SOFTWARE_QUALITY_MAINTAINABILITY_DEBT_RATIO;
@@ -73,6 +69,9 @@ import static org.sonar.core.metric.SoftwareQualitiesMetrics.SOFTWARE_QUALITY_MA
 import static org.sonar.core.metric.SoftwareQualitiesMetrics.SOFTWARE_QUALITY_MAINTAINABILITY_RATING_KEY;
 import static org.sonar.core.metric.SoftwareQualitiesMetrics.SOFTWARE_QUALITY_MAINTAINABILITY_REMEDIATION_EFFORT;
 import static org.sonar.core.metric.SoftwareQualitiesMetrics.SOFTWARE_QUALITY_MAINTAINABILITY_REMEDIATION_EFFORT_KEY;
+import static org.sonar.server.measure.Rating.A;
+import static org.sonar.server.measure.Rating.C;
+import static org.sonar.server.measure.Rating.E;
 
 class MaintainabilityMeasuresVisitorTest {
 

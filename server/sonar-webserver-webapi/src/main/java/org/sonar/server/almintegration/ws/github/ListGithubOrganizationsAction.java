@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -21,8 +21,8 @@ package org.sonar.server.almintegration.ws.github;
 
 import java.util.List;
 import java.util.Optional;
-import org.sonar.auth.github.client.GithubApplicationClient;
-import org.sonar.auth.github.client.GithubApplicationClient.Organization;
+import org.sonar.auth.github.GithubApplicationClient;
+import org.sonar.auth.github.GithubApplicationClient.Organization;
 import org.sonar.alm.client.github.GithubApplicationClientImpl;
 import org.sonar.auth.github.security.AccessToken;
 import org.sonar.auth.github.security.UserAccessToken;

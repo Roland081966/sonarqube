@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -101,9 +101,11 @@ public class EsSettings {
     configureCluster(builder);
     configureSecurity(builder);
     configureOthers(builder);
-    LOGGER.info("Elasticsearch listening on [HTTP: {}:{}, TCP: {}:{}]",
-      builder.get(ES_HTTP_HOST_KEY), builder.get(ES_HTTP_PORT_KEY),
-      builder.get(ES_TRANSPORT_HOST_KEY), builder.get(ES_TRANSPORT_PORT_KEY));
+    LOGGER.atInfo()
+      .addArgument(() -> builder.get(ES_HTTP_HOST_KEY))
+      .addArgument(() -> builder.get(ES_HTTP_PORT_KEY))
+      .addArgument(() -> builder.get(ES_TRANSPORT_HOST_KEY))
+      .log("Elasticsearch listening on [HTTP: {}:{}, TCP: {}:{}]");
     return builder;
   }
 

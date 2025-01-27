@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -30,13 +30,13 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import javax.annotation.CheckForNull;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpServletResponse;
 import org.apache.commons.io.IOUtils;
 import org.sonar.api.server.http.HttpResponse;
 import org.sonar.api.server.ws.Response;
 import org.sonar.api.utils.text.JsonWriter;
 import org.sonar.api.utils.text.XmlWriter;
-import org.sonar.server.http.JavaxHttpResponse;
+import org.sonar.server.http.JakartaHttpResponse;
 import org.sonar.server.ws.ServletResponse;
 import org.sonar.server.ws.TestableResponse;
 
@@ -50,7 +50,7 @@ public class DumbPushResponse extends ServletResponse implements TestableRespons
   }
 
   private static HttpResponse initMock() {
-    JavaxHttpResponse mock = mock(JavaxHttpResponse.class);
+    JakartaHttpResponse mock = mock(JakartaHttpResponse.class);
     when(mock.getDelegate()).thenReturn(mock(HttpServletResponse.class));
     return mock;
   }

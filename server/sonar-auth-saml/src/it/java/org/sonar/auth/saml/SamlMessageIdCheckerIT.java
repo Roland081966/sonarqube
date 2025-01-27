@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -19,71 +19,56 @@
  */
 package org.sonar.auth.saml;
 
-import com.google.common.collect.ImmutableList;
-import com.onelogin.saml2.Auth;
-import java.util.Arrays;
-import org.joda.time.Instant;
-import org.junit.Rule;
-import org.junit.Test;
-import org.sonar.db.DbSession;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.util.Optional;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.sonar.db.DbTester;
 import org.sonar.db.user.SamlMessageIdDto;
+import org.springframework.security.saml2.core.Saml2Error;
 
+import static java.time.temporal.ChronoUnit.DAYS;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatCode;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 public class SamlMessageIdCheckerIT {
 
-  @Rule
-  public DbTester db = DbTester.create();
+  public static final SamlMessageIdDto MESSAGE_1 = new SamlMessageIdDto().setMessageId("MESSAGE_1").setExpirationDate(1_000_000_000L);
 
-  private DbSession dbSession = db.getSession();
+  @RegisterExtension
+  private final DbTester db = DbTester.create();
 
-  private Auth auth = mock(Auth.class);
+  private final Clock clock = Clock.fixed(Instant.EPOCH, ZoneId.systemDefault());
 
-  private SamlMessageIdChecker underTest = new SamlMessageIdChecker(db.getDbClient());
+  private final SamlMessageIdChecker underTest = new SamlMessageIdChecker(db.getDbClient(), clock);
 
   @Test
-  public void check_do_not_fail_when_message_id_is_new_and_insert_saml_message_in_db() {
-    db.getDbClient().samlMessageIdDao().insert(dbSession, new SamlMessageIdDto().setMessageId("MESSAGE_1").setExpirationDate(1_000_000_000L));
-    db.commit();
-    when(auth.getLastMessageId()).thenReturn("MESSAGE_2");
-    when(auth.getLastAssertionNotOnOrAfter()).thenReturn(ImmutableList.of(Instant.ofEpochMilli(10_000_000_000L)));
+  void check_fails_when_message_id_already_exist() {
+    insertMessageInDb();
 
-    assertThatCode(() -> underTest.check(auth)).doesNotThrowAnyException();
+    Optional<Saml2Error> validationErrors = underTest.validateMessageIdWasNotAlreadyUsed("MESSAGE_1");
+    assertThat(validationErrors).isPresent();
+    Saml2Error saml2Error = validationErrors.orElseThrow();
+    assertThat(saml2Error.getErrorCode()).isEqualTo("response_id_already_used");
+    assertThat(saml2Error.getDescription()).isEqualTo("A message with the same ID was already processed");
+  }
 
-    SamlMessageIdDto result = db.getDbClient().samlMessageIdDao().selectByMessageId(dbSession, "MESSAGE_2").get();
+  @Test
+  void check_do_not_fail_when_message_id_is_new_and_insert_saml_message_in_db() {
+    insertMessageInDb();
+
+    Optional<Saml2Error> validationErrors = underTest.validateMessageIdWasNotAlreadyUsed("MESSAGE_2");
+    assertThat(validationErrors).isEmpty();
+
+    SamlMessageIdDto result = db.getDbClient().samlMessageIdDao().selectByMessageId(db.getSession(), "MESSAGE_2").orElseThrow();
     assertThat(result.getMessageId()).isEqualTo("MESSAGE_2");
-    assertThat(result.getExpirationDate()).isEqualTo(10_000_000_000L);
+    assertThat(Instant.ofEpochMilli(result.getExpirationDate())).isEqualTo(Instant.EPOCH.plus(1, DAYS));
   }
 
-  @Test
-  public void check_fails_when_message_id_already_exist() {
-    db.getDbClient().samlMessageIdDao().insert(dbSession, new SamlMessageIdDto().setMessageId("MESSAGE_1").setExpirationDate(1_000_000_000L));
+  private void insertMessageInDb() {
+    db.getDbClient().samlMessageIdDao().insert(db.getSession(), MESSAGE_1);
     db.commit();
-    when(auth.getLastMessageId()).thenReturn("MESSAGE_1");
-    when(auth.getLastAssertionNotOnOrAfter()).thenReturn(ImmutableList.of(Instant.ofEpochMilli(10_000_000_000L)));
-
-    assertThatThrownBy(() -> underTest.check(auth))
-      .isInstanceOf(IllegalArgumentException.class)
-      .hasMessageContaining("This message has already been processed");
   }
 
-  @Test
-  public void check_insert_message_id_using_oldest_NotOnOrAfter_value() {
-    db.getDbClient().samlMessageIdDao().insert(dbSession, new SamlMessageIdDto().setMessageId("MESSAGE_1").setExpirationDate(1_000_000_000L));
-    db.commit();
-    when(auth.getLastMessageId()).thenReturn("MESSAGE_2");
-    when(auth.getLastAssertionNotOnOrAfter())
-      .thenReturn(Arrays.asList(Instant.ofEpochMilli(10_000_000_000L), Instant.ofEpochMilli(30_000_000_000L), Instant.ofEpochMilli(20_000_000_000L)));
-
-    assertThatCode(() -> underTest.check(auth)).doesNotThrowAnyException();
-
-    SamlMessageIdDto result = db.getDbClient().samlMessageIdDao().selectByMessageId(dbSession, "MESSAGE_2").get();
-    assertThat(result.getMessageId()).isEqualTo("MESSAGE_2");
-    assertThat(result.getExpirationDate()).isEqualTo(10_000_000_000L);
-  }
 }

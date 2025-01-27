@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -29,7 +29,7 @@ import org.sonar.api.server.http.HttpRequest;
 import org.sonar.api.server.http.HttpResponse;
 import org.sonar.server.authentication.event.AuthenticationEvent;
 import org.sonar.server.authentication.event.AuthenticationException;
-import org.sonar.server.http.JavaxHttpRequest;
+import org.sonar.server.http.JakartaHttpRequest;
 
 import static org.apache.commons.codec.digest.DigestUtils.sha1Hex;
 import static org.apache.commons.codec.digest.DigestUtils.sha256Hex;
@@ -151,7 +151,7 @@ public class OAuthCsrfVerifierTest {
     assertThat(cookie.isSecure()).isFalse();
   }
 
-  private JavaxHttpRequest.JavaxCookie wrapCookie(String name, String value) {
-    return new JavaxHttpRequest.JavaxCookie(new javax.servlet.http.Cookie(name, value));
+  private JakartaHttpRequest.JakartaCookie wrapCookie(String name, String value) {
+    return new JakartaHttpRequest.JakartaCookie(new jakarta.servlet.http.Cookie(name, value));
   }
 }

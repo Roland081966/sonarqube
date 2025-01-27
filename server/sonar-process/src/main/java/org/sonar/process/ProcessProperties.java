@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -55,6 +55,7 @@ public class ProcessProperties {
     JDBC_USERNAME("sonar.jdbc.username", ""),
     JDBC_PASSWORD("sonar.jdbc.password", ""),
     JDBC_DRIVER_PATH("sonar.jdbc.driverPath"),
+    JDBC_ADDITIONAL_LIB_PATHS("sonar.jdbc.additionalLibPaths"),
     JDBC_MAX_ACTIVE("sonar.jdbc.maxActive", "60"),
     JDBC_MIN_IDLE("sonar.jdbc.minIdle", "10"),
     JDBC_MAX_WAIT("sonar.jdbc.maxWait", "8000"),

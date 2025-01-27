@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -147,7 +147,7 @@ public class WebServiceEngine implements LocalConnector, Startable {
     if (isRequestAbortedByClient(exception)) {
       // do not pollute logs. We can't do anything -> use DEBUG level
       // see org.sonar.server.ws.ServletResponse#output()
-      LOGGER.debug(String.format("Request %s has been aborted by client", request), exception);
+      LOGGER.debug("Request {} has been aborted by client", request, exception);
       if (!isResponseCommitted(response)) {
         // can be useful for access.log
         response.stream().setStatus(299);
@@ -158,13 +158,13 @@ public class WebServiceEngine implements LocalConnector, Startable {
     if (status == 500) {
       // Sending exception message into response is a vulnerability. Error must be
       // displayed only in logs.
-      LOGGER.error("Fail to process request " + request, exception);
+      LOGGER.error("Fail to process request {}", request, exception);
     }
 
     Response.Stream stream = response.stream();
     if (isResponseCommitted(response)) {
       // status can't be changed
-      LOGGER.debug(String.format("Request %s failed during response streaming", request), exception);
+      LOGGER.debug("Request {} failed during response streaming", request, exception);
       return;
     }
 
@@ -192,7 +192,7 @@ public class WebServiceEngine implements LocalConnector, Startable {
   }
 
   private static boolean isRequestAbortedByClient(Exception exception) {
-    return Throwables.getCausalChain(exception).stream().anyMatch(t -> t instanceof ClientAbortException);
+    return Throwables.getCausalChain(exception).stream().anyMatch(ClientAbortException.class::isInstance);
   }
 
   private static boolean isResponseCommitted(Response response) {

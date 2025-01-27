@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -30,7 +30,7 @@ import static org.sonar.api.PropertyType.INTEGER;
 
 public class ScannerProperties {
 
-  public static final String BRANCHES_DOC_LINK_SUFFIX = "/analyzing-source-code/branches/branch-analysis/";
+  public static final String BRANCHES_DOC_LINK_SUFFIX = "/analyzing-source-code/analysis-parameters/#multibranch";
 
   public static final String BRANCH_NAME = "sonar.branch.name";
 

@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -19,6 +19,7 @@
  */
 package org.sonar.telemetry.legacy;
 
+import jakarta.inject.Inject;
 import java.sql.DatabaseMetaData;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -34,7 +35,6 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import javax.annotation.Nullable;
-import javax.inject.Inject;
 import org.sonar.api.config.Configuration;
 import org.sonar.api.platform.Server;
 import org.sonar.api.server.ServerSide;
@@ -46,12 +46,11 @@ import org.sonar.db.DbSession;
 import org.sonar.db.alm.setting.ALM;
 import org.sonar.db.alm.setting.ProjectAlmKeyAndProject;
 import org.sonar.db.component.AnalysisPropertyValuePerProject;
+import org.sonar.db.component.BranchDto;
 import org.sonar.db.component.BranchMeasuresDto;
 import org.sonar.db.component.PrBranchAnalyzedLanguageCountByProjectDto;
 import org.sonar.db.component.SnapshotDto;
 import org.sonar.db.measure.MeasureDto;
-import org.sonar.db.measure.ProjectLocDistributionDto;
-import org.sonar.db.measure.ProjectMainBranchMeasureDto;
 import org.sonar.db.metric.MetricDto;
 import org.sonar.db.newcodeperiod.NewCodePeriodDto;
 import org.sonar.db.project.ProjectDto;
@@ -281,7 +280,10 @@ public class TelemetryDataLoaderImpl implements TelemetryDataLoader {
     editionProvider.get()
       .filter(edition -> edition.equals(COMMUNITY))
       .ifPresent(edition -> {
-        List<MeasureDto> measureDtos = dbClient.measureDao().selectAllForMainBranches(dbSession);
+        List<BranchDto> mainBranches = dbClient.branchDao().selectMainBranches(dbSession);
+        List<MeasureDto> measureDtos = dbClient.measureDao().selectByComponentUuidsAndMetricKeys(dbSession,
+          mainBranches.stream().map(BranchDto::getUuid).toList(), List.of(UNANALYZED_C_KEY, UNANALYZED_CPP_KEY));
+
         long numberOfUnanalyzedCMeasures = countProjectsHavingMeasure(measureDtos, UNANALYZED_C_KEY);
         long numberOfUnanalyzedCppMeasures = countProjectsHavingMeasure(measureDtos, UNANALYZED_CPP_KEY);
 
@@ -405,7 +407,7 @@ public class TelemetryDataLoaderImpl implements TelemetryDataLoader {
       List<Condition> conditions = conditionsMap.getOrDefault(qualityGateUuid, Collections.emptyList());
       qualityGates.add(
         new TelemetryData.QualityGate(qualityGateDto.getUuid(), qualityGateCaycChecker.checkCaycCompliant(dbSession,
-          qualityGateDto.getUuid()).toString(), conditions));
+          qualityGateDto.getUuid()).toString(), qualityGateDto.isAiCodeSupported(), conditions));
     }
 
     data.setQualityGates(qualityGates);
@@ -488,13 +490,17 @@ public class TelemetryDataLoaderImpl implements TelemetryDataLoader {
 
   private Map<String, Map<String, Number>> getProjectMetricsByMetricKeys(DbSession dbSession, List<String> metricKeys) {
     Map<String, Map<String, Number>> measuresByProject = new HashMap<>();
-    List<ProjectMainBranchMeasureDto> projectMainBranchMeasureDtos = dbClient.measureDao().selectAllForProjectMainBranches(dbSession);
 
-    for (ProjectMainBranchMeasureDto projectMainBranchMeasureDto : projectMainBranchMeasureDtos) {
-      Map<String, Number> measures = projectMainBranchMeasureDto.getMetricValues().entrySet().stream()
-        .filter(e -> metricKeys.contains(e.getKey()))
+    List<BranchDto> mainBranches = dbClient.branchDao().selectMainBranches(dbSession);
+    Map<String, String> branchUuidToProjectUuid = mainBranches.stream().collect(Collectors.toMap(BranchDto::getUuid,
+      BranchDto::getProjectUuid));
+    List<MeasureDto> measureDtos = dbClient.measureDao().selectByComponentUuidsAndMetricKeys(dbSession, branchUuidToProjectUuid.keySet(),
+      metricKeys);
+
+    for (MeasureDto measureDto : measureDtos) {
+      Map<String, Number> measures = measureDto.getMetricValues().entrySet().stream()
         .collect(toMap(Map.Entry::getKey, e -> Double.parseDouble(e.getValue().toString())));
-      measuresByProject.put(projectMainBranchMeasureDto.getProjectUuid(), measures);
+      measuresByProject.put(branchUuidToProjectUuid.get(measureDto.getComponentUuid()), measures);
     }
 
     return measuresByProject;

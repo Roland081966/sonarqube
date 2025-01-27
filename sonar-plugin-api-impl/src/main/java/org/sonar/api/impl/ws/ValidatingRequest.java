@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -190,7 +190,7 @@ public abstract class ValidatingRequest extends Request {
 
   private static List<String> validateValues(List<String> values, WebService.Param definition) {
     Integer maximumValues = definition.maxValuesAllowed();
-    checkArgument(maximumValues == null || values.size() <= maximumValues, "'%s' can contains only %s values, got %s", definition.key(), maximumValues, values.size());
+    checkArgument(maximumValues == null || values.size() <= maximumValues, "'%s' can contain only %s values, got %s", definition.key(), maximumValues, values.size());
     values.forEach(value -> validatePossibleValues(definition.key(), value, definition));
     return values;
   }

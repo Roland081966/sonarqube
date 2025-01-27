@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -20,7 +20,7 @@
 package org.sonar.server.email.ws;
 
 import javax.annotation.Nullable;
-import org.apache.commons.mail.EmailException;
+import org.apache.commons.mail2.core.EmailException;
 import org.junit.Rule;
 import org.junit.Test;
 import org.sonar.api.server.ws.WebService;

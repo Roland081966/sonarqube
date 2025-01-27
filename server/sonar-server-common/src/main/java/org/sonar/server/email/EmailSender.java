@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -23,10 +23,10 @@ import java.net.MalformedURLException;
 import java.time.Duration;
 import java.util.Properties;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.mail.Email;
-import org.apache.commons.mail.EmailException;
-import org.apache.commons.mail.HtmlEmail;
-import org.apache.commons.mail.MultiPartEmail;
+import org.apache.commons.mail2.core.EmailException;
+import org.apache.commons.mail2.jakarta.Email;
+import org.apache.commons.mail2.jakarta.HtmlEmail;
+import org.apache.commons.mail2.jakarta.MultiPartEmail;
 import org.sonar.api.platform.Server;
 import org.sonar.server.oauth.OAuthMicrosoftRestClient;
 

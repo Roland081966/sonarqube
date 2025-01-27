@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -24,8 +24,8 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Properties;
 import javax.annotation.Nullable;
-import javax.servlet.ServletContext;
-import javax.servlet.ServletRegistration;
+import jakarta.servlet.ServletContext;
+import jakarta.servlet.ServletRegistration;
 import org.sonar.api.utils.log.Logger;
 import org.sonar.api.utils.log.Loggers;
 import org.sonar.api.utils.log.Profiler;

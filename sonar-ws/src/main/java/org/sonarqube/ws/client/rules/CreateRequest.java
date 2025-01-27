@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -20,7 +20,7 @@
 package org.sonarqube.ws.client.rules;
 
 import java.util.List;
-import javax.annotation.Generated;
+import jakarta.annotation.Generated;
 
 /**
  * This is part of the internal API.
@@ -39,6 +39,7 @@ public class CreateRequest {
   private String severity;
   private String status;
   private String templateKey;
+  private String cleanCodeAttribute;
   private String type;
 
   /**
@@ -156,6 +157,34 @@ public class CreateRequest {
 
   public String getTemplateKey() {
     return templateKey;
+  }
+
+  /**
+   * Possible values:
+   * <ul>
+   *   <li>CONVENTIONAL</li>
+   *   <li>FORMATTED</li>
+   *   <li>IDENTIFIABLE</li>
+   *   <li>CLEAR</li>
+   *   <li>COMPLETE</li>
+   *   <li>EFFICIENT</li>
+   *   <li>LOGICAL</li>
+   *   <li>DISTINCT</li>
+   *   <li>FOCUSED</li>
+   *   <li>MODULAR</li>
+   *   <li>TESTED</li>
+   *   <li>LAWFUL</li>
+   *   <li>RESPECTFUL</li>
+   *   <li>TRUSTWORTHY</li>
+   * </ul>
+   */
+  public CreateRequest setCleanCodeAttribute(String cleanCodeAttribute) {
+    this.cleanCodeAttribute = cleanCodeAttribute;
+    return this;
+  }
+
+  public String getCleanCodeAttribute() {
+    return cleanCodeAttribute;
   }
 
   /**

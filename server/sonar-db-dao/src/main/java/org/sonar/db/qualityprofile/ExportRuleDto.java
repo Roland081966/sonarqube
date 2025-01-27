@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -31,6 +31,7 @@ import org.sonar.db.rule.SeverityUtil;
 
 public class ExportRuleDto {
   private String activeRuleUuid = null;
+  private String cleanCodeAttribute = null;
   private String description = null;
   private String repository = null;
   private String rule = null;
@@ -92,6 +93,10 @@ public class ExportRuleDto {
 
   public String getDescriptionOrThrow() {
     return Objects.requireNonNull(description, "description is expected to be set but it is null");
+  }
+
+  public String getCleanCodeAttribute() {
+    return cleanCodeAttribute;
   }
 
   public List<ExportRuleParamDto> getParams() {

@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -23,7 +23,7 @@ import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import com.google.common.annotations.VisibleForTesting;
 import java.io.File;
-import javax.inject.Inject;
+import jakarta.inject.Inject;
 import org.sonar.api.Startable;
 import org.slf4j.LoggerFactory;
 import org.sonar.api.ce.ComputeEngineSide;

@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -21,7 +21,6 @@ package org.sonar.ce.task.projectanalysis.step;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
-import org.sonar.ce.task.projectanalysis.batch.BatchReportReaderRule;
 import org.sonar.ce.task.projectanalysis.component.TreeRootHolderRule;
 import org.sonar.ce.task.projectanalysis.measure.MeasureRepositoryRule;
 import org.sonar.ce.task.projectanalysis.metric.MetricRepositoryRule;

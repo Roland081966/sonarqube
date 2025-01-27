@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -213,7 +213,7 @@ public class SamlSettings {
         .build(),
       PropertyDefinition.builder(SERVICE_PROVIDER_CERTIFICATE)
         .name("Service provider certificate")
-        .description("X.509 certificate for the service provider, used for signing the requests.")
+        .description("X.509 certificate for the service provider, used for signing the requests and decrypting responses from the identity provider.")
         .category(CATEGORY)
         .subCategory(SUBCATEGORY)
         .type(PASSWORD)

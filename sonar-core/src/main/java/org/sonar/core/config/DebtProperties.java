@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -21,9 +21,7 @@ package org.sonar.core.config;
 
 import java.util.List;
 import org.sonar.api.CoreProperties;
-import org.sonar.api.PropertyType;
 import org.sonar.api.config.PropertyDefinition;
-import org.sonar.api.config.PropertyFieldDefinition;
 
 class DebtProperties {
 

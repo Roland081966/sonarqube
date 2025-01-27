@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -25,7 +25,7 @@ import java.util.Optional;
 import org.sonar.api.config.internal.Settings;
 import org.sonar.scanner.bootstrap.GlobalConfiguration;
 
-import javax.annotation.Priority;
+import jakarta.annotation.Priority;
 
 import static java.util.Objects.requireNonNull;
 

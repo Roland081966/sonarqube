@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -25,7 +25,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import org.sonar.api.batch.sensor.SensorContext;
 import org.sonar.api.scanner.ScannerSide;
-import org.sonar.api.utils.Version;
 
 @ScannerSide
 public class SensorMetrics {

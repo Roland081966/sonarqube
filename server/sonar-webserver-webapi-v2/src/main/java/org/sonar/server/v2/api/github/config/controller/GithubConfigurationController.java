@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -24,7 +24,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.enums.ParameterIn;
 import io.swagger.v3.oas.annotations.extensions.Extension;
 import io.swagger.v3.oas.annotations.extensions.ExtensionProperty;
-import javax.validation.Valid;
+import jakarta.validation.Valid;
 import org.sonar.server.v2.api.github.config.request.GithubConfigurationCreateRestRequest;
 import org.sonar.server.v2.api.github.config.request.GithubConfigurationUpdateRestRequest;
 import org.sonar.server.v2.api.github.config.resource.GithubConfigurationResource;

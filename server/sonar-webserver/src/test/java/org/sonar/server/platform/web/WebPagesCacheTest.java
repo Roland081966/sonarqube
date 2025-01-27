@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -20,7 +20,7 @@
 package org.sonar.server.platform.web;
 
 import java.io.InputStream;
-import javax.servlet.ServletContext;
+import jakarta.servlet.ServletContext;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.stubbing.Answer;

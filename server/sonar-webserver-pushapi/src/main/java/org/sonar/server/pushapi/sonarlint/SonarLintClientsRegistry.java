@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -24,8 +24,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
-import javax.servlet.AsyncEvent;
-import javax.servlet.AsyncListener;
+import jakarta.servlet.AsyncEvent;
+import jakarta.servlet.AsyncListener;
 import org.sonar.api.server.ServerSide;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

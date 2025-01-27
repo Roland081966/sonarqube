@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -60,7 +60,7 @@ public class NewAuthorizedIndexTest {
   public void build_fails_if_no_relation_mapping_has_been_created() {
     NewAuthorizedIndex underTest = new NewAuthorizedIndex(someIndex, defaultSettingsConfiguration);
 
-    assertThatThrownBy(() -> underTest.build())
+    assertThatThrownBy(underTest::build)
       .isInstanceOf(IllegalStateException.class)
       .hasMessage("At least one relation mapping must be defined");
   }

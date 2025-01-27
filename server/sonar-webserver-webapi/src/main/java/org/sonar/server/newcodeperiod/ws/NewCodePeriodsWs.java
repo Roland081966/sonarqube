@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -22,7 +22,7 @@ package org.sonar.server.newcodeperiod.ws;
 import org.sonar.api.server.ws.WebService;
 import org.sonar.core.documentation.DocumentationLinkGenerator;
 
-import static org.sonar.server.ws.WsUtils.createHtmlExternalLink;
+import static org.sonar.server.newcodeperiod.ws.NewCodePeriodsWsUtils.createNewCodePeriodHtmlLink;
 
 public class NewCodePeriodsWs implements WebService {
 
@@ -37,7 +37,7 @@ public class NewCodePeriodsWs implements WebService {
   @Override
   public void define(Context context) {
     NewController controller = context.createController("api/new_code_periods")
-      .setDescription("Manage "+ createHtmlExternalLink(documentationLinkGenerator.getDocumentationLink("/project-administration/clean-as-you-code-settings/defining-new-code/"), "new code definition") +".")
+      .setDescription("Manage "+ createNewCodePeriodHtmlLink(documentationLinkGenerator) +".")
       .setSince("8.0");
     for (NewCodePeriodsWsAction action : actions) {
       action.define(controller);

@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -26,13 +26,13 @@ import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
-import javax.servlet.Filter;
-import javax.servlet.FilterChain;
-import javax.servlet.FilterConfig;
-import javax.servlet.ServletException;
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.Filter;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.FilterConfig;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.ServletRequest;
+import jakarta.servlet.ServletResponse;
+import jakarta.servlet.http.HttpServletResponse;
 
 public class CspFilter implements Filter {
 
@@ -74,11 +74,13 @@ public class CspFilter implements Filter {
 
   private static String getAssetsPathScriptCSPHash(String contextPath) {
     final String WEB_CONTEXT_PLACEHOLDER = "WEB_CONTEXT";
-    final String ASSETS_PATH_SCRIPT = "\n" +
-      "      window.__assetsPath = function (filename) {\n" +
-      "        return 'WEB_CONTEXT/' + filename;\n" +
-      "      };\n" +
-      "    ";
+    final String ASSETS_PATH_SCRIPT = """
+
+            window.__assetsPath = function (filename) {
+              return 'WEB_CONTEXT/' + filename;
+            };
+          \
+      """;
 
     String assetsPathScriptWithContextPath = ASSETS_PATH_SCRIPT.replace(WEB_CONTEXT_PLACEHOLDER, contextPath);
     return generateCSPHash(assetsPathScriptWithContextPath);

@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -23,8 +23,8 @@ import com.google.common.annotations.VisibleForTesting;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
-import org.sonar.api.utils.DateUtils;
 import org.slf4j.LoggerFactory;
+import org.sonar.api.utils.DateUtils;
 import org.sonar.db.purge.PurgeableAnalysisDto;
 
 class KeepOneFilter implements Filter {
@@ -54,7 +54,11 @@ class KeepOneFilter implements Filter {
 
   @Override
   public void log() {
-    LoggerFactory.getLogger(getClass()).debug("-> Keep one snapshot per {} between {} and {}", label, DateUtils.formatDate(start), DateUtils.formatDate(end));
+    LoggerFactory.getLogger(getClass()).atDebug()
+      .addArgument(label)
+      .addArgument(() -> DateUtils.formatDate(start))
+      .addArgument(() -> DateUtils.formatDate(end))
+      .log("-> Keep one snapshot per {} between {} and {}");
   }
 
   private static void appendSnapshotsToDelete(Interval interval, List<PurgeableAnalysisDto> toDelete) {

@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -173,6 +173,10 @@ public class PropertiesDao implements Dao {
 
   public List<PropertyDto> selectEntityPropertyByKeyAndUserUuid(DbSession session, String key, String userUuid) {
     return getMapper(session).selectEntityPropertyByKeyAndUserUuid(key, userUuid);
+  }
+
+  public List<PropertyDto> selectProjectPropertyByKey(DbSession session, String key) {
+    return getMapper(session).selectProjectPropertyByKey(key);
   }
 
   /**

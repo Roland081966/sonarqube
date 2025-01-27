@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -87,7 +87,9 @@ public class LanguageDetection {
     PathPattern[] defaultLanguagePatterns = Stream.concat(fileSuffixes, filenamePatterns)
       .distinct()
       .toArray(PathPattern[]::new);
-    LOG.debug("Declared patterns of language {} were converted to {}", language, getDetails(language, defaultLanguagePatterns));
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Declared patterns of language {} were converted to {}", language, getDetails(language, defaultLanguagePatterns));
+    }
     return defaultLanguagePatterns;
   }
 

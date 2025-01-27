@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -145,7 +145,7 @@ class QualityGateMeasuresStepTest {
 
     underTest.execute(new TestComputationStepContext());
 
-    assertThatThrownBy(() -> qualityGateStatusHolder.getStatus())
+    assertThatThrownBy(qualityGateStatusHolder::getStatus)
       .isInstanceOf(IllegalStateException.class)
       .hasMessage("Quality gate status has not been set yet");
   }

@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -52,9 +52,12 @@ public interface ActiveRuleMapper {
 
   List<OrgActiveRuleDto> selectByRuleUuids(@Param("ruleUuids") List<String> partitionOfRuleUuids);
 
-  List<OrgActiveRuleDto> selectByProfileUuid(String uuid);
+  List<OrgActiveRuleDto> selectByProfileUuids(@Param("profileUuids") Collection<String> profileUuids);
 
   List<OrgActiveRuleDto> selectByTypeAndProfileUuids(@Param("types") List<Integer> types, @Param("profileUuids") List<String> uuids);
+
+  List<OrgActiveRuleDto> selectByHotspotAndSoftwareQualityAndProfileUuids(@Param("softwareQuality") String softwareQuality, @Param(
+    "profileUuids") List<String> uuids);
 
   List<ActiveRuleDto> selectByRuleProfileUuid(@Param("ruleProfileUuid") String uuid);
 
@@ -90,4 +93,6 @@ public interface ActiveRuleMapper {
   void scrollByRuleProfileUuidForIndexing(@Param("ruleProfileUuid") String ruleProfileUuid, ResultHandler<IndexedActiveRuleDto> handler);
 
   int countMissingRules(@Param("rulesProfileUuid") String rulesProfileUuid, @Param("compareToRulesProfileUuid") String compareToRulesProfileUuid);
+
+  List<ActiveRuleParamDto> selectAllParamsByProfileUuids(@Param("profileUuids") Collection<String> profileUuids);
 }

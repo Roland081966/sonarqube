@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -60,6 +60,8 @@ public interface ProjectMapper {
 
   void updateContainsAiCode(@Param("uuid") String uuid, @Param("containsAiCode") boolean containsAiCode, @Param("updatedAt") long updatedAt);
 
+  void updateDetectedAiCode(@Param("uuid") String uuid, @Param("detectedAiCode") boolean containsAiCode, @Param("updatedAt") long updatedAt);
+
   void updateAiCodeFixEnablementForAllProjects(@Param("aiCodeFixEnabled") boolean aiCodeFixEnabled, @Param("updatedAt") long updatedAt);
 
   List<ProjectDto> selectAllApplications();
@@ -77,6 +79,8 @@ public interface ProjectMapper {
   int countIndexedProjects();
 
   int countProjects();
+
+  int countApplications();
 
   int countProjectsByAiCodeFixEnablement(@Param("aiCodeFixEnabled") boolean aiCodeFixEnabled);
 }

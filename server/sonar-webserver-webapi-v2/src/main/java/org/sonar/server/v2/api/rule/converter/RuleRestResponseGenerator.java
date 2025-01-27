@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -144,13 +144,10 @@ public class RuleRestResponseGenerator {
       .map(sectionDto -> toDescriptionSectionResponse(ruleDto, sectionDto))
       .toList());
 
-    String htmlDescription = ruleDescriptionFormatter.getDescriptionAsHtml(ruleDto);
     if (MARKDOWN.equals(ruleDto.getDescriptionFormat())) {
       Optional.ofNullable(ruleDto.getDefaultRuleDescriptionSection())
         .map(RuleDescriptionSectionDto::getContent)
         .ifPresent(builder::setMarkdownDescription);
-    } else if (htmlDescription != null) {
-      builder.setMarkdownDescription(macroInterpreter.interpret(htmlDescription));
     }
   }
 

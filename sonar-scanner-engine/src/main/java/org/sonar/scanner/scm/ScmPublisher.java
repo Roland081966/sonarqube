@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -81,7 +81,7 @@ public final class ScmPublisher {
     List<InputFile> filesToBlame = collectFilesToBlame(writer);
     if (!filesToBlame.isEmpty()) {
       String key = provider.key();
-      LOG.info("SCM Publisher SCM provider for this project is: " + key);
+      LOG.info("SCM Publisher SCM provider for this project is: {}", key);
       DefaultBlameOutput output = new DefaultBlameOutput(writer, analysisWarnings, filesToBlame, documentationLinkGenerator);
       try {
         provider.blameCommand().blame(new DefaultBlameInput(fs, filesToBlame), output);

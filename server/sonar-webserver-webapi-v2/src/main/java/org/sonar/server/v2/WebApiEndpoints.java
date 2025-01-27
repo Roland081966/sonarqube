@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -51,6 +51,7 @@ public class WebApiEndpoints {
   public static final String ANALYSIS_DOMAIN = "/analysis";
   public static final String VERSION_ENDPOINT = ANALYSIS_DOMAIN + "/version";
   public static final String JRE_ENDPOINT = ANALYSIS_DOMAIN + "/jres";
+  public static final String ACTIVE_RULES_ENDPOINT = ANALYSIS_DOMAIN + "/active_rules";
   public static final String SCANNER_ENGINE_ENDPOINT = ANALYSIS_DOMAIN + "/engine";
 
   private WebApiEndpoints() {

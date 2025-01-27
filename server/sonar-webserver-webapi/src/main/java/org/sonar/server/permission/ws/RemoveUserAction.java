@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -89,7 +89,7 @@ public class RemoveUserAction implements PermissionsWsAction {
       wsSupport.checkRemovingOwnAdminRight(userSession, userIdDto, permission);
 
       EntityDto entityDto = wsSupport.findEntity(dbSession, request);
-      wsSupport.checkRemovingOwnBrowsePermissionOnPrivateProject(userSession, entityDto, permission, userIdDto);
+      wsSupport.checkRemovingOwnBrowsePermissionOnPrivateProject(dbSession, userSession, entityDto, permission, userIdDto);
       wsSupport.checkPermissionManagementAccess(userSession, entityDto);
       if (entityDto != null && entityDto.isProject()) {
         managedInstanceChecker.throwIfUserAndProjectAreManaged(dbSession, userIdDto.getUuid(), entityDto.getUuid());

@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -72,7 +72,7 @@ public class MarketplaceActionIT {
     userSessionRule.anonymous();
     TestRequest request = ws.newRequest();
 
-    assertThatThrownBy(() -> request.execute())
+    assertThatThrownBy(request::execute)
       .isInstanceOf(UnauthorizedException.class)
       .hasMessageContaining("Authentication is required");
   }
@@ -82,7 +82,7 @@ public class MarketplaceActionIT {
     userSessionRule.logIn();
     TestRequest request = ws.newRequest();
 
-    assertThatThrownBy(() -> request.execute())
+    assertThatThrownBy(request::execute)
       .isInstanceOf(ForbiddenException.class)
       .hasMessageContaining("Insufficient privileges");
   }

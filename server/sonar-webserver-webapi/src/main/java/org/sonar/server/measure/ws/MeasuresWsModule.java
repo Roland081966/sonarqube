@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -24,6 +24,8 @@ import java.util.stream.Stream;
 import org.sonar.api.measures.CoreMetrics;
 import org.sonar.core.metric.SoftwareQualitiesMetrics;
 import org.sonar.core.platform.Module;
+import org.sonar.server.telemetry.TelemetryPortfolioActivityGraphTypeProvider;
+import org.sonar.server.telemetry.TelemetryPortfolioActivityRequestedMetricProvider;
 
 public class MeasuresWsModule extends Module {
   @Override
@@ -33,7 +35,11 @@ public class MeasuresWsModule extends Module {
       ComponentTreeAction.class,
       ComponentAction.class,
       SearchAction.class,
-      SearchHistoryAction.class);
+      SearchHistoryAction.class,
+      // Telemetry
+      TelemetryPortfolioActivityGraphTypeProvider.class,
+      TelemetryPortfolioActivityRequestedMetricProvider.class
+    );
   }
 
   public static String getDeprecatedMetricsInSonarQube93() {

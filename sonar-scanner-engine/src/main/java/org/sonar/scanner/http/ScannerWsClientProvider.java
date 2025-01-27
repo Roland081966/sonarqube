@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -96,7 +96,7 @@ public class ScannerWsClientProvider {
       .responseTimeoutMilliseconds(parseDurationProperty(responseTimeout, SONAR_SCANNER_RESPONSE_TIMEOUT))
       .userAgent(env.toString())
       .url(url)
-      .credentials(login, scannerProps.property(CoreProperties.PASSWORD))
+      .token(login)
       .setSSLSocketFactory(sslContext.getSslSocketFactory())
       .setTrustManager(sslContext.getTrustManager().orElseThrow());
 

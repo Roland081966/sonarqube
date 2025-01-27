@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -22,9 +22,9 @@ package org.sonar.server.pushapi.sonarlint;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Set;
-import javax.servlet.AsyncContext;
-import javax.servlet.ServletOutputStream;
-import javax.servlet.ServletResponse;
+import jakarta.servlet.AsyncContext;
+import jakarta.servlet.ServletOutputStream;
+import jakarta.servlet.ServletResponse;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;

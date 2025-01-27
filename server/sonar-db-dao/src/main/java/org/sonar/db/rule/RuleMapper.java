@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -47,6 +47,9 @@ public interface RuleMapper {
   List<RuleDto> selectByQuery(@Param("query") RuleQuery ruleQuery);
 
   List<RuleDto> selectByTypeAndLanguages(@Param("types") List<Integer> types, @Param("languages") List<String> languages);
+
+  List<RuleDto> selectByHotspotAndSoftwareQualityAndLanguages(@Param("softwareQuality") String softwareQuality,
+    @Param("languages") List<String> languages);
 
   List<RuleDto> selectByLanguage(@Param("language") String language);
 

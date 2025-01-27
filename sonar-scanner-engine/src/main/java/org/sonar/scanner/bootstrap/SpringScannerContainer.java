@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -19,8 +19,8 @@
  */
 package org.sonar.scanner.bootstrap;
 
+import jakarta.annotation.Priority;
 import javax.annotation.Nullable;
-import javax.annotation.Priority;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.sonar.api.batch.fs.internal.FileMetadata;
@@ -28,7 +28,6 @@ import org.sonar.api.batch.rule.CheckFactory;
 import org.sonar.api.batch.sensor.issue.internal.DefaultNoSonarFilter;
 import org.sonar.api.config.PropertyDefinition;
 import org.sonar.api.scan.filesystem.PathResolver;
-import org.sonar.api.utils.MessageException;
 import org.sonar.core.extension.CoreExtensionsInstaller;
 import org.sonar.core.metric.ScannerMetrics;
 import org.sonar.core.platform.SpringComponentContainer;
@@ -160,10 +159,12 @@ public class SpringScannerContainer extends SpringComponentContainer {
 
   private void addSuffixesDeprecatedProperties() {
     add(
-    /* This is needed to support properly the deprecated sonar.rpg.suffixes property when the download optimization feature is enabled.
-       The value of the property is needed at the preprocessing stage, but being defined by an optional analyzer means that at preprocessing
-       it won't be properly available. This will be removed in SQ 11.0 together with the drop of the property from the rpg analyzer.
-       See SONAR-21514 */
+      /*
+       * This is needed to support properly the deprecated sonar.rpg.suffixes property when the download optimization feature is enabled.
+       * The value of the property is needed at the preprocessing stage, but being defined by an optional analyzer means that at preprocessing
+       * it won't be properly available. This will be removed in SQ 11.0 together with the drop of the property from the rpg analyzer.
+       * See SONAR-21514
+       */
       PropertyDefinition.builder("sonar.rpg.file.suffixes")
         .deprecatedKey("sonar.rpg.suffixes")
         .multiValues(true)
@@ -308,8 +309,7 @@ public class SpringScannerContainer extends SpringComponentContainer {
       GitlabCi.class,
       Jenkins.class,
       SemaphoreCi.class,
-      TravisCi.class
-    );
+      TravisCi.class);
 
     add(GitScmSupport.getObjects());
     add(SvnScmSupport.getObjects());
@@ -335,11 +335,6 @@ public class SpringScannerContainer extends SpringComponentContainer {
   protected void doAfterStart() {
     ScanProperties properties = getComponentByType(ScanProperties.class);
     properties.validate();
-
-    properties.get("sonar.branch").ifPresent(deprecatedBranch -> {
-      throw MessageException.of("The 'sonar.branch' parameter is no longer supported. You should stop using it. " +
-        "Branch analysis is available in Developer Edition and above. See https://www.sonarsource.com/plans-and-pricing/developer/ for more information.");
-    });
 
     BranchConfiguration branchConfig = getComponentByType(BranchConfiguration.class);
     if (branchConfig.branchType() == BranchType.PULL_REQUEST && LOG.isInfoEnabled()) {

@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -22,8 +22,8 @@ package org.sonar.scanner.scan.filesystem;
 import org.sonar.api.batch.fs.internal.DefaultInputModule;
 import org.sonar.api.batch.fs.internal.predicates.DefaultFilePredicates;
 
-import javax.annotation.Priority;
-import javax.inject.Inject;
+import jakarta.annotation.Priority;
+import jakarta.inject.Inject;
 
 @Priority(1)
 public class DefaultModuleFileSystem extends MutableFileSystem {

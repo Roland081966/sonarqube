@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -71,7 +71,7 @@ public class SonarCpdBlockIndex extends AbstractCloneIndex {
     for (Block block : blocks) {
       mem.insert(block);
     }
-    if (blocks.isEmpty()) {
+    if (blocks.isEmpty() && LOG.isDebugEnabled()) {
       LOG.debug("Not enough content in '{}' to have CPD blocks, it will not be part of the duplication detection", inputFile.relativePath());
     }
     indexedFiles.add(inputFile);

@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -52,15 +52,18 @@ public class AsyncIssueIndexingImpl implements AsyncIssueIndexing {
 
   private final CeQueue ceQueue;
   private final DbClient dbClient;
+  private final AsyncIssueIndexCreationTelemetry asyncIssueIndexCreationTelemetry;
 
-  public AsyncIssueIndexingImpl(CeQueue ceQueue, DbClient dbClient) {
+  public AsyncIssueIndexingImpl(CeQueue ceQueue, DbClient dbClient, AsyncIssueIndexCreationTelemetry asyncIssueIndexCreationTelemetry) {
     this.ceQueue = ceQueue;
     this.dbClient = dbClient;
+    this.asyncIssueIndexCreationTelemetry = asyncIssueIndexCreationTelemetry;
   }
 
   @Override
   public void triggerOnIndexCreation() {
 
+    final int nbTask;
     try (DbSession dbSession = dbClient.openSession(false)) {
 
       // remove already existing indexing task, if any
@@ -92,7 +95,10 @@ public class AsyncIssueIndexingImpl implements AsyncIssueIndexing {
 
       ceQueue.massSubmit(tasks);
       dbSession.commit();
+      nbTask = tasks.size();
     }
+
+    asyncIssueIndexCreationTelemetry.startIndexCreationMonitoringToSendTelemetry(nbTask);
   }
 
   @Override
@@ -162,16 +168,16 @@ public class AsyncIssueIndexingImpl implements AsyncIssueIndexing {
   }
 
   private void removeIndexationTasks(DbSession dbSession, Set<String> ceQueueUuids, Set<String> ceActivityUuids) {
-    LOG.atInfo().setMessage("{} pending indexing task found to be deleted...")
-      .addArgument(ceQueueUuids.size())
-      .log();
+    LOG.atInfo()
+      .addArgument(ceQueueUuids::size)
+      .log("{} pending indexing task found to be deleted...");
     for (String uuid : ceQueueUuids) {
       dbClient.ceQueueDao().deleteByUuid(dbSession, uuid);
     }
 
-    LOG.atInfo().setMessage("{} completed indexing task found to be deleted...")
-      .addArgument(ceQueueUuids.size())
-      .log();
+    LOG.atInfo()
+      .addArgument(ceQueueUuids::size)
+      .log("{} completed indexing task found to be deleted...");
     dbClient.ceActivityDao().deleteByUuids(dbSession, ceActivityUuids);
     LOG.info("Indexing task deletion complete.");
 

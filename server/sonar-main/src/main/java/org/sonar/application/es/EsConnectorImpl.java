@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -65,7 +65,7 @@ public class EsConnectorImpl implements EsConnector {
   private final String keyStorePassword;
 
   public EsConnectorImpl(Set<HostAndPort> hostAndPorts, @Nullable String searchPassword, @Nullable Path keyStorePath,
-                         @Nullable String keyStorePassword) {
+    @Nullable String keyStorePassword) {
     this.hostAndPorts = hostAndPorts;
     this.searchPassword = searchPassword;
     this.keyStorePath = keyStorePath;
@@ -112,12 +112,11 @@ public class EsConnectorImpl implements EsConnector {
       .map(this::toHttpHost)
       .toArray(HttpHost[]::new);
 
-    if (LOG.isDebugEnabled()) {
-      String addresses = Arrays.stream(httpHosts)
+    LOG.atDebug()
+      .addArgument(Arrays.stream(httpHosts)
         .map(t -> t.getHostName() + ":" + t.getPort())
-        .collect(Collectors.joining(", "));
-      LOG.debug("Connected to Elasticsearch node: [{}]", addresses);
-    }
+        .collect(Collectors.joining(", ")))
+      .log("Connected to Elasticsearch node: [{}]");
 
     RestClientBuilder builder = RestClient.builder(httpHosts)
       .setHttpClientConfigCallback(httpClientBuilder -> {

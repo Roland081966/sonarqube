@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -246,6 +246,7 @@ public class DefaultUserControllerTest {
       userInformation.managed(),
       userInformation.userDto().getExternalLogin(),
       userInformation.userDto().getExternalIdentityProvider(),
+      userInformation.userDto().getExternalId(),
       userInformation.avatar().orElse(""),
       formatDateTime(userInformation.userDto().getLastConnectionDate()),
       formatDateTime(userInformation.userDto().getLastSonarlintConnectionDate()),
@@ -507,10 +508,17 @@ public class DefaultUserControllerTest {
     UpdateUser userUpdate = performPatchCallAndVerifyResponse("{\"externalProvider\":\"newExternalProvider\"}");
     assertThat(userUpdate.externalIdentityProvider()).isEqualTo("newExternalProvider");
   }
+
   @Test
   public void updateUser_whenExternalProviderLoginIsProvided_shouldUpdate() throws Exception {
     UpdateUser userUpdate = performPatchCallAndVerifyResponse("{\"externalLogin\":\"newExternalProviderLogin\"}");
     assertThat(userUpdate.externalIdentityProviderLogin()).isEqualTo("newExternalProviderLogin");
+  }
+
+  @Test
+  public void updateUser_whenExternalProviderIdIsProvided_shouldUpdate() throws Exception {
+    UpdateUser userUpdate = performPatchCallAndVerifyResponse("{\"externalId\":\"newExternalProviderId12334\"}");
+    assertThat(userUpdate.externalIdentityProviderId()).isEqualTo("newExternalProviderId12334");
   }
 
   @Test

@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -23,9 +23,9 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import javax.annotation.Nullable;
-import org.sonar.api.measures.CoreMetrics;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.sonar.api.measures.CoreMetrics;
 import org.sonar.ce.task.projectanalysis.analysis.AnalysisMetadataHolder;
 import org.sonar.ce.task.projectanalysis.analysis.Branch;
 import org.sonar.ce.task.projectanalysis.component.Component;
@@ -95,7 +95,7 @@ public class QualityGateEventsStep implements ComputationStep {
     }
 
     if (!baseMeasure.get().hasQualityGateStatus()) {
-      LOGGER.warn(String.format("Previous Quality gate status for project %s is not a supported value. Can not compute Quality Gate event", project.getKey()));
+      LOGGER.warn("Previous Quality gate status for project {} is not a supported value. Can not compute Quality Gate event", project.getKey());
       checkNewQualityGate(project, rawStatus);
       return;
     }

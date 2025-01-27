@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -98,6 +98,10 @@ public class CeActivityDao implements Dao {
 
   public boolean hasAnyFailedOrCancelledIssueSyncTask(DbSession dbSession) {
     return mapper(dbSession).hasAnyFailedOrCancelledIssueSyncTask() > 0;
+  }
+
+  public int countFailedOrCancelledIssueSyncTasks(DbSession dbSession) {
+    return mapper(dbSession).countFailedOrCancelledIssueSyncTasks();
   }
 
   private static CeActivityMapper mapper(DbSession dbSession) {

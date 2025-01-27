@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -95,6 +95,7 @@ import org.sonar.server.extension.CoreExtensionStopper;
 import org.sonar.server.favorite.FavoriteUpdater;
 import org.sonar.server.issue.IssueFieldsSetter;
 import org.sonar.server.issue.IssueStorage;
+import org.sonar.server.issue.TaintChecker;
 import org.sonar.server.issue.index.IssueIndexer;
 import org.sonar.server.issue.index.IssueIteratorFactory;
 import org.sonar.server.issue.notification.IssuesChangesNotificationModule;
@@ -225,8 +226,9 @@ public class ComputeEngineContainerImpl implements ComputeEngineContainer {
     level4.startComponents();
 
     PlatformEditionProvider editionProvider = level4.getComponentByType(PlatformEditionProvider.class);
-    LoggerFactory.getLogger(ComputeEngineContainerImpl.class)
-      .info("Running {} edition", editionProvider.get().map(EditionProvider.Edition::getLabel).orElse(""));
+    LoggerFactory.getLogger(ComputeEngineContainerImpl.class).atInfo()
+      .addArgument(() -> editionProvider.get().map(EditionProvider.Edition::getLabel).orElse(""))
+      .log("Running {} edition");
   }
 
   private void startupTasks() {
@@ -395,6 +397,7 @@ public class ComputeEngineContainerImpl implements ComputeEngineContainer {
       IssueIteratorFactory.class,
       IssueFieldsSetter.class, // used in Web Services and CE's DebtCalculator
       FunctionExecutor.class, // used by IssueWorkflow
+      TaintChecker.class,
       IssueWorkflow.class, // used in Web Services and CE's DebtCalculator
       NewIssuesEmailTemplate.class,
       MyNewIssuesEmailTemplate.class,

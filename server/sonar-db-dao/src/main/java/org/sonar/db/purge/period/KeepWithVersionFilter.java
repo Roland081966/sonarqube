@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -44,7 +44,9 @@ class KeepWithVersionFilter implements Filter {
 
   @Override
   public void log() {
-    LoggerFactory.getLogger(getClass()).debug("-> Keep analyses with a version prior to {}", DateUtils.formatDate(before));
+    LoggerFactory.getLogger(getClass()).atDebug()
+      .addArgument(() -> DateUtils.formatDate(before))
+      .log("-> Keep analyses with a version prior to {}");
   }
 
   private static boolean isDeletable(PurgeableAnalysisDto snapshot) {

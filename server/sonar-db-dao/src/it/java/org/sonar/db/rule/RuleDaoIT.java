@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -400,6 +400,37 @@ class RuleDaoIT {
       singletonList("java"))).isEmpty();
     assertThat(underTest.selectByTypeAndLanguages(db.getSession(), singletonList(RuleType.VULNERABILITY.getDbConstant()), singletonList(
       "js"))).isEmpty();
+  }
+
+  @Test
+  void selectByHotspotAndSoftwareQualityAndLanguages_shouldReturnExpectedResult() {
+    RuleDto rule1 = db.rules().insert(
+      r -> r.setKey(RuleKey.of("java", "S001"))
+        .setConfigKey("S1")
+        .setType(RuleType.VULNERABILITY)
+        .replaceAllDefaultImpacts(List.of(new ImpactDto(SoftwareQuality.SECURITY, org.sonar.api.issue.impact.Severity.HIGH)))
+        .setLanguage("java"));
+
+    RuleDto rule2 = db.rules().insert(
+      r -> r.setKey(RuleKey.of("java", "S002"))
+        .setType(RuleType.SECURITY_HOTSPOT)
+        .setLanguage("java"));
+
+    // Insert additional rules to ensure that the query is correctly filtered
+    db.rules().insert(
+      r -> r.setKey(RuleKey.of("java", "S003"))
+        .setType(RuleType.BUG)
+        .replaceAllDefaultImpacts(List.of(new ImpactDto(MAINTAINABILITY, org.sonar.api.issue.impact.Severity.HIGH)))
+        .setLanguage("java"));
+
+    db.rules().insert(
+      r -> r.setKey(RuleKey.of("js", "S004"))
+        .setType(RuleType.SECURITY_HOTSPOT)
+        .setLanguage("js"));
+
+    assertThat(underTest.selectByHotspotAndSoftwareQualityAndLanguages(db.getSession(), SECURITY.name(), singletonList("java")))
+      .extracting(RuleDto::getUuid)
+      .containsExactlyInAnyOrder(rule1.getUuid(), rule2.getUuid());
   }
 
   @Test

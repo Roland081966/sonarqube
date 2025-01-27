@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -106,13 +106,13 @@ public class DefaultScannerWsClient implements ScannerWsClient {
       response.close();
       if (hasCredentials) {
         // credentials are not valid
-        throw MessageException.of(format("Not authorized. Please check the user token in the property '%s' or the credentials in the properties '%s' and '%s'.",
-          ScannerWsClientProvider.TOKEN_PROPERTY, CoreProperties.LOGIN, CoreProperties.PASSWORD));
+        throw MessageException.of(format("Not authorized. Please check the user token in the property '%s' or '%s' (deprecated).",
+          ScannerWsClientProvider.TOKEN_PROPERTY, CoreProperties.LOGIN));
       }
       // not authenticated - see https://jira.sonarsource.com/browse/SONAR-4048
       throw MessageException.of(format("Not authorized. Analyzing this project requires authentication. " +
-        "Please check the user token in the property '%s' or the credentials in the properties '%s' and '%s'.",
-        ScannerWsClientProvider.TOKEN_PROPERTY, CoreProperties.LOGIN, CoreProperties.PASSWORD));
+        "Please check the user token in the property '%s' or '%s' (deprecated).",
+        ScannerWsClientProvider.TOKEN_PROPERTY, CoreProperties.LOGIN));
     }
     if (code == HTTP_FORBIDDEN) {
       logResponseDetailsIfDebug(response);
@@ -130,12 +130,11 @@ public class DefaultScannerWsClient implements ScannerWsClient {
   }
 
   private static void logResponseDetailsIfDebug(WsResponse response) {
-    if (!LOG.isDebugEnabled()) {
-      return;
+    if (LOG.isDebugEnabled()) {
+      String content = response.hasContent() ? response.content() : "<no content>";
+      Map<String, List<String>> headers = response.headers();
+      LOG.debug("Error response content: {}, headers: {}", content, headers);
     }
-    String content = response.hasContent() ? response.content() : "<no content>";
-    Map<String, List<String>> headers = response.headers();
-    LOG.debug("Error response content: {}, headers: {}", content, headers);
   }
 
   private void checkAuthenticationWarnings(WsResponse response) {

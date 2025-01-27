@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -23,7 +23,6 @@ import java.util.Optional;
 import javax.annotation.Nullable;
 import org.junit.jupiter.api.extension.AfterEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
-import org.junit.rules.ExternalResource;
 import org.sonar.server.qualitygate.EvaluatedQualityGate;
 
 import static com.google.common.base.Preconditions.checkState;

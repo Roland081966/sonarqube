@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -21,7 +21,7 @@ package org.sonar.scanner.mediumtest;
 
 import java.util.HashMap;
 import java.util.Map;
-import javax.annotation.Priority;
+import jakarta.annotation.Priority;
 import org.sonar.api.resources.Languages;
 import org.sonar.scanner.repository.language.Language;
 import org.sonar.scanner.repository.language.LanguagesLoader;

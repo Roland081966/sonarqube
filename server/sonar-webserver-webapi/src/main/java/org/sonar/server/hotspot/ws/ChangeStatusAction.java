@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -84,6 +84,10 @@ public class ChangeStatusAction implements HotspotsWsAction {
         "Requires the 'Administer Security Hotspot' permission.")
       .setSince("8.1")
       .setChangelog(
+        new Change("2025.1", String.format("The following '%s' values are not deprecated anymore: %s",
+          PARAM_RESOLUTION, String.join(", ", SECURITY_HOTSPOT_RESOLUTIONS))),
+        new Change("2025.1", String.format("The following '%s' values are not deprecated anymore: %s",
+          PARAM_STATUS, String.join(", ", STATUS_TO_REVIEW, STATUS_REVIEWED))),
         new Change("10.1", "Endpoint visibility change from internal to public"));
 
     action.createParam(PARAM_HOTSPOT_KEY)

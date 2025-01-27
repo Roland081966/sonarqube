@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -22,7 +22,7 @@ package org.sonar.server.qualityprofile;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.sonar.api.issue.impact.Severity;
 import org.sonar.api.issue.impact.SoftwareQuality;
 import org.sonar.api.rule.RuleKey;
@@ -39,12 +39,12 @@ import static org.sonar.db.qualityprofile.QualityProfileTesting.newQualityProfil
 import static org.sonar.server.qualityprofile.ActiveRuleChange.Type.ACTIVATED;
 import static org.sonar.server.qualityprofile.ActiveRuleChange.Type.UPDATED;
 
-public class ActiveRuleChangeTest {
+class ActiveRuleChangeTest {
 
   private static final String A_USER_UUID = "A_USER_UUID";
 
   @Test
-  public void toDto() {
+  void toDto() {
     QProfileDto profile = newQualityProfileDto();
     ActiveRuleKey key = ActiveRuleKey.of(profile, RuleKey.of("P1", "R1"));
     String ruleUuid = Uuids.createFast();
@@ -53,6 +53,7 @@ public class ActiveRuleChangeTest {
       new RuleDto().replaceAllDefaultImpacts(List.of(new ImpactDto(SoftwareQuality.RELIABILITY, Severity.LOW), new ImpactDto(SoftwareQuality.MAINTAINABILITY, Severity.HIGH))));
     underTest.setOldImpacts(Map.of(SoftwareQuality.SECURITY, Severity.LOW, SoftwareQuality.MAINTAINABILITY, Severity.HIGH));
     underTest.setNewImpacts(Map.of(SoftwareQuality.RELIABILITY, Severity.HIGH, SoftwareQuality.MAINTAINABILITY, Severity.BLOCKER));
+    underTest.setPrioritizedRule(true);
 
     QProfileChangeDto result = underTest.toDto(A_USER_UUID);
 
@@ -60,6 +61,7 @@ public class ActiveRuleChangeTest {
     assertThat(result.getRulesProfileUuid()).isEqualTo(profile.getRulesProfileUuid());
     assertThat(result.getUserUuid()).isEqualTo(A_USER_UUID);
     assertThat(result.getDataAsMap()).containsEntry("ruleUuid", ruleUuid);
+    assertThat(result.getData()).contains("prioritizedRule=true");
 
     Set<RuleImpactChangeDto> ruleImpactChanges = result.getRuleChange().getRuleImpactChanges();
 
@@ -71,7 +73,7 @@ public class ActiveRuleChangeTest {
   }
 
   @Test
-  public void toDto_whenIdenticalImpacts_shouldNotReturnImpactChanges() {
+  void toDto_whenIdenticalImpacts_shouldNotReturnImpactChanges() {
     QProfileDto profile = newQualityProfileDto();
     ActiveRuleKey key = ActiveRuleKey.of(profile, RuleKey.of("P1", "R1"));
     String ruleUuid = Uuids.createFast();
@@ -87,7 +89,7 @@ public class ActiveRuleChangeTest {
   }
 
   @Test
-  public void toDto_whenRuleChangeDtoIsActivated_shouldNotReturnImpactChanges() {
+  void toDto_whenRuleChangeDtoIsActivated_shouldNotReturnImpactChanges() {
     QProfileDto profile = newQualityProfileDto();
     ActiveRuleKey key = ActiveRuleKey.of(profile, RuleKey.of("P1", "R1"));
     String ruleUuid = Uuids.createFast();
@@ -105,7 +107,7 @@ public class ActiveRuleChangeTest {
   }
 
   @Test
-  public void toDto_whenRuleChangeDtoIsActivatedAndSameImpacts_shouldNotReturnImpactChanges() {
+  void toDto_whenRuleChangeDtoIsActivatedAndSameImpacts_shouldNotReturnImpactChanges() {
     QProfileDto profile = newQualityProfileDto();
     ActiveRuleKey key = ActiveRuleKey.of(profile, RuleKey.of("P1", "R1"));
     String ruleUuid = Uuids.createFast();

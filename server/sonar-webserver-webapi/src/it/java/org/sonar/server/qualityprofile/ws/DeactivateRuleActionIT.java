@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -140,7 +140,7 @@ public class DeactivateRuleActionIT {
       .setParam(PARAM_RULE, rule.getKey().toString())
       .setParam(PARAM_KEY, qualityProfile.getKee());
 
-    assertThatThrownBy(() -> request.execute())
+    assertThatThrownBy(request::execute)
       .isInstanceOf(BadRequestException.class)
       .hasMessage(String.format("Operation forbidden for rule '%s' imported from an external rule engine.", rule.getKey()));
   }

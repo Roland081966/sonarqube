@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -92,7 +92,7 @@ class UserDaoWithPersisterIT {
       .setResetPassword(true)
       .setSalt("12345")
       .setCryptedPassword("abcde")
-      .setHashMethod("BCRYPT")
+      .setHashMethod("PBKDF2")
       .setExternalLogin("johngithub")
       .setExternalIdentityProvider("github")
       .setExternalId("EXT_ID")

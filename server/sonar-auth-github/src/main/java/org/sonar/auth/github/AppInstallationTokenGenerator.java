@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -20,7 +20,6 @@
 package org.sonar.auth.github;
 
 import org.sonar.api.ce.ComputeEngineSide;
-import org.sonar.auth.github.client.GithubApplicationClient;
 
 import static java.lang.Long.parseLong;
 import static java.lang.String.format;

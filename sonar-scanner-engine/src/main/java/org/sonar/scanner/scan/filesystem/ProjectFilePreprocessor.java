@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -72,6 +72,8 @@ public class ProjectFilePreprocessor {
   private final Map<DefaultInputModule, List<Path>> mainSourcesByModule = new HashMap<>();
   private final Map<DefaultInputModule, List<Path>> testSourcesByModule = new HashMap<>();
 
+  private final ProgressReport progressReport = new ProgressReport("Report about progress of file preprocessing",
+    TimeUnit.SECONDS.toMillis(10));
   private int totalFilesPreprocessed = 0;
 
   public ProjectFilePreprocessor(AnalysisWarnings analysisWarnings, ScmConfiguration scmConfiguration, InputModuleHierarchy inputModuleHierarchy,
@@ -93,9 +95,8 @@ public class ProjectFilePreprocessor {
   }
 
   public void execute() {
-    ProgressReport progressReport = new ProgressReport("Report about progress of file preprocessing",
-      TimeUnit.SECONDS.toMillis(10));
     progressReport.start("Preprocessing files...");
+    progressReport.message(() -> String.format("Preprocessed %s files", totalFilesPreprocessed));
     ExclusionCounter exclusionCounter = new ExclusionCounter();
 
     if (useScmExclusion) {
@@ -171,8 +172,7 @@ public class ProjectFilePreprocessor {
     List<Path> processedFiles = new ArrayList<>();
     Files.walkFileTree(path.normalize(), Collections.singleton(FileVisitOption.FOLLOW_LINKS), Integer.MAX_VALUE,
       new DirectoryFileVisitor(file -> filePreprocessor.processFile(module, moduleExclusionFilters, file, type, exclusionCounter,
-        ignoreCommand).ifPresent(processedFiles::add), module, moduleExclusionFilters, inputModuleHierarchy, type)
-    );
+        ignoreCommand).ifPresent(processedFiles::add), module, moduleExclusionFilters, inputModuleHierarchy, type));
     return processedFiles;
   }
 

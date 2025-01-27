@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -25,6 +25,7 @@ import com.google.gson.stream.JsonWriter;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.util.Optional;
+import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.sonar.api.server.http.HttpRequest;
@@ -41,7 +42,6 @@ import org.sonar.server.authentication.CredentialsLocalAuthentication;
 import org.sonar.server.authentication.JwtHttpHandler;
 import org.sonar.server.authentication.event.AuthenticationEvent;
 import org.sonar.server.authentication.event.AuthenticationException;
-import org.sonar.server.common.management.ManagedInstanceChecker;
 import org.sonar.server.exceptions.BadRequestException;
 import org.sonar.server.exceptions.NotFoundException;
 import org.sonar.server.user.UpdateUser;
@@ -49,6 +49,7 @@ import org.sonar.server.user.UserSession;
 import org.sonar.server.user.UserUpdater;
 import org.sonar.server.ws.ServletFilterHandler;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static java.lang.String.format;
 import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;
 import static java.net.HttpURLConnection.HTTP_NO_CONTENT;
@@ -69,21 +70,26 @@ public class ChangePasswordAction extends HttpFilter implements BaseUsersWsActio
   private static final String CHANGE_PASSWORD_URL = "/" + UsersWs.API_USERS + "/" + CHANGE_PASSWORD;
   private static final String MSG_PARAMETER_MISSING = "The '%s' parameter is missing";
 
+  private static final Pattern UPPERCASE_PATTERN = Pattern.compile("[A-Z]");
+  private static final Pattern LOWERCASE_PATTERN = Pattern.compile("[a-z]");
+  private static final Pattern DIGIT_PATTERN = Pattern.compile("\\d");
+  private static final Pattern SPECIAL_CHARACTER_PATTERN = Pattern.compile("[^a-zA-Z0-9]");
+
+  private static final int MIN_PASSWORD_LENGTH = 12;
+
   private final DbClient dbClient;
   private final UserUpdater userUpdater;
   private final UserSession userSession;
   private final CredentialsLocalAuthentication localAuthentication;
   private final JwtHttpHandler jwtHttpHandler;
-  private final ManagedInstanceChecker managedInstanceChecker;
 
   public ChangePasswordAction(DbClient dbClient, UserUpdater userUpdater, UserSession userSession, CredentialsLocalAuthentication localAuthentication,
-    JwtHttpHandler jwtHttpHandler, ManagedInstanceChecker managedInstanceChecker) {
+    JwtHttpHandler jwtHttpHandler) {
     this.dbClient = dbClient;
     this.userUpdater = userUpdater;
     this.userSession = userSession;
     this.localAuthentication = localAuthentication;
     this.jwtHttpHandler = jwtHttpHandler;
-    this.managedInstanceChecker = managedInstanceChecker;
   }
 
   @Override
@@ -95,8 +101,8 @@ public class ChangePasswordAction extends HttpFilter implements BaseUsersWsActio
   public void define(WebService.NewController controller) {
     WebService.NewAction action = controller.createAction(CHANGE_PASSWORD)
       .setDescription("Update a user's password. Authenticated users can change their own password, " +
-        "provided that the account is not linked to an external authentication system. " +
-        "Administer System permission is required to change another user's password.")
+                      "provided that the account is not linked to an external authentication system. " +
+                      "Administer System permission is required to change another user's password.")
       .setSince("5.2")
       .setPost(true)
       .setHandler(ServletFilterHandler.INSTANCE)
@@ -110,12 +116,15 @@ public class ChangePasswordAction extends HttpFilter implements BaseUsersWsActio
     action.createParam(PARAM_PASSWORD)
       .setDescription("New password")
       .setRequired(true)
-      .setExampleValue("mypassword");
+      .setExampleValue("My_Passw0rd%")
+      .setMinimumLength(12)
+      .setDescription("The password needs to fulfill the following requirements: at least 12 characters " +
+                      "and contain at least one uppercase character, one lowercase character, one digit and one special character.");
 
     action.createParam(PARAM_PREVIOUS_PASSWORD)
       .setDescription("Previous password. Required when changing one's own password.")
       .setRequired(false)
-      .setExampleValue("oldpassword");
+      .setExampleValue("My_Previous_Passw0rd%");
   }
 
   @Override
@@ -124,11 +133,11 @@ public class ChangePasswordAction extends HttpFilter implements BaseUsersWsActio
     try (DbSession dbSession = dbClient.openSession(false)) {
       String login = getParamOrThrow(request, PARAM_LOGIN);
       String newPassword = getParamOrThrow(request, PARAM_PASSWORD);
+      assertPasswordFormatIsValid(newPassword);
       UserDto user;
 
       if (login.equals(userSession.getLogin())) {
         user = getUserOrThrow(dbSession, login);
-        managedInstanceChecker.throwIfInstanceIsManaged();
         String previousPassword = getParamOrThrow(request, PARAM_PREVIOUS_PASSWORD);
         checkPreviousPassword(dbSession, user, previousPassword);
         checkNewPasswordSameAsOld(newPassword, previousPassword);
@@ -136,10 +145,8 @@ public class ChangePasswordAction extends HttpFilter implements BaseUsersWsActio
       } else {
         userSession.checkIsSystemAdministrator();
         user = getUserOrThrow(dbSession, login);
-        managedInstanceChecker.throwIfInstanceIsManaged();
         dbClient.sessionTokensDao().deleteByUser(dbSession, user);
       }
-
       updatePassword(dbSession, user, newPassword);
       setResponseStatus(response, HTTP_NO_CONTENT);
     } catch (BadRequestException badRequestException) {
@@ -151,6 +158,18 @@ public class ChangePasswordAction extends HttpFilter implements BaseUsersWsActio
       setResponseStatus(response, HTTP_BAD_REQUEST);
       String message = passwordException.getPasswordMessage().map(pm -> pm.key).orElseGet(passwordException::getMessage);
       writeJsonResponse(message, response);
+    }
+  }
+
+  private static void assertPasswordFormatIsValid(String newPassword) throws PasswordException {
+    try {
+      checkArgument(newPassword.length() >= MIN_PASSWORD_LENGTH, "Password must be at least %s characters long", MIN_PASSWORD_LENGTH);
+      checkArgument(UPPERCASE_PATTERN.matcher(newPassword).find(), "Password must contain at least one uppercase character");
+      checkArgument(LOWERCASE_PATTERN.matcher(newPassword).find(), "Password must contain at least one lowercase character");
+      checkArgument(DIGIT_PATTERN.matcher(newPassword).find(), "Password must contain at least one digit");
+      checkArgument(SPECIAL_CHARACTER_PATTERN.matcher(newPassword).find(), "Password must contain at least one special character");
+    } catch (IllegalArgumentException e) {
+      throw new PasswordException(e.getMessage());
     }
   }
 
@@ -210,7 +229,7 @@ public class ChangePasswordAction extends HttpFilter implements BaseUsersWsActio
       .create();
 
     try (OutputStream output = response.getOutputStream();
-         JsonWriter writer = gson.newJsonWriter(new OutputStreamWriter(output, UTF_8))) {
+      JsonWriter writer = gson.newJsonWriter(new OutputStreamWriter(output, UTF_8))) {
       response.setContentType(JSON);
       writer.beginObject()
         .name("result").value(msg);
@@ -233,6 +252,7 @@ public class ChangePasswordAction extends HttpFilter implements BaseUsersWsActio
 
   private static class PasswordException extends Exception {
     private final PasswordMessage passwordMessage;
+
     public PasswordException(PasswordMessage passwordMessage, String message) {
       super(message);
       this.passwordMessage = passwordMessage;

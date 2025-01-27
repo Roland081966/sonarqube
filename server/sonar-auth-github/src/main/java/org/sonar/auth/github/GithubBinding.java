@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -24,7 +24,7 @@ import java.util.List;
 import javax.annotation.CheckForNull;
 import javax.annotation.Nullable;
 
-import static org.sonar.auth.github.client.GithubApplicationClient.Repository;
+import static org.sonar.auth.github.GithubApplicationClient.Repository;
 
 public class GithubBinding {
 
@@ -32,7 +32,8 @@ public class GithubBinding {
     // nothing to do
   }
 
-  public record GsonOrganizationFull(@SerializedName("login") String login, @SerializedName("default_repository_permission") String defaultRepositoryPermissions){}
+  public record GsonOrganizationFull(@SerializedName("login") String login, @SerializedName("default_repository_permission") String defaultRepositoryPermissions) {
+  }
 
   public static class GsonApp {
 
@@ -168,12 +169,13 @@ public class GithubBinding {
     String metadata;
     @SerializedName("administration")
     String repoAdministration;
-
     @SerializedName("organization_administration")
     String orgAdministration;
+    @SerializedName("organization_copilot_seat_management")
+    String orgCopilotSeatManagement;
 
     public Permissions(@Nullable String checks, @Nullable String members, @Nullable String emails, @Nullable String contents, @Nullable String metadata,
-      @Nullable String repoAdministration, @Nullable String orgAdministration) {
+      @Nullable String repoAdministration, @Nullable String orgAdministration, @Nullable String orgCopilotSeatManagement) {
       this.checks = checks;
       this.members = members;
       this.emails = emails;
@@ -181,6 +183,7 @@ public class GithubBinding {
       this.metadata = metadata;
       this.repoAdministration = repoAdministration;
       this.orgAdministration = orgAdministration;
+      this.orgCopilotSeatManagement = orgCopilotSeatManagement;
     }
 
     public Permissions() {
@@ -228,6 +231,11 @@ public class GithubBinding {
       return orgAdministration;
     }
 
+    @CheckForNull
+    public String getOrgCopilotSeatManagement() {
+      return orgCopilotSeatManagement;
+    }
+
     public static class Builder {
       private String checks;
       private String members;
@@ -235,8 +243,8 @@ public class GithubBinding {
       private String contents;
       private String metadata;
       private String repoAdministration;
-
       private String orgAdministration;
+      private String orgCopilotSeatManagement;
 
       private Builder() {
         // Use static factory method
@@ -277,8 +285,13 @@ public class GithubBinding {
         return this;
       }
 
+      public Builder setOrgCopilotSeatManagement(String orgCopilotSeatManagement) {
+        this.orgCopilotSeatManagement = orgCopilotSeatManagement;
+        return this;
+      }
+
       public GithubBinding.Permissions build() {
-        return new GithubBinding.Permissions(checks, members, emails, contents, metadata, repoAdministration, orgAdministration);
+        return new GithubBinding.Permissions(checks, members, emails, contents, metadata, repoAdministration, orgAdministration, orgCopilotSeatManagement);
       }
     }
   }
@@ -294,6 +307,7 @@ public class GithubBinding {
       // recommended:
       // http://stackoverflow.com/a/18645370/229031
     }
+
     public int getTotalCount() {
       return totalCount;
     }

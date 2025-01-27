@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -95,8 +95,28 @@ public class ScanPropertiesTest {
   public void validate_fails_if_metadata_file_location_is_not_absolute() {
     settings.setProperty("sonar.scanner.metadataFilePath", "relative");
 
-    assertThatThrownBy(() -> underTest.validate())
+    assertThatThrownBy(underTest::validate)
       .isInstanceOf(MessageException.class)
       .hasMessage("Property 'sonar.scanner.metadataFilePath' must point to an absolute path: relative");
+  }
+
+  @Test
+  public void validate_fails_if_sonar_branch_is_set() {
+    settings.setProperty("sonar.branch", "anything");
+
+    assertThatThrownBy(underTest::validate)
+      .isInstanceOf(MessageException.class)
+      .hasMessage("The 'sonar.branch' parameter is no longer supported. You should stop using it. " +
+        "Branch analysis is available in Developer Edition and above. See https://www.sonarsource.com/plans-and-pricing/developer/ for more information.");
+  }
+
+  @Test
+  public void validate_fails_if_sonar_password_is_set() {
+    settings.setProperty("sonar.password", "anything");
+
+    assertThatThrownBy(underTest::validate)
+      .isInstanceOf(MessageException.class)
+      .hasMessage("The property 'sonar.password' is no longer supported. " +
+        "Please pass a token with the 'sonar.token' property instead.");
   }
 }

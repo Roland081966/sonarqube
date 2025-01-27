@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -24,7 +24,7 @@ import org.apache.tomcat.JarScanType;
 import org.apache.tomcat.JarScannerCallback;
 import org.junit.Test;
 
-import javax.servlet.ServletContext;
+import jakarta.servlet.ServletContext;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;

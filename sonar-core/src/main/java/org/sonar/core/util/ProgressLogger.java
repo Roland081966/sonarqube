@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -106,7 +106,11 @@ public class ProgressLogger {
 
     private void log() {
       long current = counter.get();
-      logger.info(String.format("%d %s processed (%d items/sec)", current, pluralLabel, 1000 * (current - previousCounter) / periodMs));
+      logger.atInfo()
+        .addArgument(current)
+        .addArgument(pluralLabel)
+        .addArgument(() -> 1000 * (current - previousCounter) / periodMs)
+        .log("{} {} processed ({} items/sec)");
       previousCounter = current;
     }
   }

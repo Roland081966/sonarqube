@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -78,8 +78,6 @@ public interface PortfolioMapper {
 
   List<PortfolioDto> selectRootOfReferencers(String referenceUuid);
 
-  List<PortfolioDto> selectRootOfReferencersToMainBranch(String referenceUuid);
-
   void deleteReferencesTo(String referenceUuid);
 
   void deleteProjects(String portfolioUuid);
@@ -113,7 +111,10 @@ public interface PortfolioMapper {
 
   List<ReferenceDto> selectAllReferencesToApplicationsInHierarchy(String rootUuid);
 
-  List<PortfolioDto> selectRootOfReferencersToAppBranch(@Param("appUuid") String appUuid, @Param("appBranchKey") String appBranchKey);
+  List<PortfolioDto> selectRootOfReferencersToAppBranch(@Param("appBranchUuid") String appBranchUuid);
 
   List<KeyWithUuidDto> selectUuidsByKey(@Param("rootKey") String rootKey);
+
+  List<ModeCount> countPortfoliosByMode();
+  List<ModeCount> countSubportfoliosByMode();
 }

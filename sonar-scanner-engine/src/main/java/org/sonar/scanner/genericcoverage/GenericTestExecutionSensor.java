@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -87,7 +87,7 @@ public class GenericTestExecutionSensor implements Sensor {
       parser.parse(reportFile, context);
       LOG.info("Imported test execution data for {} files", parser.numberOfMatchedFiles());
       int numberOfUnknownFiles = parser.numberOfUnknownFiles();
-      if (numberOfUnknownFiles > 0) {
+      if (numberOfUnknownFiles > 0 && LOG.isInfoEnabled()) {
         LOG.info("Test execution data ignored for {} unknown files, including:\n{}", numberOfUnknownFiles, parser.firstUnknownFiles().stream().collect(Collectors.joining("\n")));
       }
     }

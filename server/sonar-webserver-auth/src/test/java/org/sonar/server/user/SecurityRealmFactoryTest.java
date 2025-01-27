@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -20,7 +20,6 @@
 package org.sonar.server.user;
 
 import org.junit.Test;
-import org.sonar.api.CoreProperties;
 import org.sonar.api.config.internal.MapSettings;
 import org.sonar.api.security.Authenticator;
 import org.sonar.api.security.SecurityRealm;

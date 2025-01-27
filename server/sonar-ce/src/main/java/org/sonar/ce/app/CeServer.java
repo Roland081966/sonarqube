@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -31,7 +31,6 @@ import org.sonar.ce.container.ComputeEngineContainerImpl;
 import org.sonar.ce.logging.CeProcessLogging;
 import org.sonar.process.MinimumViableSystem;
 import org.sonar.process.Monitored;
-import org.sonar.process.PluginSecurityManager;
 import org.sonar.process.ProcessEntryPoint;
 import org.sonar.process.Props;
 
@@ -56,8 +55,7 @@ public class CeServer implements Monitored {
   private CeMainThread ceMainThread = null;
 
   @VisibleForTesting
-  protected CeServer(ComputeEngine computeEngine, MinimumViableSystem mvs, CeSecurityManager securityManager) {
-    securityManager.apply();
+  protected CeServer(ComputeEngine computeEngine, MinimumViableSystem mvs) {
     this.computeEngine = computeEngine;
     mvs
       .checkWritableTempDir()
@@ -121,8 +119,7 @@ public class CeServer implements Monitored {
 
     CeServer server = new CeServer(
       new ComputeEngineImpl(props, new ComputeEngineContainerImpl()),
-      new MinimumViableSystem(),
-      new CeSecurityManager(new PluginSecurityManager(), props));
+      new MinimumViableSystem());
     entryPoint.launch(server);
   }
 

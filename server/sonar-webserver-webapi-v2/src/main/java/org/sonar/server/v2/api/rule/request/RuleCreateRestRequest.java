@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -22,9 +22,9 @@ package org.sonar.server.v2.api.rule.request;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
 import javax.annotation.Nullable;
-import javax.validation.Valid;
-import javax.validation.constraints.NotNull;
-import javax.validation.constraints.Size;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import org.sonar.api.rules.RuleType;
 import org.sonar.server.v2.api.rule.enums.CleanCodeAttributeRestEnum;
 import org.sonar.server.v2.api.rule.enums.RuleStatusRestEnum;

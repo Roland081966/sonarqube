@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -86,10 +86,11 @@ class ChangelogActionIT {
     RuleChangeDto ruleChange = insertRuleChange(CLEAR, TESTED, rule.getUuid(),
       Set.of(new RuleImpactChangeDto(MAINTAINABILITY, SECURITY, HIGH, MEDIUM)));
     insertChange(profile, ActiveRuleChange.Type.ACTIVATED, user, ImmutableMap.of(
-        "ruleUuid", rule.getUuid(),
-        "severity", "MINOR",
-        "param_foo", "foo_value",
-        "param_bar", "bar_value"),
+      "ruleUuid", rule.getUuid(),
+      "severity", "MINOR",
+      "prioritizedRule", "true",
+      "param_foo", "foo_value",
+      "param_bar", "bar_value"),
       ruleChange);
 
     String response = ws.newRequest()
@@ -125,6 +126,7 @@ class ChangelogActionIT {
             ],
             "params": {
               "severity": "MINOR",
+              "prioritizedRule": "true",
               "foo": "foo_value",
               "bar": "bar_value",
               "oldCleanCodeAttribute": "CLEAR",
@@ -154,10 +156,10 @@ class ChangelogActionIT {
     RuleChangeDto ruleChange = insertRuleChange(COMPLETE, FOCUSED, rule.getUuid(),
       Set.of(new RuleImpactChangeDto(MAINTAINABILITY, null, HIGH, null), new RuleImpactChangeDto(null, RELIABILITY, null, LOW)));
     insertChange(profile, ActiveRuleChange.Type.DEACTIVATED, user, ImmutableMap.of(
-        "ruleUuid", rule.getUuid(),
-        "severity", "MINOR",
-        "param_foo", "foo_value",
-        "param_bar", "bar_value"),
+      "ruleUuid", rule.getUuid(),
+      "severity", "MINOR",
+      "param_foo", "foo_value",
+      "param_bar", "bar_value"),
       ruleChange);
 
     String response = ws.newRequest()
@@ -343,9 +345,10 @@ class ChangelogActionIT {
       .setParam(PARAM_QUALITY_PROFILE, qualityProfile.getName())
       .setParam(PARAM_SINCE, "2011-04-25T01:15:43+0100")
       .execute()
-      .getInput()).isSimilarTo("{\n" +
-        "  \"events\": []\n" +
-        "}");
+      .getInput()).isSimilarTo("""
+        {
+          "events": []
+        }""");
   }
 
   @Test
@@ -452,7 +455,7 @@ class ChangelogActionIT {
     system2.setNow(DateUtils.parseDateTime(DATE).getTime());
     RuleDto rule = db.rules().insert();
     UserDto user = db.users().insertUser();
-    //ACTIVATED and DEACTIVATED rules must always appear
+    // ACTIVATED and DEACTIVATED rules must always appear
     insertChange(qualityProfile, ActiveRuleChange.Type.ACTIVATED, user, Map.of("ruleUuid", rule.getUuid()));
     insertChange(qualityProfile, ActiveRuleChange.Type.DEACTIVATED, user, Map.of("ruleUuid", rule.getUuid()));
     // Changes with data must appear in STANDARD mode
@@ -547,7 +550,7 @@ class ChangelogActionIT {
     system2.setNow(DateUtils.parseDateTime(DATE).getTime());
     RuleDto rule = db.rules().insert();
     UserDto user = db.users().insertUser();
-    //ACTIVATED and DEACTIVATED rules must always appear
+    // ACTIVATED and DEACTIVATED rules must always appear
     insertChange(qualityProfile, ActiveRuleChange.Type.ACTIVATED, user, Map.of("ruleUuid", rule.getUuid()));
     insertChange(qualityProfile, ActiveRuleChange.Type.DEACTIVATED, user, Map.of("ruleUuid", rule.getUuid()));
     // Changes without rule_change must not appear in MQR mode
@@ -670,8 +673,7 @@ class ChangelogActionIT {
       """.formatted(DATE, user.getLogin(), user.getName(), rule.getKey(), rule.getName(),
       DATE, user.getLogin(), user.getName(), rule.getKey(), rule.getName(),
       DATE, user.getLogin(), user.getName(), rule.getKey(), rule.getName(),
-      DATE, user.getLogin(), user.getName(), rule.getKey(), rule.getName()
-    ));
+      DATE, user.getLogin(), user.getName(), rule.getKey(), rule.getName()));
   }
 
   @Test
@@ -687,7 +689,7 @@ class ChangelogActionIT {
       .setUserUuid(user1.getUuid())
       .setSqVersion("8.3.1")
       .setChangeType(ActiveRuleChange.Type.ACTIVATED.name())
-      .setData(ImmutableMap.of("severity", "CRITICAL", "ruleUuid", rule1.getUuid())));
+      .setData(ImmutableMap.of("severity", "CRITICAL", "prioritizedRule", "true", "ruleUuid", rule1.getUuid())));
 
     system2.setNow(DateUtils.parseDateTime("2015-02-23T17:58:18+0100").getTime());
     RuleDto rule2 = db.rules().insert(RuleKey.of("java", "S2162"), r -> r.setName("\"equals\" methods should be symmetric and work for subclasses"));
@@ -704,7 +706,8 @@ class ChangelogActionIT {
     RuleChangeDto ruleChange = insertRuleChange(TESTED, CLEAR, rule3.getUuid(),
       Set.of(new RuleImpactChangeDto(MAINTAINABILITY, SECURITY, HIGH, MEDIUM), new RuleImpactChangeDto(null, RELIABILITY, null, LOW)));
     insertChange(profile, ActiveRuleChange.Type.ACTIVATED, user3,
-      ImmutableMap.of("severity", "MAJOR", "param_format", "^[A-Z][a-zA-Z0-9]*", "ruleUuid", rule3.getUuid()), ruleChange);
+      ImmutableMap.of("severity", "MAJOR", "prioritizedRule", "false", "param_format", "^[A-Z][a-zA-Z0-9]*", "ruleUuid", rule3.getUuid())
+      , ruleChange);
 
     ws.newRequest()
       .setMethod("GET")
@@ -734,7 +737,7 @@ class ChangelogActionIT {
   }
 
   private void insertChange(QProfileDto profile, ActiveRuleChange.Type type, @Nullable UserDto user, @Nullable Map<String, Object> data,
-                            @Nullable RuleChangeDto ruleChange) {
+    @Nullable RuleChangeDto ruleChange) {
     insertChange(c -> c.setRulesProfileUuid(profile.getRulesProfileUuid())
       .setUserUuid(user == null ? null : user.getUuid())
       .setSqVersion("7.6")

@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -20,15 +20,21 @@
 package org.sonar.scanner.bootstrap;
 
 import com.google.common.collect.ImmutableMap;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.slf4j.event.Level;
+import org.sonar.api.testfixtures.log.LogTesterJUnit5;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-public class ScannerPropertiesTest {
+class ScannerPropertiesTest {
+
+  @RegisterExtension
+  LogTesterJUnit5 logTester = new LogTesterJUnit5();
 
   @Test
-  public void initialization() {
+  void initialization() {
     ImmutableMap<String, String> map = ImmutableMap.<String, String>builder()
       .put("prop-1", "{b64}Zm9v")
       .put("sonar.projectKey", "my-project")
@@ -43,7 +49,7 @@ public class ScannerPropertiesTest {
   }
 
   @Test
-  public void encryption_fail() {
+  void encryption_fail() {
     ImmutableMap<String, String> map = ImmutableMap.<String, String>builder()
       .put("prop-1", "{aes}Zm9vzxc")
       .build();
@@ -53,13 +59,17 @@ public class ScannerPropertiesTest {
   }
 
   @Test
-  public void encryption_ok() {
+  void encryption_ok() {
     ImmutableMap<String, String> map = ImmutableMap.<String, String>builder()
       .put("prop-1", "{b64}Zm9v")
       .build();
     ScannerProperties underTest = new ScannerProperties(map);
 
     assertThat(underTest.property("prop-1")).isEqualTo("foo");
+
+    assertThat(logTester.logs(Level.WARN))
+      .contains(
+        "Property 'prop-1' is encrypted. The encryption of scanner properties is deprecated and will soon be removed.");
   }
 
 }

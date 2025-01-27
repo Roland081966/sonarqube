@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -20,7 +20,7 @@
 package org.sonar.server.rule.index;
 
 import java.util.Set;
-import javax.inject.Inject;
+import jakarta.inject.Inject;
 import org.sonar.api.config.Configuration;
 import org.sonar.api.config.internal.MapSettings;
 import org.sonar.server.es.Index;
@@ -81,7 +81,6 @@ public class RuleIndexDefinition implements IndexDefinition {
   public static final String FIELD_ACTIVE_RULE_SEVERITY = "activeRule_severity";
   public static final String FIELD_PRIORITIZED_RULE = "activeRule_prioritizedRule";
   public static final String FIELD_ACTIVE_RULE_IMPACTS = "activeRule_impacts";
-  public static final String FIELD_ACTIVE_RULE_IMPACT_SOFTWARE_QUALITY = FIELD_ACTIVE_RULE_IMPACTS + "." + SUB_FIELD_SOFTWARE_QUALITY;
   public static final String FIELD_ACTIVE_RULE_IMPACT_SEVERITY = FIELD_ACTIVE_RULE_IMPACTS + "." + SUB_FIELD_SEVERITY;
 
   public static final Set<String> SORT_FIELDS = Set.of(

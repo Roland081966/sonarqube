@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -36,7 +36,6 @@ import static org.junit.Assert.fail;
 
 public class BaseDocTest {
   private final IndexType.IndexMainType someType = IndexType.main(Index.simple("bar"), "donut");
-
 
   @Test
   public void getField() {
@@ -125,7 +124,7 @@ public class BaseDocTest {
 
     };
 
-    assertThatThrownBy(() -> doc.getFields())
+    assertThatThrownBy(doc::getFields)
       .isInstanceOf(IllegalStateException.class)
       .hasMessage("parent must be set on a doc associated to a IndexRelationType (see BaseDoc#setParent(String))");
   }

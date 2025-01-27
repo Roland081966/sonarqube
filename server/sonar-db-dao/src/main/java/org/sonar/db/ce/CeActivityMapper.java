@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -52,6 +52,8 @@ public interface CeActivityMapper {
   CeActivityDto selectLastByComponentUuidAndTaskType(@Param("componentUuid") String componentUuid, @Param("taskType") String taskType);
 
   short hasAnyFailedOrCancelledIssueSyncTask();
+
+  int countFailedOrCancelledIssueSyncTasks();
 
   List<CeActivityDto> selectByTaskType(@Param("taskType") String taskType);
 }

@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -22,7 +22,7 @@ package org.sonar.server.pushapi;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpServletResponse;
 import org.sonar.server.ws.ServletRequest;
 import org.sonar.server.ws.ServletResponse;
 import org.sonar.server.ws.WsAction;

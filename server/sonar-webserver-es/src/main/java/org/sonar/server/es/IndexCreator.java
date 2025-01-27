@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -131,7 +131,7 @@ public class IndexCreator implements Startable {
 
   private void createIndex(BuiltIndex<?> builtIndex, boolean useMetadata) {
     Index index = builtIndex.getMainType().getIndex();
-    LOGGER.info(String.format("Create index [%s]", index.getName()));
+    LOGGER.info("Create index [{}]", index.getName());
     Settings.Builder settings = Settings.builder();
     settings.put(builtIndex.getSettings());
     if (useMetadata) {

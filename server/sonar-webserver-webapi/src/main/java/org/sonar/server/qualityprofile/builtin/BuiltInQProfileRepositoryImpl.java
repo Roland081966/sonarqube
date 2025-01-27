@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -107,7 +107,7 @@ public class BuiltInQProfileRepositoryImpl implements BuiltInQProfileRepository 
       .collect(Collectors.toSet());
 
     checkState(languagesWithoutBuiltInQProfiles.isEmpty(), "The following languages have no built-in quality profiles: %s",
-      String.join("", languagesWithoutBuiltInQProfiles));
+      languagesWithoutBuiltInQProfiles.isEmpty() ? "" : String.join("", languagesWithoutBuiltInQProfiles));
   }
 
   private Map<String, Map<String, BuiltInQualityProfile>> validateAndClean(BuiltInQualityProfilesDefinition.Context context) {

@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -53,6 +53,7 @@ import static org.assertj.core.api.Assertions.entry;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.sonar.server.newcodeperiod.ws.NewCodePeriodsWsUtils.DOCUMENTATION_LINK;
 
 public class UnsetActionIT {
   @Rule
@@ -68,8 +69,8 @@ public class UnsetActionIT {
   private WsActionTester ws;
 
   @Before
-  public void setup(){
-    when(documentationLinkGenerator.getDocumentationLink(any())).thenReturn("https://docs.sonarsource.com/someddoc");
+  public void setup() {
+    when(documentationLinkGenerator.getDocumentationLink(any())).thenReturn("https://docs.sonarsource.com/someddoc" + DOCUMENTATION_LINK);
     ws = new WsActionTester(new UnsetAction(dbClient, userSession, componentFinder, editionProvider, dao, documentationLinkGenerator));
   }
 
@@ -95,7 +96,7 @@ public class UnsetActionIT {
 
     TestRequest request = ws.newRequest()
       .setParam("branch", "branch");
-    assertThatThrownBy(() -> request.execute())
+    assertThatThrownBy(request::execute)
       .isInstanceOf(IllegalArgumentException.class)
       .hasMessageContaining("If branch key is specified, project key needs to be specified too");
   }
@@ -106,8 +107,8 @@ public class UnsetActionIT {
       .setParam("type", "previous_version")
       .setParam("project", "unknown")
       .execute())
-      .isInstanceOf(NotFoundException.class)
-      .hasMessageContaining("Project 'unknown' not found");
+        .isInstanceOf(NotFoundException.class)
+        .hasMessageContaining("Project 'unknown' not found");
   }
 
   @Test
@@ -120,8 +121,8 @@ public class UnsetActionIT {
       .setParam("type", "previous_version")
       .setParam("branch", "unknown")
       .execute())
-      .isInstanceOf(NotFoundException.class)
-      .hasMessageContaining("Branch 'unknown' in project '" + project.getKey() + "' not found");
+        .isInstanceOf(NotFoundException.class)
+        .hasMessageContaining("Branch 'unknown' in project '" + project.getKey() + "' not found");
   }
 
   // permission
@@ -133,8 +134,8 @@ public class UnsetActionIT {
       .setParam("project", project.getKey())
       .setParam("type", "previous_version")
       .execute())
-      .isInstanceOf(ForbiddenException.class)
-      .hasMessageContaining("Insufficient privileges");
+        .isInstanceOf(ForbiddenException.class)
+        .hasMessageContaining("Insufficient privileges");
   }
 
   @Test
@@ -142,8 +143,8 @@ public class UnsetActionIT {
     assertThatThrownBy(() -> ws.newRequest()
       .setParam("type", "previous_version")
       .execute())
-      .isInstanceOf(ForbiddenException.class)
-      .hasMessageContaining("Insufficient privileges");
+        .isInstanceOf(ForbiddenException.class)
+        .hasMessageContaining("Insufficient privileges");
   }
 
   // success cases
@@ -236,7 +237,7 @@ public class UnsetActionIT {
       .setParam("branch", "branch");
 
     logInAsProjectAdministrator(project);
-    assertThatThrownBy(() -> request.execute())
+    assertThatThrownBy(request::execute)
       .isInstanceOf(IllegalArgumentException.class)
       .hasMessageContaining("Failed to unset the New Code Definition. Your project " +
         "New Code Definition is not compatible with the Clean as You Code methodology. Please update your project New Code Definition");
@@ -255,7 +256,7 @@ public class UnsetActionIT {
       .setParam("branch", "branch");
 
     logInAsProjectAdministrator(project);
-    assertThatThrownBy(() -> request.execute())
+    assertThatThrownBy(request::execute)
       .isInstanceOf(IllegalArgumentException.class)
       .hasMessageContaining("Failed to unset the New Code Definition. Your instance " +
         "New Code Definition is not compatible with the Clean as You Code methodology. Please update your instance New Code Definition");
@@ -271,7 +272,7 @@ public class UnsetActionIT {
 
     TestRequest request = ws.newRequest()
       .setParam("project", project.getKey());
-    assertThatThrownBy(() -> request.execute())
+    assertThatThrownBy(request::execute)
       .isInstanceOf(IllegalArgumentException.class)
       .hasMessageContaining("Failed to unset the New Code Definition. Your instance " +
         "New Code Definition is not compatible with the Clean as You Code methodology. Please update your instance New Code Definition");

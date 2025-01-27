@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -19,10 +19,10 @@
  */
 package org.sonar.scanner.bootstrap;
 
+import jakarta.annotation.Priority;
 import java.time.Clock;
 import java.util.List;
 import java.util.Map;
-import javax.annotation.Priority;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -119,8 +119,7 @@ public class SpringGlobalContainer extends SpringComponentContainer {
       ScannerCoreExtensionsInstaller.class,
       DefaultGlobalSettingsLoader.class,
       DefaultNewCodePeriodLoader.class,
-      DefaultMetricsRepositoryLoader.class,
-      RuntimeJavaVersion.class);
+      DefaultMetricsRepositoryLoader.class);
   }
 
   @Override
@@ -140,10 +139,11 @@ public class SpringGlobalContainer extends SpringComponentContainer {
     if (!analysisMode.equals("publish")) {
       throw MessageException.of("The preview mode, along with the 'sonar.analysis.mode' parameter, is no more supported. You should stop using this parameter.");
     }
-    getComponentByType(RuntimeJavaVersion.class).checkJavaVersion();
     new SpringScannerContainer(this).execute();
 
-    LOG.info("Analysis total time: {}", formatTime(System.currentTimeMillis() - startTime));
+    if (LOG.isInfoEnabled()) {
+      LOG.info("Analysis total time: {}", formatTime(System.currentTimeMillis() - startTime));
+    }
   }
 
   private void installRequiredPlugins() {

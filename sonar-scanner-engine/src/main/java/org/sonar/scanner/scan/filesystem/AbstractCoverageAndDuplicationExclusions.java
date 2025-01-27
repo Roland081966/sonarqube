@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -84,7 +84,7 @@ public abstract class AbstractCoverageAndDuplicationExclusions {
   }
 
   private static void log(String title, Collection<WildcardPattern> patterns, String ident) {
-    if (!patterns.isEmpty()) {
+    if (!patterns.isEmpty() && LOG.isInfoEnabled()) {
       LOG.info("{}{} {}", ident, title, patterns.stream().map(WildcardPattern::toString).collect(Collectors.joining(", ")));
     }
   }

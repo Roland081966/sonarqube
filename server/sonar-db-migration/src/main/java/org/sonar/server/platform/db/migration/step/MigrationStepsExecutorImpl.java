@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -22,14 +22,13 @@ package org.sonar.server.platform.db.migration.step;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.sonar.api.platform.Server;
+import org.sonar.api.utils.System2;
 import org.sonar.core.platform.Container;
 import org.sonar.core.util.logs.Profiler;
+import org.sonar.server.platform.db.migration.DatabaseMigrationLoggerContext;
 import org.sonar.server.platform.db.migration.MutableDatabaseMigrationState;
 import org.sonar.server.platform.db.migration.history.MigrationHistory;
-import org.sonar.server.telemetry.TelemetryDbMigrationStepDurationProvider;
-import org.sonar.server.telemetry.TelemetryDbMigrationSuccessProvider;
-import org.sonar.server.telemetry.TelemetryDbMigrationStepsProvider;
-import org.sonar.server.telemetry.TelemetryDbMigrationTotalTimeProvider;
 
 import static com.google.common.base.Preconditions.checkState;
 
@@ -43,21 +42,18 @@ public class MigrationStepsExecutorImpl implements MigrationStepsExecutor {
   private final Container migrationContainer;
   private final MigrationHistory migrationHistory;
   private final MutableDatabaseMigrationState databaseMigrationState;
-  private final TelemetryDbMigrationTotalTimeProvider telemetryDbMigrationTotalTimeProvider;
-  private final TelemetryDbMigrationStepsProvider telemetryDbMigrationStepsProvider;
-  private final TelemetryDbMigrationSuccessProvider telemetryDbMigrationSuccessProvider;
-  private final TelemetryDbMigrationStepDurationProvider telemetryDbMigrationStepDurationProvider;
+  private final DatabaseMigrationLoggerContext databaseMigrationLoggerContext;
+  private final Server server;
+  private final System2 system2;
 
   public MigrationStepsExecutorImpl(Container migrationContainer, MigrationHistory migrationHistory, MutableDatabaseMigrationState databaseMigrationState,
-    TelemetryDbMigrationTotalTimeProvider telemetryDbMigrationTotalTimeProvider, TelemetryDbMigrationStepsProvider telemetryDbMigrationStepsProvider,
-    TelemetryDbMigrationSuccessProvider telemetryDbMigrationSuccessProvider, TelemetryDbMigrationStepDurationProvider stepDurationProvider) {
+    DatabaseMigrationLoggerContext databaseMigrationLoggerContext, Server server, System2 system2) {
     this.migrationContainer = migrationContainer;
     this.migrationHistory = migrationHistory;
     this.databaseMigrationState = databaseMigrationState;
-    this.telemetryDbMigrationTotalTimeProvider = telemetryDbMigrationTotalTimeProvider;
-    this.telemetryDbMigrationStepsProvider = telemetryDbMigrationStepsProvider;
-    this.telemetryDbMigrationSuccessProvider = telemetryDbMigrationSuccessProvider;
-    this.telemetryDbMigrationStepDurationProvider = stepDurationProvider;
+    this.databaseMigrationLoggerContext = databaseMigrationLoggerContext;
+    this.server = server;
+    this.system2 = system2;
   }
 
   @Override
@@ -72,21 +68,17 @@ public class MigrationStepsExecutorImpl implements MigrationStepsExecutor {
       }
       allStepsExecuted = true;
     } finally {
-      long dbMigrationDuration = 0L;
       if (allStepsExecuted) {
-        dbMigrationDuration = globalProfiler.stopInfo(GLOBAL_END_MESSAGE,
+        globalProfiler.stopInfo(GLOBAL_END_MESSAGE,
           databaseMigrationState.getCompletedMigrations(),
           databaseMigrationState.getTotalMigrations(),
           "success");
       } else {
-        dbMigrationDuration = globalProfiler.stopError(GLOBAL_END_MESSAGE,
+        globalProfiler.stopError(GLOBAL_END_MESSAGE,
           databaseMigrationState.getCompletedMigrations(),
           databaseMigrationState.getTotalMigrations(),
           "failure");
       }
-      telemetryDbMigrationTotalTimeProvider.setDbMigrationTotalTime(dbMigrationDuration);
-      telemetryDbMigrationStepsProvider.setDbMigrationCompletedSteps(databaseMigrationState.getCompletedMigrations());
-      telemetryDbMigrationSuccessProvider.setDbMigrationSuccess(allStepsExecuted);
     }
   }
 
@@ -104,6 +96,7 @@ public class MigrationStepsExecutorImpl implements MigrationStepsExecutor {
       databaseMigrationState.getTotalMigrations(),
       step);
     boolean done = false;
+    long timeStarted = system2.now();
     try {
       migrationStep.execute();
       migrationHistory.done(step);
@@ -111,13 +104,13 @@ public class MigrationStepsExecutorImpl implements MigrationStepsExecutor {
     } catch (Exception e) {
       throw new MigrationStepExecutionException(step, e);
     } finally {
+      long durationInMiliseconds = 0L;
       if (done) {
-        long durationInMiliseconds = stepProfiler.stopInfo(STEP_STOP_PATTERN,
+        durationInMiliseconds = stepProfiler.stopInfo(STEP_STOP_PATTERN,
           databaseMigrationState.getCompletedMigrations() + 1,
           databaseMigrationState.getTotalMigrations(),
           step,
           "success");
-        telemetryDbMigrationStepDurationProvider.addCompletedStep(step.getMigrationNumber(), durationInMiliseconds);
       } else {
         stepProfiler.stopError(STEP_STOP_PATTERN,
           databaseMigrationState.getCompletedMigrations() + 1,
@@ -125,6 +118,14 @@ public class MigrationStepsExecutorImpl implements MigrationStepsExecutor {
           step,
           "failure");
       }
+
+      databaseMigrationLoggerContext.addMigrationData(
+        String.valueOf(step.getMigrationNumber()),
+        durationInMiliseconds,
+        done,
+        timeStarted,
+        server.getVersion()
+      );
     }
   }
 }

@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -68,6 +68,7 @@ public final class SqTables {
     "issue_changes",
     "measures",
     "metrics",
+    "migration_logs",
     "new_code_periods",
     "new_code_reference_issues",
     "notifications",
@@ -118,6 +119,7 @@ public final class SqTables {
     "snapshots",
     "telemetry_metrics_sent",
     "users",
+    "user_ai_tool_usages",
     "user_dismissed_messages",
     "user_roles",
     "user_tokens",

@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -24,7 +24,7 @@ import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.mockito.Mockito;
-import org.sonar.auth.github.client.GithubApplicationClient;
+import org.sonar.auth.github.GithubApplicationClient;
 import org.sonar.alm.client.github.GithubApplicationClientImpl;
 import org.sonar.auth.github.security.UserAccessToken;
 import org.sonar.api.config.internal.Encryption;

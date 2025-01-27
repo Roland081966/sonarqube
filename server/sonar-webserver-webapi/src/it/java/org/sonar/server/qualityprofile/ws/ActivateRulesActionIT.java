@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -18,7 +18,6 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 package org.sonar.server.qualityprofile.ws;
-
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -97,7 +96,8 @@ class ActivateRulesActionIT {
       "sonarsourceSecurity",
       "cleanCodeAttributeCategories",
       "impactSoftwareQualities",
-      "impactSeverities");
+      "impactSeverities",
+      "active_impactSeverities");
   }
 
   @Test
@@ -135,7 +135,7 @@ class ActivateRulesActionIT {
       .setMethod("POST")
       .setParam(PARAM_TARGET_KEY, secure().nextAlphanumeric(UUID_SIZE));
 
-    assertThatThrownBy(() -> request.execute())
+    assertThatThrownBy(request::execute)
       .isInstanceOf(UnauthorizedException.class);
   }
 
@@ -147,7 +147,7 @@ class ActivateRulesActionIT {
       .setMethod("POST")
       .setParam(PARAM_TARGET_KEY, qualityProfile.getKee());
 
-    assertThatThrownBy(() -> request.execute())
+    assertThatThrownBy(request::execute)
       .isInstanceOf(BadRequestException.class);
   }
 

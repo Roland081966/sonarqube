@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -43,7 +43,7 @@ public class UserDto implements UserId {
   private String externalIdentityProvider;
   // Hashed password that may be null in case of external authentication
   private String cryptedPassword;
-  // Salt used for PBKDF2, null when bcrypt is used or for external authentication
+  // Null for external authentication
   private String salt;
   // Hash method used to generate cryptedPassword, my be null in case of external authentication
   private String hashMethod;

@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -23,8 +23,8 @@ import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
 import javax.annotation.Nullable;
-import javax.validation.constraints.Email;
-import javax.validation.constraints.Size;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.Size;
 import org.sonar.server.v2.common.model.UpdateField;
 
 public class UserUpdateRestRequest {
@@ -35,6 +35,7 @@ public class UserUpdateRestRequest {
   private UpdateField<List<String>> scmAccounts = UpdateField.undefined();
   private UpdateField<String> externalProvider = UpdateField.undefined();
   private UpdateField<String> externalLogin = UpdateField.undefined();
+  private UpdateField<String> externalId = UpdateField.undefined();
 
   @Size(min = 2, max = 100)
   @Schema(description = "User login")
@@ -90,12 +91,22 @@ public class UserUpdateRestRequest {
   }
 
   @Size(min = 1, max = 255)
-  @Schema(implementation = String.class, description = "New external login, usually the login used in the authentication system. If not provided previous identity will be used.")
+  @Schema(implementation = String.class, description = "New external login, usually the login used in the authentication system.")
   public UpdateField<String> getExternalLogin() {
     return externalLogin;
   }
 
   public void setExternalLogin(@Nullable String externalLogin) {
     this.externalLogin = UpdateField.withValue(externalLogin);
+  }
+
+  @Size(min = 1, max = 255)
+  @Schema(implementation = String.class, description = "New external id in the authentication system.")
+  public UpdateField<String> getExternalId() {
+    return externalId;
+  }
+
+  public void setExternalId(@Nullable String externalId) {
+    this.externalId = UpdateField.withValue(externalId);
   }
 }

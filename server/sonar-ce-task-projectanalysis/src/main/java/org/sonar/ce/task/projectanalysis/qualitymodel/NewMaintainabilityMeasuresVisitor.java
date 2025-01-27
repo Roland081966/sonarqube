@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -163,7 +163,7 @@ public class NewMaintainabilityMeasuresVisitor extends PathAwareVisitorAdapter<N
     Optional<Set<Integer>> changedLines = newLinesRepository.getNewLines(file);
 
     if (!changedLines.isPresent()) {
-      LOG.trace(String.format("No information about changed lines is available for file '%s'. Dev cost will be zero.", file.getKey()));
+      LOG.trace("No information about changed lines is available for file '{}'. Dev cost will be zero.", file.getKey());
       return;
     }
 

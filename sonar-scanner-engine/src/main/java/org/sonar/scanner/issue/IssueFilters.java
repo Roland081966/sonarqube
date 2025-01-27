@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -41,11 +41,11 @@ public class IssueFilters {
     this.project = project;
   }
 
-  public boolean accept(InputComponent component, ScannerReport.Issue rawIssue) {
+  public boolean accept(InputComponent component, ScannerReport.Issue rawIssue, String severity) {
     if (filterChain == null) {
       throw new IllegalStateException("Issue filters must be registered before this class can be used");
     }
-    FilterableIssue fIssue = new DefaultFilterableIssue(project, rawIssue, component);
+    FilterableIssue fIssue = new DefaultFilterableIssue(project, rawIssue, severity, component);
     return filterChain.accept(fIssue);
   }
 

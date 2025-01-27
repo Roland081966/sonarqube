@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -21,7 +21,7 @@ package org.sonarqube.ws.client.issues;
 
 import java.io.InputStream;
 import java.util.stream.Collectors;
-import javax.annotation.Generated;
+import jakarta.annotation.Generated;
 import org.sonarqube.ws.Issues.AddCommentResponse;
 import org.sonarqube.ws.Issues.AssignResponse;
 import org.sonarqube.ws.Issues.AuthorsResponse;

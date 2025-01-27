@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -241,7 +241,7 @@ public class BulkIndexer {
 
     @Override
     public void afterBulk(long executionId, BulkRequest request, Throwable e) {
-      LOGGER.error("Fail to execute bulk index request: " + request, e);
+      LOGGER.error("Fail to execute bulk index request: {}", request, e);
       stopProfiler(request);
     }
 

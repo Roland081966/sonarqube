@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -59,7 +59,7 @@ import org.sonar.core.metric.SoftwareQualitiesMetrics;
 import org.sonar.core.platform.PlatformEditionProvider;
 import org.sonar.core.platform.SpringComponentContainer;
 import org.sonar.server.ai.code.assurance.AiCodeAssuranceEntitlement;
-import org.sonar.server.ai.code.assurance.AiCodeAssuranceVerifier;
+import org.sonar.server.ai.code.assurance.NoOpAiCodeAssuranceVerifier;
 import org.sonar.server.almintegration.ws.AlmIntegrationsWSModule;
 import org.sonar.server.almintegration.ws.CredentialsEncoderHelper;
 import org.sonar.server.almintegration.ws.ImportHelper;
@@ -142,8 +142,10 @@ import org.sonar.server.issue.RemoveTagsAction;
 import org.sonar.server.issue.SetSeverityAction;
 import org.sonar.server.issue.SetTypeAction;
 import org.sonar.server.issue.TransitionAction;
+import org.sonar.server.issue.index.AsyncIssueIndexCreationTelemetry;
 import org.sonar.server.issue.index.AsyncIssueIndexingImpl;
 import org.sonar.server.issue.index.IssueIndexDefinition;
+import org.sonar.server.issue.index.IssueIndexMonitoringScheduler;
 import org.sonar.server.issue.index.IssueIndexer;
 import org.sonar.server.issue.index.IssueIteratorFactory;
 import org.sonar.server.issue.notification.IssuesChangesNotificationModule;
@@ -182,6 +184,7 @@ import org.sonar.server.notification.NotificationModule;
 import org.sonar.server.notification.email.telemetry.EmailConfigAuthMethodTelemetryProvider;
 import org.sonar.server.notification.email.telemetry.EmailConfigHostTelemetryProvider;
 import org.sonar.server.notification.email.telemetry.TelemetryApplicationSubscriptionsProvider;
+import org.sonar.server.notification.email.telemetry.TelemetryApplicationsCountProvider;
 import org.sonar.server.notification.email.telemetry.TelemetryPortfolioSubscriptionsProvider;
 import org.sonar.server.notification.email.telemetry.TelemetryProjectSubscriptionsProvider;
 import org.sonar.server.notification.ws.NotificationWsModule;
@@ -192,9 +195,13 @@ import org.sonar.server.platform.PersistentSettings;
 import org.sonar.server.platform.SystemInfoWriterModule;
 import org.sonar.server.platform.WebCoreExtensionsInstaller;
 import org.sonar.server.platform.db.CheckAnyonePermissionsAtStartup;
+import org.sonar.server.platform.db.migration.DatabaseMigrationPersister;
+import org.sonar.server.platform.db.migration.DatabaseMigrationTelemetry;
 import org.sonar.server.platform.telemetry.TelemetryFipsEnabledProvider;
 import org.sonar.server.platform.telemetry.TelemetryMQRModePropertyProvider;
 import org.sonar.server.platform.telemetry.TelemetryNclocProvider;
+import org.sonar.server.platform.telemetry.TelemetryPortfolioSelectionModeProvider;
+import org.sonar.server.platform.telemetry.TelemetrySubportfolioSelectionModeProvider;
 import org.sonar.server.platform.telemetry.TelemetryUserEnabledProvider;
 import org.sonar.server.platform.telemetry.TelemetryVersionProvider;
 import org.sonar.server.platform.web.ActionDeprecationLoggerInterceptor;
@@ -345,7 +352,7 @@ public class PlatformLevel4 extends PlatformLevel {
       DelegatingDevOpsProjectCreatorFactory.class,
 
       // ai code assurance
-      AiCodeAssuranceVerifier.class,
+      NoOpAiCodeAssuranceVerifier.class,
       AiCodeAssuranceEntitlement.class,
 
       // batch
@@ -493,6 +500,8 @@ public class PlatformLevel4 extends PlatformLevel {
       // issues
       IssueIndexDefinition.class,
       AsyncIssueIndexingImpl.class,
+      IssueIndexMonitoringScheduler.class,
+      AsyncIssueIndexCreationTelemetry.class,
       IssueIndexer.class,
       IssueIteratorFactory.class,
       PermissionIndexer.class,
@@ -682,6 +691,9 @@ public class PlatformLevel4 extends PlatformLevel {
       TelemetryNclocProvider.class,
       TelemetryUserEnabledProvider.class,
       TelemetryFipsEnabledProvider.class,
+      TelemetrySubportfolioSelectionModeProvider.class,
+      TelemetryPortfolioSelectionModeProvider.class,
+      TelemetryApplicationsCountProvider.class,
 
       // Reports telemetry
       TelemetryApplicationSubscriptionsProvider.class,
@@ -697,6 +709,10 @@ public class PlatformLevel4 extends PlatformLevel {
       CloudUsageDataProvider.class,
       QualityProfileDataProvider.class,
       ProjectLocDistributionDataProvider.class,
+
+      // database migration logging and telemetry
+      DatabaseMigrationPersister.class,
+      DatabaseMigrationTelemetry.class,
 
       // monitoring
       ServerMonitoringMetrics.class,

@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -22,7 +22,7 @@ package org.sonar.server.v2.api.gitlab.config.request;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
-import javax.validation.constraints.Size;
+import jakarta.validation.constraints.Size;
 import org.sonar.server.v2.api.model.ProvisioningType;
 import org.sonar.server.v2.common.model.UpdateField;
 

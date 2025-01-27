@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -22,13 +22,13 @@ package org.sonar.server.v2.api.membership.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.enums.ParameterIn;
-import javax.validation.Valid;
+import jakarta.validation.Valid;
 import org.sonar.server.v2.api.membership.request.GroupMembershipCreateRestRequest;
 import org.sonar.server.v2.api.membership.request.GroupsMembershipSearchRestRequest;
 import org.sonar.server.v2.api.membership.response.GroupsMembershipSearchRestResponse;
 import org.sonar.server.v2.api.membership.response.GroupMembershipRestResponse;
 import org.sonar.server.v2.api.model.RestPage;
-import org.springdoc.api.annotations.ParameterObject;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.DeleteMapping;

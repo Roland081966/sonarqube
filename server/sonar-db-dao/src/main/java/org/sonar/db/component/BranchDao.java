@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -205,5 +205,13 @@ public class BranchDao implements Dao {
   public List<BranchMeasuresDto> selectBranchMeasuresWithCaycMetric(DbSession dbSession) {
     long yesterday = ZonedDateTime.now(ZoneId.systemDefault()).minusDays(1).toInstant().toEpochMilli();
     return mapper(dbSession).selectBranchMeasuresWithCaycMetric(yesterday);
+  }
+
+  public List<BranchDto> selectMainBranches(DbSession dbSession) {
+    return mapper(dbSession).selectMainBranches();
+  }
+
+  public List<BranchDto> selectMainBranchesAssociatedToDefaultQualityProfile(DbSession dbSession) {
+    return mapper(dbSession).selectMainBranchesAssociatedToDefaultQualityProfile();
   }
 }

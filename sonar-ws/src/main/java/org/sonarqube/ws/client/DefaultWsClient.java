@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -19,7 +19,7 @@
  */
 package org.sonarqube.ws.client;
 
-import javax.annotation.Generated;
+import jakarta.annotation.Generated;
 import org.sonarqube.ws.client.almintegrations.AlmIntegrationsService;
 import org.sonarqube.ws.client.almsettings.AlmSettingsService;
 import org.sonarqube.ws.client.analysiscache.AnalysisCacheService;
@@ -223,7 +223,6 @@ class DefaultWsClient implements WsClient {
   }
 
   @Override
-  @Deprecated
   public WsConnector wsConnector() {
     return wsConnector;
   }

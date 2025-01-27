@@ -1,6 +1,6 @@
 /*
  * SonarQube
- * Copyright (C) 2009-2024 SonarSource SA
+ * Copyright (C) 2009-2025 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -69,7 +69,7 @@ class SafeModeHealthActionTest {
     when(systemPasscode.isValid(any())).thenReturn(false);
     TestRequest request = underTest.newRequest();
 
-    expectForbiddenException(() -> request.execute());
+    expectForbiddenException(request::execute);
   }
 
   @ParameterizedTest

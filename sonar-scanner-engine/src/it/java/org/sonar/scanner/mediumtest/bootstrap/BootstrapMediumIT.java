@@ -144,13 +144,13 @@ class BootstrapMediumIT {
   @Test
   void should_complete_successfully(@TempDir Path baseDir) {
 
+    String dir = baseDir.toString().replace("\\", "/");
+
     String arguments = "{\"scannerProperties\": ["
             + "{\"key\": \"sonar.host.url\", \"value\": \"" + sonarqube.baseUrl() + "\"},"
             + "{\"key\": \"sonar.projectKey\", \"value\": \"" + PROJECT_KEY + "\"},"
-            + "{\"key\": \"sonar.projectBaseDir\", \"value\": \"" + baseDir + "\"}"
+            + "{\"key\": \"sonar.projectBaseDir\", \"value\": \"" + dir + "\"}"
             + "]}";
-
-    arguments = arguments.replace("\\", "\\\\");
 
     var exitCode = ScannerMain.run(new ByteArrayInputStream((arguments).getBytes()));
 
@@ -161,12 +161,12 @@ class BootstrapMediumIT {
   @Test
   void should_unwrap_message_exception_without_stacktrace(@TempDir Path baseDir) {
 
+    String dir = baseDir.toString().replace("\\", "/");
+
     String arguments = "{\"scannerProperties\": ["
             + "{\"key\": \"sonar.host.url\", \"value\": \"" + sonarqube.baseUrl() + "\"},"
-            + "{\"key\": \"sonar.projectBaseDir\", \"value\": \"" + baseDir + "\"}"
+            + "{\"key\": \"sonar.projectBaseDir\", \"value\": \"" + dir + "\"}"
             + "]}";
-
-    arguments = arguments.replace("\\", "\\\\");
 
     var exitCode = ScannerMain.run(new ByteArrayInputStream((arguments).getBytes()));
 
@@ -179,13 +179,13 @@ class BootstrapMediumIT {
   @Test
   void should_show_message_exception_stacktrace_in_debug(@TempDir Path baseDir) {
 
+    String dir = baseDir.toString().replace("\\", "/");
+
     String arguments = "{\"scannerProperties\": ["
             + "{\"key\": \"sonar.host.url\", \"value\": \"" + sonarqube.baseUrl() + "\"},"
-            + "{\"key\": \"sonar.projectBaseDir\", \"value\": \"" + baseDir + "\"},"
+            + "{\"key\": \"sonar.projectBaseDir\", \"value\": \"" + dir + "\"},"
             + "{\"key\": \"sonar.verbose\", \"value\": \"true\"}"
             + "]}";
-
-    arguments = arguments.replace("\\", "\\\\");
 
     var exitCode = ScannerMain.run(new ByteArrayInputStream((arguments).getBytes()));
 
@@ -198,13 +198,13 @@ class BootstrapMediumIT {
   @Test
   void should_enable_verbose(@TempDir Path baseDir) {
 
+    String dir = baseDir.toString().replace("\\", "/");
+
     String arguments = "{\"scannerProperties\": ["
             + "{\"key\": \"sonar.host.url\", \"value\": \"" + sonarqube.baseUrl() + "\"},"
             + "{\"key\": \"sonar.projectKey\", \"value\": \"" + PROJECT_KEY + "\"},"
-            + "{\"key\": \"sonar.projectBaseDir\", \"value\": \"" + baseDir + "\"}"
+            + "{\"key\": \"sonar.projectBaseDir\", \"value\": \"" + dir + "\"}"
             + "]}";
-
-    arguments = arguments.replace("\\", "\\\\");
 
     ScannerMain.run(new ByteArrayInputStream((arguments).getBytes()));
 
@@ -213,7 +213,7 @@ class BootstrapMediumIT {
     arguments = "{\"scannerProperties\": ["
             + "{\"key\": \"sonar.host.url\", \"value\": \"" + sonarqube.baseUrl() + "\"},"
             + "{\"key\": \"sonar.projectKey\", \"value\": \"" + PROJECT_KEY + "\"},"
-            + "{\"key\": \"sonar.projectBaseDir\", \"value\": \"" + baseDir + "\"},"
+            + "{\"key\": \"sonar.projectBaseDir\", \"value\": \"" + dir + "\"},"
             + "{\"key\": \"sonar.verbose\", \"value\": \"true\"}"
             + "]}";
 

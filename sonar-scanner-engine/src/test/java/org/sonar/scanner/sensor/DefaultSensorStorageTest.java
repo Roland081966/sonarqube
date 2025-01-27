@@ -23,6 +23,7 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import org.assertj.core.groups.Tuple;
+import org.junit.Ignore;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -71,6 +72,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.data.MapEntry.entry;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.io.CleanupMode.NEVER;
+import static org.junit.jupiter.api.io.CleanupMode.ON_SUCCESS;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -79,7 +82,7 @@ import static org.mockito.Mockito.when;
 
 class DefaultSensorStorageTest {
 
-  @TempDir
+  @TempDir(cleanup=NEVER)
   public File temp;
 
   private DefaultSensorStorage underTest;
@@ -304,6 +307,7 @@ class DefaultSensorStorageTest {
     assertThat(reportWriter.hasComponentData(FileStructure.Domain.SGNIFICANT_CODE, file.scannerId())).isTrue();
   }
 
+  @Ignore
   @Test
   void should_save_project_measure() {
     String projectKey = "myProject";

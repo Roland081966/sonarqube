@@ -56,7 +56,7 @@ public class ScannerProperties {
               .category(CoreProperties.CATEGORY_SCM)
               .subCategory("Git")
               .type(BOOLEAN)
-              .onQualifiers(Qualifiers.PROJECT, Qualifiers.APP)
+              .onConfigScopes(ConfigScope.PROJECT, ConfigScope.APP)
               .defaultValue("false")
               .build(),
       PropertyDefinition.builder(CoreProperties.SCM_DISABLED_KEY)

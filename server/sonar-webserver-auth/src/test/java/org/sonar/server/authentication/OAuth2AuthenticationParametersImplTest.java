@@ -183,7 +183,8 @@ public class OAuth2AuthenticationParametersImplTest {
 
   private JakartaHttpRequest.JakartaCookie wrapCookie(String name, String value) {
     return new JakartaHttpRequest.JakartaCookie(new jakarta.servlet.http.Cookie(name, value));
-  private Optional<String> getRequestResult() {
+  }
+  private Optional<String> getRequestResult () {
 
     Optional<String> requestResult = underTest.getReturnTo(request);
     if (requestResult.isPresent()) {
@@ -196,8 +197,5 @@ public class OAuth2AuthenticationParametersImplTest {
 
     return requestResult;
   }
-
-  private JavaxHttpRequest.JavaxCookie wrapCookie(String name, String value) {
-    return new JavaxHttpRequest.JavaxCookie(new javax.servlet.http.Cookie(name, value));
-  }
 }
+

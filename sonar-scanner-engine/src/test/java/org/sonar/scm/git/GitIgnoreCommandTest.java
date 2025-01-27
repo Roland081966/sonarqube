@@ -36,6 +36,7 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.sonar.api.config.Configuration;
 import org.sonar.api.testfixtures.log.LogTester;
+import org.slf4j.event.Level;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.nio.file.StandardOpenOption.CREATE;
@@ -92,7 +93,7 @@ public class GitIgnoreCommandTest {
         .isFalse();
 
     int expectedIncludedFiles = (int) Math.pow(child_folders_per_folder, folder_depth) + 1; // The .gitignore file is indexed
-    assertThat(logTester.logs(LoggerLevel.DEBUG)).contains(expectedIncludedFiles + " non excluded files in this Git repository");
+    assertThat(logTester.logs(Level.DEBUG)).contains(expectedIncludedFiles + " non excluded files in this Git repository");
   }
 
   @Test
@@ -121,7 +122,7 @@ public class GitIgnoreCommandTest {
     assertThat(underTest.isIgnored(projectDir.resolve("module1/folder_0_0/Foo.php"))).isFalse();
 
     int expectedIncludedFiles = 6;
-    assertThat(logTester.logs(LoggerLevel.DEBUG)).contains(expectedIncludedFiles + " non excluded files in this Git repository");
+    assertThat(logTester.logs(Level.DEBUG)).contains(expectedIncludedFiles + " non excluded files in this Git repository");
   }
 
   @Test
@@ -149,7 +150,7 @@ public class GitIgnoreCommandTest {
 //    assertThat(logTester.logs(LoggerLevel.DEBUG)).contains("Git submodule [module1] found, but has not been cloned, skipping.");
 
     int expectedIncludedFiles = 3;
-    assertThat(logTester.logs(LoggerLevel.DEBUG)).contains(expectedIncludedFiles + " non excluded files in this Git repository");
+    assertThat(logTester.logs(Level.DEBUG)).contains(expectedIncludedFiles + " non excluded files in this Git repository");
   }
 
   @Test
@@ -175,7 +176,7 @@ public class GitIgnoreCommandTest {
         .isTrue();
 
     int expectedIncludedFiles = (int) Math.pow(child_folders_per_folder, folder_depth - 1);
-    assertThat(logTester.logs(LoggerLevel.DEBUG)).contains(expectedIncludedFiles + " non excluded files in this Git repository");
+    assertThat(logTester.logs(Level.DEBUG)).contains(expectedIncludedFiles + " non excluded files in this Git repository");
   }
 
   @Test
@@ -228,7 +229,7 @@ public class GitIgnoreCommandTest {
     GitIgnoreCommand gitIgnoreCommand = new GitIgnoreCommand(configuration);
     gitIgnoreCommand.init(baseDir.toPath());
     assertThat(gitIgnoreCommand.isIgnored(subModuleFile.toPath())).isTrue();
-    assertThat(logTester.logs(LoggerLevel.INFO)).contains("Submodule lib given, failed to get submodule repository, is it not checked out?");
+    assertThat(logTester.logs(Level.INFO)).contains("Submodule lib given, failed to get submodule repository, is it not checked out?");
   }
 
   @Test(expected = NullPointerException.class)

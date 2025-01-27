@@ -19,21 +19,22 @@
  */
 package org.sonar.scanner.mediumtest.bootstrap;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
 import java.io.ByteArrayInputStream;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.api.io.TempDir;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
 import org.slf4j.event.Level;
 import org.sonar.api.testfixtures.log.LogTesterJUnit5;
 import org.sonar.scanner.bootstrap.ScannerMain;
 import org.sonarqube.ws.Ce;
 import org.sonarqube.ws.Qualityprofiles;
-import org.sonarqube.ws.Rules;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
@@ -41,6 +42,11 @@ import static com.github.tomakehurst.wiremock.client.WireMock.okJson;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.fail;
+import static org.sonar.scanner.mediumtest.bootstrap.BootstrapMediumIT.ScannerProperties.SONAR_HOST_URL;
+import static org.sonar.scanner.mediumtest.bootstrap.BootstrapMediumIT.ScannerProperties.SONAR_PROJECT_BASE_DIR;
+import static org.sonar.scanner.mediumtest.bootstrap.BootstrapMediumIT.ScannerProperties.SONAR_PROJECT_KEY;
+import static org.sonar.scanner.mediumtest.bootstrap.BootstrapMediumIT.ScannerProperties.SONAR_VERBOSE;
 import static testutils.TestUtils.protobufBody;
 
 class BootstrapMediumIT {
@@ -74,10 +80,10 @@ class BootstrapMediumIT {
             .build())
           .build()))));
 
-    sonarqube.stubFor(get("/api/rules/list.protobuf?qprofile=" + QPROFILE_KEY + "&ps=500&p=1")
-      .willReturn(aResponse()
-        .withResponseBody(protobufBody(Rules.ListResponse.newBuilder()
-          .build()))));
+    sonarqube.stubFor(get("/api/v2/analysis/active_rules?projectKey=" + PROJECT_KEY)
+      .willReturn(okJson("""
+        []
+        """)));
 
     sonarqube.stubFor(get("/api/languages/list")
       .willReturn(okJson("""
@@ -119,15 +125,31 @@ class BootstrapMediumIT {
     ScannerMain.run(new ByteArrayInputStream("""
       {"scannerProperties": [{"value": "aValueWithoutKey"}]}""".getBytes()));
 
-    assertThat(logTester.logs(Level.WARN)).contains("Ignoring property with null key: 'aValueWithoutKey'");
+    assertThat(logTester.logs(Level.WARN)).contains("Ignoring property with null key. Value='aValueWithoutKey'");
+  }
+
+  @Test
+  void should_warn_if_null_property_value() {
+    ScannerMain.run(new ByteArrayInputStream("""
+      {"scannerProperties": [{"key": "aKey", "value": null}]}""".getBytes()));
+
+    assertThat(logTester.logs(Level.WARN)).contains("Ignoring property with null value. Key='aKey'");
+  }
+
+  @Test
+  void should_warn_if_not_provided_property_value() {
+    ScannerMain.run(new ByteArrayInputStream("""
+      {"scannerProperties": [{"key": "aKey"}]}""".getBytes()));
+
+    assertThat(logTester.logs(Level.WARN)).contains("Ignoring property with null value. Key='aKey'");
   }
 
   @Test
   void should_warn_if_duplicate_property_keys() {
     ScannerMain.run(new ByteArrayInputStream("""
-      {"scannerProperties": [{"key": "aKey"}, {"key": "aKey"}]}""".getBytes()));
+      {"scannerProperties": [{"key": "aKey", "value": "aValue"}, {"key": "aKey", "value": "aValue"}]}""".getBytes()));
 
-    assertThat(logTester.logs(Level.WARN)).contains("Duplicated properties with key: 'aKey'");
+    assertThat(logTester.logs(Level.WARN)).contains("Duplicated properties. Key='aKey'");
   }
 
   @Test
@@ -135,7 +157,15 @@ class BootstrapMediumIT {
     ScannerMain.run(new ByteArrayInputStream("""
       {"scannerProperties": [{"key": "aKey", "value": "aValue"},]}""".getBytes()));
 
-    assertThat(logTester.logs(Level.WARN)).contains("Ignoring null property");
+    assertThat(logTester.logs(Level.WARN)).contains("Ignoring null or empty property");
+  }
+
+  @Test
+  void should_warn_if_empty_property() {
+    ScannerMain.run(new ByteArrayInputStream("""
+      {"scannerProperties": [{}]}""".getBytes()));
+
+    assertThat(logTester.logs(Level.WARN)).contains("Ignoring null or empty property");
   }
 
   /**
@@ -143,16 +173,10 @@ class BootstrapMediumIT {
    */
   @Test
   void should_complete_successfully(@TempDir Path baseDir) {
-
-    String dir = baseDir.toString().replace("\\", "/");
-
-    String arguments = "{\"scannerProperties\": ["
-            + "{\"key\": \"sonar.host.url\", \"value\": \"" + sonarqube.baseUrl() + "\"},"
-            + "{\"key\": \"sonar.projectKey\", \"value\": \"" + PROJECT_KEY + "\"},"
-            + "{\"key\": \"sonar.projectBaseDir\", \"value\": \"" + dir + "\"}"
-            + "]}";
-
-    var exitCode = ScannerMain.run(new ByteArrayInputStream((arguments).getBytes()));
+    var exitCode = runScannerEngine(new ScannerProperties()
+      .addProperty(SONAR_HOST_URL, sonarqube.baseUrl())
+      .addProperty(SONAR_PROJECT_KEY, PROJECT_KEY)
+      .addProperty(SONAR_PROJECT_BASE_DIR, baseDir.toString()));
 
     assertThat(exitCode).isZero();
     assertThat(logTester.logs()).contains("SonarScanner Engine completed successfully");
@@ -160,15 +184,9 @@ class BootstrapMediumIT {
 
   @Test
   void should_unwrap_message_exception_without_stacktrace(@TempDir Path baseDir) {
-
-    String dir = baseDir.toString().replace("\\", "/");
-
-    String arguments = "{\"scannerProperties\": ["
-            + "{\"key\": \"sonar.host.url\", \"value\": \"" + sonarqube.baseUrl() + "\"},"
-            + "{\"key\": \"sonar.projectBaseDir\", \"value\": \"" + dir + "\"}"
-            + "]}";
-
-    var exitCode = ScannerMain.run(new ByteArrayInputStream((arguments).getBytes()));
+    int exitCode = runScannerEngine(new ScannerProperties()
+      .addProperty(SONAR_HOST_URL, sonarqube.baseUrl())
+      .addProperty(SONAR_PROJECT_BASE_DIR, baseDir.toString()));
 
     assertThat(exitCode).isEqualTo(1);
     assertThat(logTester.getLogs(Level.ERROR)).hasSize(1);
@@ -178,16 +196,10 @@ class BootstrapMediumIT {
 
   @Test
   void should_show_message_exception_stacktrace_in_debug(@TempDir Path baseDir) {
-
-    String dir = baseDir.toString().replace("\\", "/");
-
-    String arguments = "{\"scannerProperties\": ["
-            + "{\"key\": \"sonar.host.url\", \"value\": \"" + sonarqube.baseUrl() + "\"},"
-            + "{\"key\": \"sonar.projectBaseDir\", \"value\": \"" + dir + "\"},"
-            + "{\"key\": \"sonar.verbose\", \"value\": \"true\"}"
-            + "]}";
-
-    var exitCode = ScannerMain.run(new ByteArrayInputStream((arguments).getBytes()));
+    int exitCode = runScannerEngine(new ScannerProperties()
+      .addProperty(SONAR_HOST_URL, sonarqube.baseUrl())
+      .addProperty(SONAR_PROJECT_BASE_DIR, baseDir.toString())
+      .addProperty(SONAR_VERBOSE, "true"));
 
     assertThat(exitCode).isEqualTo(1);
     assertThat(logTester.getLogs(Level.ERROR)).hasSize(1);
@@ -197,30 +209,49 @@ class BootstrapMediumIT {
 
   @Test
   void should_enable_verbose(@TempDir Path baseDir) {
-
-    String dir = baseDir.toString().replace("\\", "/");
-
-    String arguments = "{\"scannerProperties\": ["
-            + "{\"key\": \"sonar.host.url\", \"value\": \"" + sonarqube.baseUrl() + "\"},"
-            + "{\"key\": \"sonar.projectKey\", \"value\": \"" + PROJECT_KEY + "\"},"
-            + "{\"key\": \"sonar.projectBaseDir\", \"value\": \"" + dir + "\"}"
-            + "]}";
-
-    ScannerMain.run(new ByteArrayInputStream((arguments).getBytes()));
+    var properties = new ScannerProperties()
+      .addProperty(SONAR_HOST_URL, sonarqube.baseUrl())
+      .addProperty(SONAR_PROJECT_KEY, PROJECT_KEY)
+      .addProperty(SONAR_PROJECT_BASE_DIR, baseDir.toString());
+    runScannerEngine(properties);
 
     assertThat(logTester.logs(Level.DEBUG)).isEmpty();
 
-    arguments = "{\"scannerProperties\": ["
-            + "{\"key\": \"sonar.host.url\", \"value\": \"" + sonarqube.baseUrl() + "\"},"
-            + "{\"key\": \"sonar.projectKey\", \"value\": \"" + PROJECT_KEY + "\"},"
-            + "{\"key\": \"sonar.projectBaseDir\", \"value\": \"" + dir + "\"},"
-            + "{\"key\": \"sonar.verbose\", \"value\": \"true\"}"
-            + "]}";
-
-    arguments = arguments.replace("\\", "\\\\");
-
-    ScannerMain.run(new ByteArrayInputStream((arguments).getBytes()));
+    properties.addProperty(SONAR_VERBOSE, "true");
+    runScannerEngine(properties);
 
     assertThat(logTester.logs(Level.DEBUG)).isNotEmpty();
+  }
+
+  private int runScannerEngine(ScannerProperties scannerProperties) {
+    return ScannerMain.run(new ByteArrayInputStream(scannerProperties.toJson().getBytes()));
+  }
+
+  static class ScannerProperties {
+    static final String SONAR_HOST_URL = "sonar.host.url";
+    static final String SONAR_PROJECT_KEY = "sonar.projectKey";
+    static final String SONAR_PROJECT_BASE_DIR = "sonar.projectBaseDir";
+    static final String SONAR_VERBOSE = "sonar.verbose";
+
+    public List<ScannerProperty> scannerProperties = new ArrayList<>();
+
+    ScannerProperties addProperty(String key, String value) {
+      scannerProperties.add(new ScannerProperty(key, value));
+      return this;
+    }
+
+    String toJson() {
+      try {
+        ObjectMapper objectMapper = new ObjectMapper();
+        return objectMapper.writeValueAsString(this);
+      } catch (JsonProcessingException e) {
+        fail("Failed to serialize scanner properties", e);
+        return "";
+      }
+    }
+  }
+
+  record ScannerProperty(String key, String value) {
+
   }
 }

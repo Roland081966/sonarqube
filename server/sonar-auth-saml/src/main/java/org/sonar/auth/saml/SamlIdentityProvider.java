@@ -20,14 +20,10 @@
 package org.sonar.auth.saml;
 
 import java.util.regex.Pattern;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletRequestWrapper;
 import org.sonar.api.server.ServerSide;
 import org.sonar.api.server.authentication.Display;
 import org.sonar.api.server.authentication.OAuth2IdentityProvider;
 import org.sonar.api.server.authentication.UserIdentity;
-import org.sonar.api.server.http.HttpRequest;
-import org.sonar.server.http.JavaxHttpRequest;
 
 @ServerSide
 public class SamlIdentityProvider implements OAuth2IdentityProvider {
@@ -37,12 +33,12 @@ public class SamlIdentityProvider implements OAuth2IdentityProvider {
 
   public static final String RSA_SHA_256_URL = "http://www.w3.org/2001/04/xmldsig-more#rsa-sha256";
 
+  private final SamlAuthenticator samlAuthenticator;
   private final SamlSettings samlSettings;
-  private final SamlMessageIdChecker samlMessageIdChecker;
 
-  public SamlIdentityProvider(SamlSettings samlSettings, SamlMessageIdChecker samlMessageIdChecker) {
+  public SamlIdentityProvider(SamlSettings samlSettings, SamlAuthenticator samlAuthenticator) {
     this.samlSettings = samlSettings;
-    this.samlMessageIdChecker = samlMessageIdChecker;
+    this.samlAuthenticator = samlAuthenticator;
   }
 
   @Override
@@ -75,47 +71,17 @@ public class SamlIdentityProvider implements OAuth2IdentityProvider {
 
   @Override
   public void init(InitContext context) {
-    SamlAuthenticator samlAuthenticator = new SamlAuthenticator(samlSettings, samlMessageIdChecker);
     samlAuthenticator.initLogin(context.getCallbackUrl(), context.generateCsrfState(),
       context.getHttpRequest(), context.getHttpResponse());
   }
 
   @Override
   public void callback(CallbackContext context) {
-    //
-    // Workaround for onelogin/java-saml validation not taking into account running a reverse proxy configuration. This change
-    // makes the validation take into account 'X-Forwarded-Proto' and 'Host' headers set by the reverse proxy
-    // More details here:
-    // - https://github.com/onelogin/java-saml/issues/198
-    // - https://github.com/onelogin/java-saml/issues/95
-    //
-    HttpRequest processedRequest = useProxyHeadersInRequest(context.getHttpRequest());
 
-    SamlAuthenticator samlAuthenticator = new SamlAuthenticator(samlSettings, samlMessageIdChecker);
-    UserIdentity userIdentity = samlAuthenticator.buildUserIdentity(context, processedRequest);
+    UserIdentity userIdentity = samlAuthenticator.onCallback(context, context.getHttpRequest());
     context.authenticate(userIdentity);
     context.redirectToRequestedPage();
 
   }
 
-  private static HttpRequest useProxyHeadersInRequest(HttpRequest request) {
-    String forwardedScheme = request.getHeader("X-Forwarded-Proto");
-    if (forwardedScheme != null) {
-      HttpServletRequest httpServletRequest = new HttpServletRequestWrapper(((JavaxHttpRequest) request).getDelegate()) {
-        @Override
-        public String getScheme() {
-          return forwardedScheme;
-        }
-
-        @Override
-        public StringBuffer getRequestURL() {
-          StringBuffer originalURL = ((HttpServletRequest) getRequest()).getRequestURL();
-          return new StringBuffer(HTTPS_PATTERN.matcher(originalURL.toString()).replaceFirst(forwardedScheme + "://"));
-        }
-      };
-      return new JavaxHttpRequest(httpServletRequest);
-    }
-
-    return request;
-  }
 }

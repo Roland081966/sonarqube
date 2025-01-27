@@ -38,4 +38,10 @@ public interface ReportSubscriptionMapper {
   void insert(ReportSubscriptionDto subscriptionDto);
 
   void delete(ReportSubscriptionDto subscriptionDto);
+
+  int countByQualifier(String qualifier);
+
+  int countPortfolioReportSubscriptions();
+
+  List<SubscriptionCount> countPerProject();
 }

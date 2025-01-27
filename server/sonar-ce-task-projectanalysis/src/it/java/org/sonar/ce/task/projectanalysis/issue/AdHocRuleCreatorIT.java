@@ -30,6 +30,7 @@ import org.sonar.api.utils.System2;
 import org.sonar.core.util.SequenceUuidFactory;
 import org.sonar.db.DbSession;
 import org.sonar.db.DbTester;
+import org.sonar.db.issue.ImpactDto;
 import org.sonar.db.rule.RuleDto;
 import org.sonar.scanner.protocol.Constants;
 import org.sonar.scanner.protocol.output.ScannerReport;
@@ -71,7 +72,7 @@ public class AdHocRuleCreatorIT {
     assertThat(rule.getAdHocSeverity()).isNull();
     assertThat(rule.getAdHocType()).isNull();
     assertThat(rule.getCleanCodeAttribute()).isEqualTo(CleanCodeAttribute.defaultCleanCodeAttribute());
-    assertThat(rule.getDefaultImpacts()).extracting(i -> i.getSoftwareQuality(), i -> i.getSeverity())
+    assertThat(rule.getDefaultImpacts()).extracting(ImpactDto::getSoftwareQuality, ImpactDto::getSeverity)
       .containsExactly(Tuple.tuple(SoftwareQuality.MAINTAINABILITY, org.sonar.api.issue.impact.Severity.MEDIUM));
   }
 
@@ -85,8 +86,8 @@ public class AdHocRuleCreatorIT {
       .setSeverity(Constants.Severity.BLOCKER)
       .setType(ScannerReport.IssueType.BUG)
       .setCleanCodeAttribute(CleanCodeAttribute.DISTINCT.name())
-      .addDefaultImpacts(ScannerReport.Impact.newBuilder().setSoftwareQuality(SoftwareQuality.RELIABILITY.name())
-        .setSeverity(org.sonar.api.issue.impact.Severity.LOW.name()).build())
+      .addDefaultImpacts(ScannerReport.Impact.newBuilder().setSoftwareQuality(ScannerReport.SoftwareQuality.RELIABILITY)
+        .setSeverity(ScannerReport.ImpactSeverity.ImpactSeverity_LOW).build())
       .build());
 
     RuleDto rule = underTest.persistAndIndex(dbSession, addHocRule);
@@ -105,7 +106,7 @@ public class AdHocRuleCreatorIT {
     assertThat(rule.getAdHocSeverity()).isEqualTo(Severity.BLOCKER);
     assertThat(rule.getAdHocType()).isEqualTo(RuleType.BUG.getDbConstant());
     assertThat(rule.getCleanCodeAttribute()).isEqualTo(CleanCodeAttribute.DISTINCT);
-    assertThat(rule.getDefaultImpacts()).extracting(i -> i.getSoftwareQuality(), i -> i.getSeverity())
+    assertThat(rule.getDefaultImpacts()).extracting(ImpactDto::getSoftwareQuality, ImpactDto::getSeverity)
       .containsExactly(tuple(SoftwareQuality.RELIABILITY, org.sonar.api.issue.impact.Severity.LOW));
   }
 
@@ -177,8 +178,8 @@ public class AdHocRuleCreatorIT {
       .setDescription(rule.getAdHocDescription())
       .setSeverity(Constants.Severity.valueOf(rule.getAdHocSeverity()))
       .setType(ScannerReport.IssueType.forNumber(rule.getAdHocType()))
-      .addDefaultImpacts(ScannerReport.Impact.newBuilder().setSoftwareQuality(SoftwareQuality.MAINTAINABILITY.name())
-        .setSeverity(org.sonar.api.issue.impact.Severity.HIGH.name()).build())
+      .addDefaultImpacts(ScannerReport.Impact.newBuilder().setSoftwareQuality(ScannerReport.SoftwareQuality.MAINTAINABILITY)
+        .setSeverity(ScannerReport.ImpactSeverity.ImpactSeverity_HIGH).build())
       .setCleanCodeAttribute(CleanCodeAttribute.CLEAR.name())
       .build()));
 

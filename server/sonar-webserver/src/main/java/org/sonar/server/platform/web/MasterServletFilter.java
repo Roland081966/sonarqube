@@ -21,6 +21,14 @@ package org.sonar.server.platform.web;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import jakarta.servlet.Filter;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.FilterConfig;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.ServletRequest;
+import jakarta.servlet.ServletResponse;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -28,22 +36,13 @@ import java.util.LinkedList;
 import java.util.List;
 import javax.annotation.CheckForNull;
 import javax.annotation.Nullable;
-import javax.servlet.Filter;
-import javax.servlet.FilterChain;
-import javax.servlet.FilterConfig;
-import javax.servlet.ServletException;
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.sonar.api.server.http.HttpRequest;
 import org.sonar.api.server.http.HttpResponse;
-import org.slf4j.LoggerFactory;
 import org.sonar.api.web.HttpFilter;
-import org.sonar.api.web.ServletFilter;
-import org.sonar.server.http.JavaxHttpRequest;
-import org.sonar.server.http.JavaxHttpResponse;
+import org.sonar.server.http.JakartaHttpRequest;
+import org.sonar.server.http.JakartaHttpResponse;
 import org.sonar.server.platform.PlatformImpl;
 
 /**
@@ -55,10 +54,7 @@ public class MasterServletFilter implements Filter {
   private static final Logger LOG = LoggerFactory.getLogger(MasterServletFilter.class);
   private static volatile MasterServletFilter instance;
 
-  @Deprecated(forRemoval = true)
-  private ServletFilter[] filters;
   private HttpFilter[] httpFilters;
-  private FilterConfig config;
 
   public MasterServletFilter() {
     if (instance != null) {
@@ -71,9 +67,8 @@ public class MasterServletFilter implements Filter {
   public void init(FilterConfig config) {
     // Filters are already available in the container unless a database migration is required. See
     // org.sonar.server.startup.RegisterServletFilters.
-    List<ServletFilter> servletFilterList = PlatformImpl.getInstance().getContainer().getComponentsByType(ServletFilter.class);
     List<HttpFilter> httpFilterList = PlatformImpl.getInstance().getContainer().getComponentsByType(HttpFilter.class);
-    init(config, servletFilterList, httpFilterList);
+    init(httpFilterList);
   }
 
   @CheckForNull
@@ -86,17 +81,18 @@ public class MasterServletFilter implements Filter {
     MasterServletFilter.instance = instance;
   }
 
-  void init(FilterConfig config, List<ServletFilter> filters, List<HttpFilter> httpFilters) {
-    this.config = config;
+  void init(List<HttpFilter> httpFilters) {
     initHttpFilters(httpFilters);
-    initServletFilters(filters);
   }
 
   public void initHttpFilters(List<HttpFilter> filterExtensions) {
     LinkedList<HttpFilter> filterList = new LinkedList<>();
     for (HttpFilter extension : filterExtensions) {
       try {
-        LOG.info(String.format("Initializing servlet filter %s [pattern=%s]", extension, extension.doGetPattern().label()));
+        LOG.atInfo()
+          .addArgument(extension)
+          .addArgument(() -> extension.doGetPattern().label())
+          .log("Initializing servlet filter {} [pattern={}]");
         extension.init();
         // As for scim we need to intercept traffic to URLs with path parameters
         // and that use is not properly handled when dealing with inclusions/exclusions of the WebServiceFilter,
@@ -118,26 +114,10 @@ public class MasterServletFilter implements Filter {
       .anyMatch(s -> s.startsWith(SCIM_FILTER_PATH));
   }
 
-  @Deprecated(forRemoval = true)
-  public void initServletFilters(List<ServletFilter> filterExtensions) {
-    LinkedList<ServletFilter> filterList = new LinkedList<>();
-    for (ServletFilter extension : filterExtensions) {
-      try {
-        LOG.info(String.format("Initializing servlet filter %s [pattern=%s]", extension, extension.doGetPattern().label()));
-        extension.init(config);
-        // adding deprecated extensions as last
-        filterList.addLast(extension);
-      } catch (Exception e) {
-        throw new IllegalStateException("Fail to initialize servlet filter: " + extension + ". Message: " + e.getMessage(), e);
-      }
-    }
-    filters = filterList.toArray(new ServletFilter[0]);
-  }
-
   @Override
   public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws ServletException, IOException {
     HttpServletRequest hsr = (HttpServletRequest) request;
-    if (filters.length == 0 && httpFilters.length == 0) {
+    if (httpFilters.length == 0) {
       chain.doFilter(hsr, response);
     } else {
       String path = hsr.getRequestURI().replaceFirst(hsr.getContextPath(), "");
@@ -151,26 +131,13 @@ public class MasterServletFilter implements Filter {
     Arrays.stream(httpFilters)
       .filter(filter -> filter.doGetPattern().matches(path))
       .forEachOrdered(godChain::addFilter);
-
-    Arrays.stream(filters)
-      .filter(filter -> filter.doGetPattern().matches(path))
-      .forEachOrdered(godChain::addFilter);
   }
 
   @Override
   public void destroy() {
-    for (ServletFilter filter : filters) {
-      filter.destroy();
-    }
-
     for (HttpFilter filter : httpFilters) {
       filter.destroy();
     }
-  }
-
-  @VisibleForTesting
-  ServletFilter[] getFilters() {
-    return filters;
   }
 
   @VisibleForTesting
@@ -222,8 +189,8 @@ public class MasterServletFilter implements Filter {
 
     @Override
     public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain chain) throws IOException, ServletException {
-      HttpRequest javaxHttpRequest = new JavaxHttpRequest((HttpServletRequest) servletRequest);
-      HttpResponse javaxHttpResponse = new JavaxHttpResponse((HttpServletResponse) servletResponse);
+      HttpRequest javaxHttpRequest = new JakartaHttpRequest((HttpServletRequest) servletRequest);
+      HttpResponse javaxHttpResponse = new JakartaHttpResponse((HttpServletResponse) servletResponse);
       httpFilter.doFilter(javaxHttpRequest, javaxHttpResponse, new HttpFilterChainAdapter(chain));
     }
   }
@@ -238,7 +205,7 @@ public class MasterServletFilter implements Filter {
     @Override
     public void doFilter(HttpRequest httpRequest, HttpResponse httpResponse) throws IOException {
       try {
-        filterChain.doFilter(((JavaxHttpRequest) httpRequest).getDelegate(), ((JavaxHttpResponse) httpResponse).getDelegate());
+        filterChain.doFilter(((JakartaHttpRequest) httpRequest).getDelegate(), ((JakartaHttpResponse) httpResponse).getDelegate());
       } catch (ServletException e) {
         throw new RuntimeException(e);
       }

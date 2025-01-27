@@ -20,8 +20,10 @@
 package org.sonar.db.report;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 import org.apache.ibatis.annotations.Param;
 import org.sonar.db.Dao;
 import org.sonar.db.DbSession;
@@ -60,5 +62,17 @@ public class ReportSubscriptionDao implements Dao {
 
   private static ReportSubscriptionMapper mapper(DbSession dbSession) {
     return dbSession.getMapper(ReportSubscriptionMapper.class);
+  }
+
+  public int countByQualifier(DbSession dbSession, String qualifier) {
+    return mapper(dbSession).countByQualifier(qualifier);
+  }
+
+  public int countPortfolioReportSubscriptions(DbSession dbSession) {
+    return mapper(dbSession).countPortfolioReportSubscriptions();
+  }
+
+  public Map<String, Integer> countPerProject(DbSession dbSession) {
+    return mapper(dbSession).countPerProject().stream().collect(Collectors.toMap(SubscriptionCount::getProjectUuid, SubscriptionCount::getCount));
   }
 }

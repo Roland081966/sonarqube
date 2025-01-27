@@ -19,13 +19,11 @@
  */
 package org.sonar.server.qualitygate.ws;
 
-import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.sonar.api.server.ws.WebService;
 import org.sonar.db.DbClient;
 import org.sonar.db.DbTester;
@@ -33,8 +31,7 @@ import org.sonar.db.component.ComponentDto;
 import org.sonar.db.project.ProjectDto;
 import org.sonar.db.qualitygate.QualityGateDto;
 import org.sonar.db.user.UserDto;
-import org.sonar.server.ai.code.assurance.AiCodeAssurance;
-import org.sonar.server.ai.code.assurance.AiCodeAssuranceVerifier;
+import org.sonar.server.ai.code.assurance.AiCodeAssuranceEntitlement;
 import org.sonar.server.component.TestComponentFinder;
 import org.sonar.server.exceptions.NotFoundException;
 import org.sonar.server.tester.UserSessionRule;
@@ -46,7 +43,6 @@ import static java.lang.String.valueOf;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.AssertionsForClassTypes.tuple;
-import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.sonar.api.server.ws.WebService.SelectionMode.ALL;
@@ -68,14 +64,14 @@ class SearchActionIT {
   DbTester db = DbTester.create();
 
   private final DbClient dbClient = db.getDbClient();
-  private final AiCodeAssuranceVerifier aiCodeAssuranceVerifier = mock(AiCodeAssuranceVerifier.class);
+  private final AiCodeAssuranceEntitlement entitlement = mock(AiCodeAssuranceEntitlement.class);
   private final SearchAction underTest = new SearchAction(dbClient, userSession,
-    new QualityGatesWsSupport(dbClient, userSession, TestComponentFinder.from(db)), aiCodeAssuranceVerifier);
+    new QualityGatesWsSupport(dbClient, userSession, TestComponentFinder.from(db)), entitlement);
   private final WsActionTester ws = new WsActionTester(underTest);
 
   @BeforeEach
   void setUp() {
-    when(aiCodeAssuranceVerifier.getAiCodeAssurance(anyBoolean(), anyBoolean())).thenReturn(AiCodeAssurance.NONE);
+    when(entitlement.isEnabled()).thenReturn(true);
   }
 
   @Test
@@ -300,13 +296,12 @@ class SearchActionIT {
   }
 
   @ParameterizedTest
-  @MethodSource("aiCodeAssuranceParams")
-  void return_ai_code_assurance(boolean containsAiCode, boolean aiCodeSupportedByQg, AiCodeAssurance expected) {
-    QualityGateDto qualityGate = db.qualityGates().insertQualityGate(qg -> qg.setAiCodeSupported(aiCodeSupportedByQg));
+  @ValueSource(booleans = {true, false})
+  void return_ai_code_assurance(boolean containsAiCode) {
+    QualityGateDto qualityGate = db.qualityGates().insertQualityGate();
     ProjectDto project = db.components().insertPublicProject(componentDto -> componentDto.setName("proj1"),
       projectDto -> projectDto.setContainsAiCode(containsAiCode)).getProjectDto();
     db.qualityGates().associateProjectToQualityGate(project, qualityGate);
-    when(aiCodeAssuranceVerifier.getAiCodeAssurance(project.getContainsAiCode(), qualityGate.isAiCodeSupported())).thenReturn(expected);
 
     SearchResponse response = ws.newRequest()
       .setParam(PARAM_GATE_NAME, valueOf(qualityGate.getName()))
@@ -314,18 +309,29 @@ class SearchActionIT {
       .executeProtobuf(SearchResponse.class);
 
     assertThat(response.getResultsList())
-      .extracting(Result::getName, Result::getKey, result -> result.getAiCodeAssurance().name())
+      .extracting(Result::getName, Result::getKey, Result::getContainsAiCode)
       .containsExactlyInAnyOrder(
-        tuple(project.getName(), project.getKey(), expected.name()));
+        tuple(project.getName(), project.getKey(), containsAiCode));
   }
 
-  private static Stream<Arguments> aiCodeAssuranceParams() {
-    return Stream.of(
-      Arguments.of(false, false, AiCodeAssurance.NONE),
-      Arguments.of(false, true, AiCodeAssurance.NONE),
-      Arguments.of(true, false, AiCodeAssurance.CONTAINS_AI_CODE),
-      Arguments.of(true, true, AiCodeAssurance.AI_CODE_ASSURED)
-    );
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void contains_ai_code_is_false_for_community_edition(boolean containsAiCode) {
+    when(entitlement.isEnabled()).thenReturn(false);
+    QualityGateDto qualityGate = db.qualityGates().insertQualityGate();
+    ProjectDto project = db.components().insertPublicProject(componentDto -> componentDto.setName("proj1"),
+      projectDto -> projectDto.setContainsAiCode(containsAiCode)).getProjectDto();
+    db.qualityGates().associateProjectToQualityGate(project, qualityGate);
+
+    SearchResponse response = ws.newRequest()
+      .setParam(PARAM_GATE_NAME, valueOf(qualityGate.getName()))
+      .setParam(PARAM_SELECTED, ALL.value())
+      .executeProtobuf(SearchResponse.class);
+
+    assertThat(response.getResultsList())
+      .extracting(Result::getName, Result::getKey, Result::getContainsAiCode)
+      .containsExactlyInAnyOrder(
+        tuple(project.getName(), project.getKey(), false));
   }
 
   @Test

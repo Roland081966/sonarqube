@@ -33,6 +33,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.sonar.api.measures.Metric;
@@ -53,8 +54,8 @@ import org.sonar.db.measure.MeasureDto;
 import org.sonar.db.metric.MetricDto;
 import org.sonar.db.project.ProjectDto;
 import org.sonar.db.property.PropertyDto;
-import org.sonar.db.qualitygate.QualityGateDto;
 import org.sonar.server.ai.code.assurance.AiCodeAssurance;
+import org.sonar.server.ai.code.assurance.AiCodeAssuranceEntitlement;
 import org.sonar.server.ai.code.assurance.AiCodeAssuranceVerifier;
 import org.sonar.server.component.ws.SearchProjectsAction.RequestBuilder;
 import org.sonar.server.component.ws.SearchProjectsAction.SearchProjectsRequest;
@@ -116,7 +117,7 @@ import static org.sonarqube.ws.client.project.ProjectsWsParameters.FILTER_LANGUA
 import static org.sonarqube.ws.client.project.ProjectsWsParameters.FILTER_QUALIFIER;
 import static org.sonarqube.ws.client.project.ProjectsWsParameters.FILTER_TAGS;
 
-public class SearchProjectsActionIT {
+class SearchProjectsActionIT {
 
   private static final String NCLOC = "ncloc";
   private static final String COVERAGE = "coverage";
@@ -126,7 +127,7 @@ public class SearchProjectsActionIT {
   private static final String ANALYSIS_DATE = "analysisDate";
 
   @RegisterExtension
-  public final UserSessionRule userSession = UserSessionRule.standalone();
+  final UserSessionRule userSession = UserSessionRule.standalone();
   @RegisterExtension
   public final EsTester es = EsTester.create();
   @RegisterExtension
@@ -206,19 +207,23 @@ public class SearchProjectsActionIT {
   private final ProjectMeasuresIndexer projectMeasuresIndexer = new ProjectMeasuresIndexer(db.getDbClient(), es.client());
 
   private final AiCodeAssuranceVerifier aiCodeAssuranceVerifier = mock(AiCodeAssuranceVerifier.class);
+  private final AiCodeAssuranceEntitlement aiCodeAssuranceEntitlement = mock(AiCodeAssuranceEntitlement.class);
 
-  private final WsActionTester ws = new WsActionTester(new SearchProjectsAction(dbClient, index, userSession, editionProviderMock, aiCodeAssuranceVerifier));
+  private WsActionTester underTest;
 
   private final RequestBuilder request = SearchProjectsRequest.builder();
 
   @BeforeEach
   void setUp() {
-    when(aiCodeAssuranceVerifier.getAiCodeAssurance(any())).thenReturn(AiCodeAssurance.CONTAINS_AI_CODE);
+    when(aiCodeAssuranceEntitlement.isEnabled()).thenReturn(true);
+    when(aiCodeAssuranceVerifier.isAiCodeAssured(any())).thenReturn(false);
+    when(aiCodeAssuranceVerifier.getAiCodeAssurance(any())).thenReturn(AiCodeAssurance.NONE);
+    underTest = new WsActionTester(new SearchProjectsAction(dbClient, index, userSession, editionProviderMock, aiCodeAssuranceEntitlement, aiCodeAssuranceVerifier));
   }
 
   @Test
   void verify_definition() {
-    WebService.Action def = ws.getDef();
+    WebService.Action def = underTest.getDef();
 
     assertThat(def.key()).isEqualTo("search_projects");
     assertThat(def.since()).isEqualTo("6.2");
@@ -226,7 +231,7 @@ public class SearchProjectsActionIT {
     assertThat(def.isPost()).isFalse();
     assertThat(def.responseExampleAsString()).isNotEmpty();
     assertThat(def.params().stream().map(Param::key).toList()).containsOnly("filter", "facets", "s", "asc", "ps", "p", "f");
-    assertThat(def.changelog()).hasSize(7);
+    assertThat(def.changelog()).hasSize(9);
 
     Param sort = def.param("s");
     assertThat(sort.defaultValue()).isEqualTo("name");
@@ -270,7 +275,8 @@ public class SearchProjectsActionIT {
 
     Param facets = def.param("facets");
     assertThat(facets.defaultValue()).isNull();
-    assertThat(facets.possibleValues()).containsOnly("ncloc", "duplicated_lines_density", "coverage", "sqale_rating", "reliability_rating", "security_rating", "alert_status",
+    assertThat(facets.possibleValues()).containsOnly("ncloc", "duplicated_lines_density", "coverage", "sqale_rating", "reliability_rating"
+      , "security_rating", "alert_status",
       "languages", "tags", "qualifier", "new_reliability_rating", "new_security_rating", "new_maintainability_rating", "new_coverage",
       "new_duplicated_lines_density", "new_lines",
       "security_review_rating", "security_hotspots_reviewed", "new_security_hotspots_reviewed", "new_security_review_rating",
@@ -299,15 +305,15 @@ public class SearchProjectsActionIT {
     addFavourite(db.components().getProjectDtoByMainBranch(project1));
     index();
 
-    String jsonResult = ws.newRequest()
+    String jsonResult = underTest.newRequest()
       .setParam(FACETS, COVERAGE)
       .setParam(FIELDS, "_all")
       .execute().getInput();
 
-    assertJson(jsonResult).ignoreFields("id").isSimilarTo(ws.getDef().responseExampleAsString());
-    assertJson(ws.getDef().responseExampleAsString()).ignoreFields("id").isSimilarTo(jsonResult);
+    assertJson(jsonResult).ignoreFields("id").isSimilarTo(underTest.getDef().responseExampleAsString());
+    assertJson(underTest.getDef().responseExampleAsString()).ignoreFields("id").isSimilarTo(jsonResult);
 
-    SearchProjectsWsResponse protobufResult = ws.newRequest()
+    SearchProjectsWsResponse protobufResult = underTest.newRequest()
       .setParam(FACETS, COVERAGE)
       .executeProtobuf(SearchProjectsWsResponse.class);
 
@@ -1382,35 +1388,38 @@ public class SearchProjectsActionIT {
   }
 
   @ParameterizedTest
-  @MethodSource("aiCodeAssuranceParams")
-  void return_ai_code_assured(boolean containsAiCode, boolean aiCodeSupportedByQg, AiCodeAssurance expected) {
+  @EnumSource(value = AiCodeAssurance.class)
+  void delegate_ai_code_assurance_computation_to_ai_code_assurance_verifier(AiCodeAssurance aiCodeAssurance) {
     userSession.logIn();
 
-    ProjectDto project = db.components().insertPublicProject(componentDto -> componentDto.setName("proj_A"),
-      projectDto -> projectDto.setContainsAiCode(containsAiCode)).getProjectDto();
-    QualityGateDto qualityGate = db.qualityGates().insertQualityGate(qg -> qg.setAiCodeSupported(aiCodeSupportedByQg));
-    db.qualityGates().associateProjectToQualityGate(project, qualityGate);
-
-    when(aiCodeAssuranceVerifier.getAiCodeAssurance(project)).thenReturn(expected);
+    ProjectData projectData = db.components().insertPublicProject(componentDto -> componentDto.setName("proj_A"));
+    ProjectDto project = projectData.getProjectDto();
+    when(aiCodeAssuranceVerifier.getAiCodeAssurance(project)).thenReturn(aiCodeAssurance);
     authorizationIndexerTester.allowOnlyAnyone(project);
     index();
 
     SearchProjectsWsResponse result = call(request);
 
-    boolean isAiCodeAssured = AiCodeAssurance.AI_CODE_ASSURED.equals(expected);
-    assertThat(result.getComponentsList()).extracting(Component::getKey, Component::getIsAiCodeAssured, Component::getAiCodeAssurance)
-      .containsExactly(
-        tuple(project.getKey(), isAiCodeAssured, Components.AiCodeAssurance.valueOf(expected.name())));
+    assertThat(result.getComponentsList()).extracting(Component::getKey, Component::getAiCodeAssurance)
+      .containsExactly(tuple(project.getKey(), Components.AiCodeAssurance.valueOf(aiCodeAssurance.name())));
   }
 
-  private static Stream<Arguments> aiCodeAssuranceParams() {
-    return Stream.of(
-      Arguments.of(false, false, AiCodeAssurance.NONE),
-      Arguments.of(false, true, AiCodeAssurance.NONE),
-      Arguments.of(true, false, AiCodeAssurance.CONTAINS_AI_CODE),
-      Arguments.of(true, true, AiCodeAssurance.AI_CODE_ASSURED)
-    );
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void contains_ai_code_is_false_for_community_edition(boolean containsAiCode) {
+    userSession.logIn();
+    when(aiCodeAssuranceEntitlement.isEnabled()).thenReturn(false);
+    ProjectData projectData = db.components().insertPublicProject(componentDto -> componentDto.setName("proj_A"),
+      projectDto -> projectDto.setContainsAiCode(containsAiCode));
+    ProjectDto project = projectData.getProjectDto();
+    authorizationIndexerTester.allowOnlyAnyone(project);
+    index();
+
+    SearchProjectsWsResponse result = call(request);
+
+    assertThat(result.getComponentsList()).extracting(Component::getContainsAiCode).containsExactly(false);
   }
+
 
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
@@ -1475,7 +1484,7 @@ public class SearchProjectsActionIT {
 
   private SearchProjectsWsResponse call(RequestBuilder requestBuilder) {
     SearchProjectsRequest wsRequest = requestBuilder.build();
-    TestRequest httpRequest = ws.newRequest();
+    TestRequest httpRequest = underTest.newRequest();
     ofNullable(wsRequest.getFilter()).ifPresent(filter -> httpRequest.setParam(PARAM_FILTER, filter));
     ofNullable(wsRequest.getSort()).ifPresent(sort -> httpRequest.setParam(SORT, sort));
     ofNullable(wsRequest.getAsc()).ifPresent(asc -> httpRequest.setParam(ASCENDING, Boolean.toString(asc)));
@@ -1511,7 +1520,8 @@ public class SearchProjectsActionIT {
     return insertProject(componentConsumer, defaults(), measureConsumer);
   }
 
-  private ComponentDto insertProject(Consumer<ComponentDto> componentConsumer, Consumer<ProjectDto> projectConsumer, @Nullable Consumer<MeasureDto> measureConsumer) {
+  private ComponentDto insertProject(Consumer<ComponentDto> componentConsumer, Consumer<ProjectDto> projectConsumer,
+    @Nullable Consumer<MeasureDto> measureConsumer) {
     ComponentDto project = db.components().insertPublicProject(componentConsumer, projectConsumer).getMainBranchComponent();
     if (measureConsumer != null) {
       db.measures().insertMeasure(project, measureConsumer);

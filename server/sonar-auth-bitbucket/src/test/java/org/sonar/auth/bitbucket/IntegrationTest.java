@@ -23,8 +23,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpServletRequest;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
@@ -39,7 +38,7 @@ import org.sonar.api.server.authentication.UserIdentity;
 import org.sonar.api.server.http.HttpRequest;
 import org.sonar.api.server.http.HttpResponse;
 import org.sonar.api.utils.System2;
-import org.sonar.server.http.JavaxHttpRequest;
+import org.sonar.server.http.JakartaHttpRequest;
 
 import static java.lang.String.format;
 import static java.net.URLEncoder.encode;
@@ -258,7 +257,7 @@ public class IntegrationTest {
 
     @Override
     public HttpRequest getHttpRequest() {
-      return new JavaxHttpRequest(request);
+      return new JakartaHttpRequest(request);
     }
 
     @Override
@@ -266,15 +265,6 @@ public class IntegrationTest {
       throw new UnsupportedOperationException("not used");
     }
 
-    @Override
-    public HttpServletRequest getRequest() {
-      throw new UnsupportedOperationException("deprecated");
-    }
-
-    @Override
-    public HttpServletResponse getResponse() {
-      throw new UnsupportedOperationException("deprecated");
-    }
   }
 
   private static class DumbInitContext implements OAuth2IdentityProvider.InitContext {
@@ -307,16 +297,6 @@ public class IntegrationTest {
 
     @Override
     public HttpResponse getHttpResponse() {
-      return null;
-    }
-
-    @Override
-    public HttpServletRequest getRequest() {
-      return null;
-    }
-
-    @Override
-    public HttpServletResponse getResponse() {
       return null;
     }
   }

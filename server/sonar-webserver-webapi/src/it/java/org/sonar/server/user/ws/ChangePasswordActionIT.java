@@ -19,14 +19,18 @@
  */
 package org.sonar.server.user.ws;
 
+import jakarta.servlet.ServletOutputStream;
+import jakarta.servlet.WriteListener;
 import java.io.IOException;
 import java.util.Optional;
+import java.util.stream.Stream;
 import javax.annotation.Nullable;
-import javax.servlet.ServletOutputStream;
-import javax.servlet.WriteListener;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
 import org.sonar.api.config.internal.MapSettings;
 import org.sonar.api.server.http.HttpRequest;
@@ -66,15 +70,16 @@ import static org.sonarqube.ws.client.user.UsersWsParameters.PARAM_LOGIN;
 import static org.sonarqube.ws.client.user.UsersWsParameters.PARAM_PASSWORD;
 import static org.sonarqube.ws.client.user.UsersWsParameters.PARAM_PREVIOUS_PASSWORD;
 
-public class ChangePasswordActionIT {
+class ChangePasswordActionIT {
 
-  private static final String OLD_PASSWORD = "1234";
-  private static final String NEW_PASSWORD = "12345";
+  private static final String OLD_PASSWORD = "1234567890_aA";
+  private static final String NEW_PASSWORD = "1234567890_bB";
 
-  @Rule
-  public DbTester db = DbTester.create();
-  @Rule
-  public UserSessionRule userSessionRule = UserSessionRule.standalone().logIn();
+  @RegisterExtension
+  private final DbTester db = DbTester.create();
+
+  @RegisterExtension
+  private final UserSessionRule userSessionRule = UserSessionRule.standalone().logIn();
 
   private final ArgumentCaptor<UserDto> userDtoCaptor = ArgumentCaptor.forClass(UserDto.class);
 
@@ -93,18 +98,19 @@ public class ChangePasswordActionIT {
 
   private final ManagedInstanceChecker managedInstanceChecker = mock(ManagedInstanceChecker.class);
 
-  private final ChangePasswordAction underTest = new ChangePasswordAction(db.getDbClient(), userUpdater, userSessionRule, localAuthentication, jwtHttpHandler, managedInstanceChecker);
+  private final ChangePasswordAction underTest = new ChangePasswordAction(db.getDbClient(), userUpdater, userSessionRule, localAuthentication, jwtHttpHandler,
+    managedInstanceChecker);
   private ServletOutputStream responseOutputStream;
 
-  @Before
-  public void setUp() throws IOException {
+  @BeforeEach
+  void setUp() throws IOException {
     db.users().insertDefaultGroup();
     responseOutputStream = new StringOutputStream();
     doReturn(responseOutputStream).when(response).getOutputStream();
   }
 
   @Test
-  public void a_user_can_update_his_password() {
+  void a_user_can_update_his_password() {
     UserTestData user = createLocalUser(OLD_PASSWORD);
     String oldCryptedPassword = findEncryptedPassword(user.getLogin());
     userSessionRule.logIn(user.userDto());
@@ -121,7 +127,7 @@ public class ChangePasswordActionIT {
   }
 
   @Test
-  public void system_administrator_can_update_password_of_user() {
+  void system_administrator_can_update_password_of_user() {
     UserTestData admin = createLocalUser();
     userSessionRule.logIn(admin.userDto()).setSystemAdministrator();
     UserTestData user = createLocalUser();
@@ -147,7 +153,7 @@ public class ChangePasswordActionIT {
   }
 
   @Test
-  public void fail_to_update_someone_else_password_if_not_admin() {
+  void fail_to_update_someone_else_password_if_not_admin() {
     UserTestData user = createLocalUser();
     userSessionRule.logIn(user.getLogin());
     UserTestData anotherLocalUser = createLocalUser();
@@ -161,7 +167,7 @@ public class ChangePasswordActionIT {
   }
 
   @Test
-  public void fail_to_update_someone_else_password_if_not_admin_and_user_doesnt_exist() {
+  void fail_to_update_someone_else_password_if_not_admin_and_user_doesnt_exist() {
     UserTestData user = createLocalUser();
     userSessionRule.logIn(user.getLogin());
 
@@ -174,11 +180,11 @@ public class ChangePasswordActionIT {
   }
 
   @Test
-  public void fail_to_update_unknown_user() {
+  void fail_to_update_unknown_user() {
     UserTestData admin = createLocalUser();
     userSessionRule.logIn(admin.userDto()).setSystemAdministrator();
 
-    assertThatThrownBy(() -> executeTest("polop", null, "polop"))
+    assertThatThrownBy(() -> executeTest("polop", null, NEW_PASSWORD))
       .isInstanceOf(NotFoundException.class)
       .hasMessage("User with login 'polop' has not been found");
     assertThat(findSessionTokenDto(db.getSession(), admin.getSessionTokenUuid())).isPresent();
@@ -186,19 +192,19 @@ public class ChangePasswordActionIT {
   }
 
   @Test
-  public void fail_on_disabled_user() {
+  void fail_on_disabled_user() {
     UserDto user = db.users().insertUser(u -> u.setActive(false));
     userSessionRule.logIn(user);
 
     String userLogin = user.getLogin();
-    assertThatThrownBy(() -> executeTest(userLogin, null, "polop"))
+    assertThatThrownBy(() -> executeTest(userLogin, null, NEW_PASSWORD))
       .isInstanceOf(NotFoundException.class)
       .hasMessage(format("User with login '%s' has not been found", userLogin));
     verifyNoInteractions(jwtHttpHandler);
   }
 
   @Test
-  public void fail_to_update_password_on_self_without_login() {
+  void fail_to_update_password_on_self_without_login() {
     when(request.getParameter(PARAM_PASSWORD)).thenReturn("new password");
     when(request.getParameter(PARAM_PREVIOUS_PASSWORD)).thenReturn(NEW_PASSWORD);
 
@@ -209,7 +215,7 @@ public class ChangePasswordActionIT {
   }
 
   @Test
-  public void fail_to_update_password_on_self_without_old_password() {
+  void fail_to_update_password_on_self_without_old_password() {
     UserTestData user = createLocalUser();
     userSessionRule.logIn(user.userDto());
 
@@ -221,7 +227,7 @@ public class ChangePasswordActionIT {
   }
 
   @Test
-  public void fail_to_update_password_on_self_without_new_password() {
+  void fail_to_update_password_on_self_without_new_password() {
     UserTestData user = createLocalUser();
     userSessionRule.logIn(user.userDto());
 
@@ -234,7 +240,7 @@ public class ChangePasswordActionIT {
   }
 
   @Test
-  public void fail_to_update_password_on_self_with_bad_old_password() {
+  void fail_to_update_password_on_self_with_bad_old_password() {
     UserTestData user = createLocalUser();
     userSessionRule.logIn(user.userDto());
 
@@ -246,7 +252,7 @@ public class ChangePasswordActionIT {
   }
 
   @Test
-  public void fail_to_update_password_on_external_auth() {
+  void fail_to_update_password_on_external_auth() {
     UserDto admin = db.users().insertUser();
     userSessionRule.logIn(admin).setSystemAdministrator();
     UserDto user = db.users().insertUser(u -> u.setLocal(false));
@@ -257,7 +263,7 @@ public class ChangePasswordActionIT {
   }
 
   @Test
-  public void fail_to_update_to_same_password() {
+  void fail_to_update_to_same_password() {
     UserTestData user = createLocalUser(OLD_PASSWORD);
     userSessionRule.logIn(user.userDto());
 
@@ -268,8 +274,30 @@ public class ChangePasswordActionIT {
     verifyNoInteractions(jwtHttpHandler);
   }
 
+  static Stream<Arguments> invalidPasswords() {
+    return Stream.of(
+      Arguments.of("12345678901", "Password must be at least 12 characters long"),
+      Arguments.of("123456789012", "Password must contain at least one uppercase character"),
+      Arguments.of("12345678901A", "Password must contain at least one lowercase character"),
+      Arguments.of("1234567890aA", "Password must contain at least one special character"),
+      Arguments.of("abcdefghiaA%", "Password must contain at least one digit")
+    );
+  }
+
+  @ParameterizedTest
+  @MethodSource("invalidPasswords")
+  void changePassword_whenPasswordDoesNotMatchSecurityRequirements_shouldThrowWithExpectedMessage(String newPassword, String expectedMessage) {
+    UserTestData user = createLocalUser(OLD_PASSWORD);
+    userSessionRule.logIn(user.userDto());
+
+    executeTest(user.getLogin(), OLD_PASSWORD, newPassword);
+
+    verify(response).setStatus(HTTP_BAD_REQUEST);
+    assertThat(responseOutputStream).hasToString("{\"result\":\"" + expectedMessage + "\"}");
+  }
+
   @Test
-  public void changePassword_whenInstanceIsManagedAndUserUpdate_shouldThrow() {
+  void changePassword_whenInstanceIsManagedAndUserUpdate_shouldThrow() {
     doThrow(BadRequestException.create("Operation not allowed when the instance is externally managed.")).when(managedInstanceChecker).throwIfInstanceIsManaged();
 
     UserTestData user = createLocalUser(OLD_PASSWORD);
@@ -280,7 +308,7 @@ public class ChangePasswordActionIT {
   }
 
   @Test
-  public void changePassword_whenInstanceIsManagedAndAdminUpdate_shouldThrow() {
+  void changePassword_whenInstanceIsManagedAndAdminUpdate_shouldThrow() {
     doThrow(BadRequestException.create("Operation not allowed when the instance is externally managed.")).when(managedInstanceChecker).throwIfInstanceIsManaged();
 
     UserDto admin = db.users().insertUser();
@@ -293,7 +321,7 @@ public class ChangePasswordActionIT {
   }
 
   @Test
-  public void verify_definition() {
+  void verify_definition() {
     String controllerKey = "foo";
     WebService.Context context = new WebService.Context();
     WebService.NewController newController = context.createController(controllerKey);

@@ -22,5 +22,5 @@ package org.sonar.scanner.rule;
 import java.util.List;
 
 public interface ActiveRulesLoader {
-  List<LoadedActiveRule> load(String qualityProfileKey);
+  List<LoadedActiveRule> load(String projectKey);
 }

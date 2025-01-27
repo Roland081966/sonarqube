@@ -25,15 +25,15 @@ import io.swagger.v3.oas.annotations.enums.ParameterIn;
 import io.swagger.v3.oas.annotations.extensions.Extension;
 import io.swagger.v3.oas.annotations.extensions.ExtensionProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.Valid;
 import javax.annotation.Nullable;
-import javax.validation.Valid;
 import org.sonar.server.v2.api.model.RestPage;
-import org.sonar.server.v2.api.user.response.UserRestResponse;
 import org.sonar.server.v2.api.user.request.UserCreateRestRequest;
 import org.sonar.server.v2.api.user.request.UserUpdateRestRequest;
 import org.sonar.server.v2.api.user.request.UsersSearchRestRequest;
+import org.sonar.server.v2.api.user.response.UserRestResponse;
 import org.sonar.server.v2.api.user.response.UsersSearchRestResponse;
-import org.springdoc.api.annotations.ParameterObject;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -101,8 +101,7 @@ public interface UserController {
   @PatchMapping(path = "/{id}", consumes = JSON_MERGE_PATCH_CONTENT_TYPE, produces = MediaType.APPLICATION_JSON_VALUE)
   @ResponseStatus(HttpStatus.OK)
   @Operation(summary = "Update a user", description = """
-    Update a user.
-    Allows updating user's name, email and SCM accounts.
+    Update users attributes.
     """)
   UserRestResponse updateUser(@PathVariable("id") String id, @Valid @RequestBody UserUpdateRestRequest updateRequest);
 

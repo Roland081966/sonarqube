@@ -50,6 +50,7 @@ public class RulesWsParameters {
 
   public static final String PARAM_IMPACT_SOFTWARE_QUALITIES = "impactSoftwareQualities";
   public static final String PARAM_IMPACT_SEVERITIES = "impactSeverities";
+  public static final String PARAM_ACTIVE_IMPACT_SEVERITIES = "active_impactSeverities";
   public static final String PARAM_CLEAN_CODE_ATTRIBUTE_CATEGORIES = "cleanCodeAttributeCategories";
   public static final String PARAM_PRIORITIZED_RULE = "prioritizedRule";
 
@@ -67,6 +68,11 @@ public class RulesWsParameters {
   public static final String FIELD_SYSTEM_TAGS = "sysTags";
   public static final String FIELD_LANGUAGE = "lang";
   public static final String FIELD_LANGUAGE_NAME = "langName";
+  /**
+   * For backward compatibility with SonarLint we still accept this field in the request, but we won't return it
+   * @deprecated since 2025.1
+   */
+  @Deprecated(since = "2025.1")
   public static final String FIELD_HTML_DESCRIPTION = "htmlDesc";
   public static final String FIELD_MARKDOWN_DESCRIPTION = "mdDesc";
 

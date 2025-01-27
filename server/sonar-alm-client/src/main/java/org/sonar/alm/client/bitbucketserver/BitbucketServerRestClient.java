@@ -84,10 +84,11 @@ public class BitbucketServerRestClient {
     doGet(personalAccessToken, url, body -> buildGson().fromJson(body, RepositoryList.class));
   }
 
-  public RepositoryList getRepos(String serverUrl, String token, @Nullable String project, @Nullable String repo) {
+  public RepositoryList getRepos(String serverUrl, String token, @Nullable String project, @Nullable String repo, @Nullable Integer start, int pageSize) {
     String projectOrEmpty = Optional.ofNullable(project).orElse("");
     String repoOrEmpty = Optional.ofNullable(repo).orElse("");
-    HttpUrl url = buildUrl(serverUrl, format("/rest/api/1.0/repos?projectname=%s&name=%s", projectOrEmpty, repoOrEmpty));
+    String startOrEmpty = Optional.ofNullable(start).map(String::valueOf).orElse("");
+    HttpUrl url = buildUrl(serverUrl, format("/rest/api/1.0/repos?projectname=%s&name=%s&start=%s&limit=%s", projectOrEmpty, repoOrEmpty, startOrEmpty, pageSize));
     return doGet(token, url, body -> buildGson().fromJson(body, RepositoryList.class));
   }
 
@@ -101,8 +102,9 @@ public class BitbucketServerRestClient {
     return doGet(token, url, body -> buildGson().fromJson(body, RepositoryList.class));
   }
 
-  public ProjectList getProjects(String serverUrl, String token) {
-    HttpUrl url = buildUrl(serverUrl, "/rest/api/1.0/projects");
+  public ProjectList getProjects(String serverUrl, String token, @Nullable Integer start, int pageSize) {
+    String startOrEmpty = Optional.ofNullable(start).map(String::valueOf).orElse("");
+    HttpUrl url = buildUrl(serverUrl, format("/rest/api/1.0/projects?start=%s&limit=%s", startOrEmpty, pageSize));
     return doGet(token, url, body -> buildGson().fromJson(body, ProjectList.class));
   }
 
@@ -149,7 +151,7 @@ public class BitbucketServerRestClient {
       handleHttpErrorIfAny(response.isSuccessful(), response.code(), bodyString);
       return bodyString;
     } catch (IOException e) {
-      LOG.info(UNABLE_TO_CONTACT_BITBUCKET_SERVER + ": " + e.getMessage(), e);
+      LOG.info(UNABLE_TO_CONTACT_BITBUCKET_SERVER + ": {}", e.getMessage(), e);
       throw new IllegalArgumentException(UNABLE_TO_CONTACT_BITBUCKET_SERVER, e);
     }
   }
@@ -189,9 +191,16 @@ public class BitbucketServerRestClient {
   }
 
   protected static boolean equals(@Nullable MediaType first, @Nullable MediaType second) {
-    String s1 = first == null ? null : first.toString().toLowerCase(ENGLISH).replace(" ", "");
-    String s2 = second == null ? null : second.toString().toLowerCase(ENGLISH).replace(" ", "");
-    return s1 != null && s2 != null && s1.equals(s2);
+    String s1 = convertMediaTypeToString(first);
+    String s2 = convertMediaTypeToString(second);
+    return s1 != null && s1.equals(s2);
+  }
+
+  private static String convertMediaTypeToString(@Nullable MediaType mediaType) {
+    return Optional.ofNullable(mediaType)
+      .map(MediaType::toString)
+      .map(s -> s.toLowerCase(ENGLISH).replace(" ", ""))
+      .orElse(null);
   }
 
   protected static String getErrorMessage(String bodyString) {

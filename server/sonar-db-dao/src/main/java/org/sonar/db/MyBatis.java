@@ -91,10 +91,10 @@ import org.sonar.db.issue.NewCodeReferenceIssueDto;
 import org.sonar.db.issue.PrIssueDto;
 import org.sonar.db.measure.LargestBranchNclocDto;
 import org.sonar.db.measure.MeasureMapper;
-import org.sonar.db.measure.ProjectLocDistributionDto;
 import org.sonar.db.measure.ProjectMeasureDto;
 import org.sonar.db.measure.ProjectMeasureMapper;
 import org.sonar.db.metric.MetricMapper;
+import org.sonar.db.migrationlog.MigrationLogMapper;
 import org.sonar.db.newcodeperiod.NewCodePeriodMapper;
 import org.sonar.db.notification.NotificationQueueDto;
 import org.sonar.db.notification.NotificationQueueMapper;
@@ -184,6 +184,7 @@ import org.sonar.db.user.UserTelemetryDto;
 import org.sonar.db.user.UserTokenCount;
 import org.sonar.db.user.UserTokenDto;
 import org.sonar.db.user.UserTokenMapper;
+import org.sonar.db.user.ai.UserAiToolUsageMapper;
 import org.sonar.db.webhook.WebhookDeliveryMapper;
 import org.sonar.db.webhook.WebhookMapper;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -256,7 +257,6 @@ public class MyBatis {
     confBuilder.loadAlias("AnalysisPropertyValuePerProject", AnalysisPropertyValuePerProject.class);
     confBuilder.loadAlias("ProjectAlmKeyAndProject", ProjectAlmKeyAndProject.class);
     confBuilder.loadAlias("PrAndBranchCountByProjectDto", PrBranchAnalyzedLanguageCountByProjectDto.class);
-    confBuilder.loadAlias("ProjectLocDistribution", ProjectLocDistributionDto.class);
     confBuilder.loadAlias("PurgeableAnalysis", PurgeableAnalysisDto.class);
     confBuilder.loadAlias("PushEvent", PushEventDto.class);
     confBuilder.loadAlias("QualityGateCondition", QualityGateConditionDto.class);
@@ -321,6 +321,7 @@ public class MyBatis {
       MeasureMapper.class,
       ProjectMeasureMapper.class,
       MetricMapper.class,
+      MigrationLogMapper.class,
       NewCodePeriodMapper.class,
       NotificationQueueMapper.class,
       PermissionTemplateCharacteristicMapper.class,
@@ -361,6 +362,7 @@ public class MyBatis {
       SessionTokenMapper.class,
       SnapshotMapper.class,
       TelemetryMetricsSentMapper.class,
+      UserAiToolUsageMapper.class,
       UserDismissedMessagesMapper.class,
       UserGroupMapper.class,
       UserMapper.class,

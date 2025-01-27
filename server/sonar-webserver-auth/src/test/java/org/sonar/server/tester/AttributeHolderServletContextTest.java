@@ -23,14 +23,14 @@ import com.google.common.collect.ImmutableSet;
 import java.util.Collections;
 import java.util.Enumeration;
 import java.util.EventListener;
-import javax.servlet.Filter;
-import javax.servlet.FilterChain;
-import javax.servlet.FilterConfig;
-import javax.servlet.Servlet;
-import javax.servlet.ServletConfig;
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
-import javax.servlet.SessionTrackingMode;
+import jakarta.servlet.Filter;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.FilterConfig;
+import jakarta.servlet.Servlet;
+import jakarta.servlet.ServletConfig;
+import jakarta.servlet.ServletRequest;
+import jakarta.servlet.ServletResponse;
+import jakarta.servlet.SessionTrackingMode;
 import org.junit.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -95,42 +95,16 @@ public class AttributeHolderServletContextTest {
   @Test(expected = UnsupportedOperationException.class)
   public void getRequestDispatcher_is_not_supported() {
     servletContext.getRequestDispatcher(SOME_STRING);
-
   }
 
   @Test(expected = UnsupportedOperationException.class)
   public void getNamedDispatcher_is_not_supported() {
     servletContext.getNamedDispatcher(SOME_STRING);
-
-  }
-
-  @Test(expected = UnsupportedOperationException.class)
-  public void getServlet_is_not_supported() {
-    servletContext.getServlet(SOME_STRING);
-
-  }
-
-  @Test(expected = UnsupportedOperationException.class)
-  public void getServlets_is_not_supported() {
-    servletContext.getServlets();
-
-  }
-
-  @Test(expected = UnsupportedOperationException.class)
-  public void getServletNames_is_not_supported() {
-    servletContext.getServletNames();
-
   }
 
   @Test(expected = UnsupportedOperationException.class)
   public void log_is_not_supported() {
     servletContext.log(SOME_STRING);
-
-  }
-
-  @Test(expected = UnsupportedOperationException.class)
-  public void log1_is_not_supported() {
-    servletContext.log(SOME_EXCEPTION, SOME_STRING);
   }
 
   @Test(expected = UnsupportedOperationException.class)

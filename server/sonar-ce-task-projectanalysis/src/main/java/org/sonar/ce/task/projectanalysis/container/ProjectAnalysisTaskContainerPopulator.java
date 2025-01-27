@@ -30,17 +30,18 @@ import org.sonar.ce.task.projectanalysis.analysis.AnalysisMetadataHolderImpl;
 import org.sonar.ce.task.projectanalysis.api.posttask.PostProjectAnalysisTasksExecutor;
 import org.sonar.ce.task.projectanalysis.batch.BatchReportDirectoryHolderImpl;
 import org.sonar.ce.task.projectanalysis.batch.BatchReportReaderImpl;
+import org.sonar.ce.task.projectanalysis.component.BranchComponentUuidsDelegate;
 import org.sonar.ce.task.projectanalysis.component.BranchLoader;
 import org.sonar.ce.task.projectanalysis.component.BranchPersisterImpl;
 import org.sonar.ce.task.projectanalysis.component.ConfigurationRepositoryImpl;
 import org.sonar.ce.task.projectanalysis.component.DisabledComponentsHolderImpl;
 import org.sonar.ce.task.projectanalysis.component.FileStatusesImpl;
 import org.sonar.ce.task.projectanalysis.component.PreviousSourceHashRepositoryImpl;
-import org.sonar.ce.task.projectanalysis.dependency.ProjectDependenciesHolderImpl;
 import org.sonar.ce.task.projectanalysis.component.ProjectPersister;
 import org.sonar.ce.task.projectanalysis.component.ReferenceBranchComponentUuids;
 import org.sonar.ce.task.projectanalysis.component.SiblingComponentsWithOpenIssues;
 import org.sonar.ce.task.projectanalysis.component.TreeRootHolderImpl;
+import org.sonar.ce.task.projectanalysis.dependency.ProjectDependenciesHolderImpl;
 import org.sonar.ce.task.projectanalysis.duplication.ComputeDuplicationDataMeasure;
 import org.sonar.ce.task.projectanalysis.duplication.CrossProjectDuplicationStatusHolderImpl;
 import org.sonar.ce.task.projectanalysis.duplication.DuplicationMeasures;
@@ -137,6 +138,7 @@ import org.sonar.ce.task.projectanalysis.source.FileSourceDataComputer;
 import org.sonar.ce.task.projectanalysis.source.FileSourceDataWarnings;
 import org.sonar.ce.task.projectanalysis.source.LastCommitVisitor;
 import org.sonar.ce.task.projectanalysis.source.NewLinesRepository;
+import org.sonar.ce.task.projectanalysis.source.OriginalFileResolver;
 import org.sonar.ce.task.projectanalysis.source.SignificantCodeRepository;
 import org.sonar.ce.task.projectanalysis.source.SourceHashRepositoryImpl;
 import org.sonar.ce.task.projectanalysis.source.SourceLineReadersFactory;
@@ -201,6 +203,7 @@ public final class ProjectAnalysisTaskContainerPopulator implements ContainerPop
 
       FileStatusesImpl.class,
       IndexDiffResolverImpl.class,
+      OriginalFileResolver.class,
       new MetricModule(),
 
       // holders
@@ -220,6 +223,7 @@ public final class ProjectAnalysisTaskContainerPopulator implements ContainerPop
       BatchReportReaderImpl.class,
       ReferenceBranchComponentUuids.class,
       NewCodeReferenceBranchComponentUuids.class,
+      BranchComponentUuidsDelegate.class,
       SiblingComponentsWithOpenIssues.class,
 
       // repositories

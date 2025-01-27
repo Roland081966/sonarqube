@@ -60,6 +60,8 @@ public interface ProjectMapper {
 
   void updateContainsAiCode(@Param("uuid") String uuid, @Param("containsAiCode") boolean containsAiCode, @Param("updatedAt") long updatedAt);
 
+  void updateDetectedAiCode(@Param("uuid") String uuid, @Param("detectedAiCode") boolean containsAiCode, @Param("updatedAt") long updatedAt);
+
   void updateAiCodeFixEnablementForAllProjects(@Param("aiCodeFixEnabled") boolean aiCodeFixEnabled, @Param("updatedAt") long updatedAt);
 
   List<ProjectDto> selectAllApplications();
@@ -77,6 +79,8 @@ public interface ProjectMapper {
   int countIndexedProjects();
 
   int countProjects();
+
+  int countApplications();
 
   int countProjectsByAiCodeFixEnablement(@Param("aiCodeFixEnabled") boolean aiCodeFixEnabled);
 }

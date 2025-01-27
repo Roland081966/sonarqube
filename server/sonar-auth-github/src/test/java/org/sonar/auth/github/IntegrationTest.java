@@ -25,8 +25,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicBoolean;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpServletRequest;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
@@ -41,10 +40,9 @@ import org.sonar.api.server.authentication.UserIdentity;
 import org.sonar.api.server.http.HttpRequest;
 import org.sonar.api.server.http.HttpResponse;
 import org.sonar.api.utils.System2;
-import org.sonar.auth.github.client.GithubApplicationClient;
 import org.sonar.auth.github.scribe.ScribeServiceBuilder;
 import org.sonar.db.DbTester;
-import org.sonar.server.http.JavaxHttpRequest;
+import org.sonar.server.http.JakartaHttpRequest;
 import org.sonar.server.property.InternalProperties;
 import org.sonar.server.property.InternalPropertiesImpl;
 
@@ -166,19 +164,19 @@ public class IntegrationTest {
     // response of api.github.com/orgs/first_org/members/user
     github.enqueue(new MockResponse().setResponseCode(204));
     // response of api.github.com/user/emails
-    github.enqueue(new MockResponse().setBody(
-      "[\n" +
-        "  {\n" +
-        "    \"email\": \"support@github.com\",\n" +
-        "    \"verified\": false,\n" +
-        "    \"primary\": false\n" +
-        "  },\n" +
-        "  {\n" +
-        "    \"email\": \"octocat@github.com\",\n" +
-        "    \"verified\": true,\n" +
-        "    \"primary\": true\n" +
-        "  },\n" +
-        "]"));
+    github.enqueue(new MockResponse().setBody("""
+      [
+        {
+          "email": "support@github.com",
+          "verified": false,
+          "primary": false
+        },
+        {
+          "email": "octocat@github.com",
+          "verified": true,
+          "primary": true
+        },
+      ]"""));
 
     HttpServletRequest request = newRequest("the-verifier-code");
     DumbCallbackContext callbackContext = new DumbCallbackContext(request);
@@ -203,7 +201,6 @@ public class IntegrationTest {
     github.enqueue(new MockResponse().setResponseCode(204));
     // response of api.github.com/user/emails
     github.enqueue(new MockResponse().setBody("[]"));
-
 
     HttpServletRequest request = newRequest("the-verifier-code");
     DumbCallbackContext callbackContext = new DumbCallbackContext(request);
@@ -244,14 +241,15 @@ public class IntegrationTest {
     // response of api.github.com/orgs/first_org/members/user
     github.enqueue(new MockResponse().setResponseCode(204));
     // response of api.github.com/user/teams
-    github.enqueue(new MockResponse().setBody("[\n" +
-      "  {\n" +
-      "    \"slug\": \"developers\",\n" +
-      "    \"organization\": {\n" +
-      "      \"login\": \"SonarSource\"\n" +
-      "    }\n" +
-      "  }\n" +
-      "]"));
+    github.enqueue(new MockResponse().setBody("""
+      [
+        {
+          "slug": "developers",
+          "organization": {
+            "login": "SonarSource"
+          }
+        }
+      ]"""));
 
     HttpServletRequest request = newRequest("the-verifier-code");
     DumbCallbackContext callbackContext = new DumbCallbackContext(request);
@@ -274,24 +272,26 @@ public class IntegrationTest {
     // responses of api.github.com/user/teams
     github.enqueue(new MockResponse()
       .setHeader("Link", "<" + gitHubUrl + "/user/teams?per_page=100&page=2>; rel=\"next\", <" + gitHubUrl + "/user/teams?per_page=100&page=2>; rel=\"last\"")
-      .setBody("[\n" +
-        "  {\n" +
-        "    \"slug\": \"developers\",\n" +
-        "    \"organization\": {\n" +
-        "      \"login\": \"SonarSource\"\n" +
-        "    }\n" +
-        "  }\n" +
-        "]"));
+      .setBody("""
+        [
+          {
+            "slug": "developers",
+            "organization": {
+              "login": "SonarSource"
+            }
+          }
+        ]"""));
     github.enqueue(new MockResponse()
       .setHeader("Link", "<" + gitHubUrl + "/user/teams?per_page=100&page=1>; rel=\"prev\", <" + gitHubUrl + "/user/teams?per_page=100&page=1>; rel=\"first\"")
-      .setBody("[\n" +
-        "  {\n" +
-        "    \"slug\": \"sonarsource-developers\",\n" +
-        "    \"organization\": {\n" +
-        "      \"login\": \"SonarQubeCommunity\"\n" +
-        "    }\n" +
-        "  }\n" +
-        "]"));
+      .setBody("""
+        [
+          {
+            "slug": "sonarsource-developers",
+            "organization": {
+              "login": "SonarQubeCommunity"
+            }
+          }
+        ]"""));
 
     HttpServletRequest request = newRequest("the-verifier-code");
     DumbCallbackContext callbackContext = new DumbCallbackContext(request);
@@ -452,7 +452,7 @@ public class IntegrationTest {
 
     @Override
     public HttpRequest getHttpRequest() {
-      return new JavaxHttpRequest(request);
+      return new JakartaHttpRequest(request);
     }
 
     @Override
@@ -460,15 +460,6 @@ public class IntegrationTest {
       throw new UnsupportedOperationException("not used");
     }
 
-    @Override
-    public HttpServletRequest getRequest() {
-      throw new UnsupportedOperationException("deprecated");
-    }
-
-    @Override
-    public HttpServletResponse getResponse() {
-      throw new UnsupportedOperationException("deprecated");
-    }
   }
 
   private static class DumbInitContext implements OAuth2IdentityProvider.InitContext {
@@ -504,14 +495,5 @@ public class IntegrationTest {
       return null;
     }
 
-    @Override
-    public HttpServletRequest getRequest() {
-      return null;
-    }
-
-    @Override
-    public HttpServletResponse getResponse() {
-      return null;
-    }
   }
 }

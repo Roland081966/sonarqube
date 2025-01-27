@@ -20,7 +20,7 @@
 package org.sonarqube.ws.client.rules;
 
 import java.util.stream.Collectors;
-import javax.annotation.Generated;
+import jakarta.annotation.Generated;
 import org.sonarqube.ws.MediaTypes;
 import org.sonarqube.ws.Rules.CreateResponse;
 import org.sonarqube.ws.Rules.ListResponse;
@@ -73,6 +73,7 @@ public class RulesService extends BaseService {
         .setParam("severity", request.getSeverity())
         .setParam("status", request.getStatus())
         .setParam("templateKey", request.getTemplateKey())
+        .setParam("cleanCodeAttribute", request.getCleanCodeAttribute())
         .setParam("type", request.getType()),
       CreateResponse.parser());
   }

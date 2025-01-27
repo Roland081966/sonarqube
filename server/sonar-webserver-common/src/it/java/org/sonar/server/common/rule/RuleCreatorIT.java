@@ -29,7 +29,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.assertj.core.api.Fail;
 import org.junit.Rule;
 import org.junit.Test;
-import org.mockito.Mockito;
 import org.sonar.api.config.Configuration;
 import org.sonar.api.impl.utils.TestSystem2;
 import org.sonar.api.rule.RuleKey;
@@ -145,7 +144,7 @@ public class RuleCreatorIT {
   }
 
   private static void assertCleanCodeInformation(RuleDto rule) {
-    assertThat(rule.getCleanCodeAttribute()).isEqualTo(CleanCodeAttribute.CONVENTIONAL);
+    assertThat(rule.getCleanCodeAttribute()).isEqualTo(CleanCodeAttribute.CLEAR);
     assertThat(rule.getDefaultImpacts()).extracting(ImpactDto::getSoftwareQuality, ImpactDto::getSeverity)
       .containsExactly(tuple(MAINTAINABILITY, MEDIUM));
   }
@@ -196,7 +195,7 @@ public class RuleCreatorIT {
     assertThat(rule).isNotNull();
     assertThat(rule.getStatus()).isEqualTo(RuleStatus.READY);
     assertThat(rule.getSeverityString()).isEqualTo(Severity.MAJOR);
-    assertThat(rule.getCleanCodeAttribute()).isEqualTo(CleanCodeAttribute.CONVENTIONAL);
+    assertThat(rule.getCleanCodeAttribute()).isEqualTo(CleanCodeAttribute.CLEAR);
     assertThat(rule.getDefaultImpacts()).extracting(ImpactDto::getSoftwareQuality, ImpactDto::getSeverity).containsExactly(tuple(
       convertToSoftwareQuality(RuleType.valueOf(templateRule.getType())),
       convertToImpactSeverity(requireNonNull(Severity.MAJOR))));

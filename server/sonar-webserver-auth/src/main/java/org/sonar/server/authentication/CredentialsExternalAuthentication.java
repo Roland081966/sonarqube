@@ -23,7 +23,6 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.Locale;
 import java.util.Optional;
-import javax.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.sonar.api.Startable;
@@ -41,7 +40,6 @@ import org.sonar.db.user.UserDto;
 import org.sonar.server.authentication.event.AuthenticationEvent;
 import org.sonar.server.authentication.event.AuthenticationEvent.Source;
 import org.sonar.server.authentication.event.AuthenticationException;
-import org.sonar.server.http.JavaxHttpRequest;
 import org.sonar.server.user.SecurityRealmFactory;
 
 import static java.util.Objects.requireNonNull;
@@ -93,8 +91,7 @@ public class CredentialsExternalAuthentication implements Startable {
 
   private UserDto doAuthenticate(Credentials credentials, HttpRequest request, AuthenticationEvent.Method method) {
     try {
-      HttpServletRequest httpServletRequest = ((JavaxHttpRequest) request).getDelegate();
-      ExternalUsersProvider.Context externalUsersProviderContext = new ExternalUsersProvider.Context(credentials.getLogin(), request, httpServletRequest);
+      ExternalUsersProvider.Context externalUsersProviderContext = new ExternalUsersProvider.Context(credentials.getLogin(), request);
       UserDetails details = externalUsersProvider.doGetUserDetails(externalUsersProviderContext);
       if (details == null) {
         throw AuthenticationException.newBuilder()
@@ -104,7 +101,7 @@ public class CredentialsExternalAuthentication implements Startable {
           .build();
       }
 
-      Authenticator.Context authenticatorContext = new Authenticator.Context(credentials.getLogin(), credentials.getPassword().orElse(null), request, httpServletRequest);
+      Authenticator.Context authenticatorContext = new Authenticator.Context(credentials.getLogin(), credentials.getPassword().orElse(null), request);
       boolean status = authenticator.doAuthenticate(authenticatorContext);
       if (!status) {
         throw AuthenticationException.newBuilder()
@@ -140,8 +137,7 @@ public class CredentialsExternalAuthentication implements Startable {
       .setEmail(trimToNull(details.getEmail()))
       .setProviderLogin(userLogin);
     if (externalGroupsProvider != null) {
-      HttpServletRequest httpServletRequest = ((JavaxHttpRequest) request).getDelegate();
-      ExternalGroupsProvider.Context context = new ExternalGroupsProvider.Context(userLogin, request, httpServletRequest);
+      ExternalGroupsProvider.Context context = new ExternalGroupsProvider.Context(userLogin, request);
       Collection<String> groups = externalGroupsProvider.doGetGroups(context);
       userIdentityBuilder.setGroups(new HashSet<>(groups));
     }

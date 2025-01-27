@@ -32,7 +32,7 @@ public class ScannerProperties {
 
   public static final String INCLUDE_SCM_SUBMODULES = "sonar.scm.submodules.included";
 
-  public static final String BRANCHES_DOC_LINK_SUFFIX = "/analyzing-source-code/branches/branch-analysis/";
+  public static final String BRANCHES_DOC_LINK_SUFFIX = "/analyzing-source-code/analysis-parameters/#multibranch";
 
   public static final String BRANCH_NAME = "sonar.branch.name";
 

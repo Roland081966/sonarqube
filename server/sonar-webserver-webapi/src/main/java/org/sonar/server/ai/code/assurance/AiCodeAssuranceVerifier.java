@@ -19,53 +19,14 @@
  */
 package org.sonar.server.ai.code.assurance;
 
-import org.sonar.core.platform.EditionProvider;
-import org.sonar.db.DbClient;
-import org.sonar.db.DbSession;
+import javax.annotation.Nullable;
 import org.sonar.db.project.ProjectDto;
-import org.sonar.db.qualitygate.QualityGateDto;
 
-/**
- * Make sure that for {@link EditionProvider.Edition#COMMUNITY} we'll always get false or {@link AiCodeAssurance#NONE}, no matter of the
- * value in database.
- * This is to support correctly downgraded instances.
- */
-public class AiCodeAssuranceVerifier {
-  private final DbClient dbClient;
-  private final AiCodeAssuranceEntitlement entitlement;
+public interface AiCodeAssuranceVerifier {
 
-  public AiCodeAssuranceVerifier(AiCodeAssuranceEntitlement entitlement, DbClient dbClient) {
-    this.dbClient = dbClient;
-    this.entitlement = entitlement;
-  }
+  AiCodeAssurance getAiCodeAssurance(ProjectDto projectDto, @Nullable String branchKey);
 
-  public AiCodeAssurance getAiCodeAssurance(ProjectDto projectDto) {
-    if (!entitlement.isEnabled() || !projectDto.getContainsAiCode()) {
-      return AiCodeAssurance.NONE;
-    }
-    try (DbSession dbSession = dbClient.openSession(false)) {
-      QualityGateDto qualityGate = dbClient.qualityGateDao().selectByProjectUuid(dbSession, projectDto.getUuid());
-      if (qualityGate == null) {
-        qualityGate = dbClient.qualityGateDao().selectDefault(dbSession);
-      }
-      if (qualityGate != null && qualityGate.isAiCodeSupported()) {
-        return AiCodeAssurance.AI_CODE_ASSURED;
-      }
-      return AiCodeAssurance.CONTAINS_AI_CODE;
-    }
-  }
+  AiCodeAssurance getAiCodeAssurance(ProjectDto projectDto);
 
-  public boolean isAiCodeAssured(ProjectDto projectDto) {
-    return AiCodeAssurance.AI_CODE_ASSURED.equals(getAiCodeAssurance(projectDto));
-  }
-
-  public AiCodeAssurance getAiCodeAssurance(boolean containsAiCode, boolean aiCodeSupportedQg) {
-    if (!entitlement.isEnabled() || !containsAiCode) {
-      return AiCodeAssurance.NONE;
-    }
-    if (aiCodeSupportedQg) {
-      return AiCodeAssurance.AI_CODE_ASSURED;
-    }
-    return AiCodeAssurance.CONTAINS_AI_CODE;
-  }
+  boolean isAiCodeAssured(ProjectDto projectDto);
 }

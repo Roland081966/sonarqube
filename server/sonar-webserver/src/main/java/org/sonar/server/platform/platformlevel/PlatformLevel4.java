@@ -59,7 +59,7 @@ import org.sonar.core.metric.SoftwareQualitiesMetrics;
 import org.sonar.core.platform.PlatformEditionProvider;
 import org.sonar.core.platform.SpringComponentContainer;
 import org.sonar.server.ai.code.assurance.AiCodeAssuranceEntitlement;
-import org.sonar.server.ai.code.assurance.AiCodeAssuranceVerifier;
+import org.sonar.server.ai.code.assurance.NoOpAiCodeAssuranceVerifier;
 import org.sonar.server.almintegration.ws.AlmIntegrationsWSModule;
 import org.sonar.server.almintegration.ws.CredentialsEncoderHelper;
 import org.sonar.server.almintegration.ws.ImportHelper;
@@ -181,6 +181,10 @@ import org.sonar.server.newcodeperiod.ws.NewCodePeriodsWsModule;
 import org.sonar.server.notification.NotificationModule;
 import org.sonar.server.notification.email.telemetry.EmailConfigAuthMethodTelemetryProvider;
 import org.sonar.server.notification.email.telemetry.EmailConfigHostTelemetryProvider;
+import org.sonar.server.notification.email.telemetry.TelemetryApplicationSubscriptionsProvider;
+import org.sonar.server.notification.email.telemetry.TelemetryApplicationsCountProvider;
+import org.sonar.server.notification.email.telemetry.TelemetryPortfolioSubscriptionsProvider;
+import org.sonar.server.notification.email.telemetry.TelemetryProjectSubscriptionsProvider;
 import org.sonar.server.notification.ws.NotificationWsModule;
 import org.sonar.server.permission.index.PermissionIndexer;
 import org.sonar.server.permission.ws.PermissionsWsModule;
@@ -189,10 +193,13 @@ import org.sonar.server.platform.PersistentSettings;
 import org.sonar.server.platform.SystemInfoWriterModule;
 import org.sonar.server.platform.WebCoreExtensionsInstaller;
 import org.sonar.server.platform.db.CheckAnyonePermissionsAtStartup;
+import org.sonar.server.platform.db.migration.DatabaseMigrationPersister;
+import org.sonar.server.platform.db.migration.DatabaseMigrationTelemetry;
 import org.sonar.server.platform.telemetry.TelemetryFipsEnabledProvider;
 import org.sonar.server.platform.telemetry.TelemetryMQRModePropertyProvider;
 import org.sonar.server.platform.telemetry.TelemetryNclocProvider;
-import org.sonar.server.platform.telemetry.TelemetryPortfolioConfidentialFlagProvider;
+import org.sonar.server.platform.telemetry.TelemetryPortfolioSelectionModeProvider;
+import org.sonar.server.platform.telemetry.TelemetrySubportfolioSelectionModeProvider;
 import org.sonar.server.platform.telemetry.TelemetryUserEnabledProvider;
 import org.sonar.server.platform.telemetry.TelemetryVersionProvider;
 import org.sonar.server.platform.web.ActionDeprecationLoggerInterceptor;
@@ -343,7 +350,7 @@ public class PlatformLevel4 extends PlatformLevel {
       DelegatingDevOpsProjectCreatorFactory.class,
 
       // ai code assurance
-      AiCodeAssuranceVerifier.class,
+      NoOpAiCodeAssuranceVerifier.class,
       AiCodeAssuranceEntitlement.class,
 
       // batch
@@ -680,7 +687,14 @@ public class PlatformLevel4 extends PlatformLevel {
       TelemetryNclocProvider.class,
       TelemetryUserEnabledProvider.class,
       TelemetryFipsEnabledProvider.class,
-      TelemetryPortfolioConfidentialFlagProvider.class,
+      TelemetrySubportfolioSelectionModeProvider.class,
+      TelemetryPortfolioSelectionModeProvider.class,
+      TelemetryApplicationsCountProvider.class,
+
+      // Reports telemetry
+      TelemetryApplicationSubscriptionsProvider.class,
+      TelemetryProjectSubscriptionsProvider.class,
+      TelemetryPortfolioSubscriptionsProvider.class,
 
       // telemetry
       TelemetryMetricsLoader.class,
@@ -691,6 +705,10 @@ public class PlatformLevel4 extends PlatformLevel {
       CloudUsageDataProvider.class,
       QualityProfileDataProvider.class,
       ProjectLocDistributionDataProvider.class,
+
+      // database migration logging and telemetry
+      DatabaseMigrationPersister.class,
+      DatabaseMigrationTelemetry.class,
 
       // monitoring
       ServerMonitoringMetrics.class,

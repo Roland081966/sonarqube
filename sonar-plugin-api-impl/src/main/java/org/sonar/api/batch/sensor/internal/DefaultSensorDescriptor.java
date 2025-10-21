@@ -27,18 +27,16 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.Nullable;
-
 import org.sonar.api.batch.fs.InputFile;
 import org.sonar.api.batch.sensor.SensorDescriptor;
 import org.sonar.api.config.Configuration;
 
 public class DefaultSensorDescriptor implements SensorDescriptor {
   public static final Set<String> HARDCODED_INDEPENDENT_FILE_SENSORS = Collections.unmodifiableSet(Stream.of(
-          "CSS Metrics",
-          "CSS Rules",
-          "HTML",
-          "XML Sensor"
-  ).collect(Collectors.toSet()));
+    "CSS Metrics",
+    "CSS Rules",
+    "HTML",
+    "XML Sensor").collect(Collectors.toSet()));
 
   private String name;
   private String[] languages = new String[0];
@@ -47,6 +45,7 @@ public class DefaultSensorDescriptor implements SensorDescriptor {
   private boolean global = false;
   private Predicate<Configuration> configurationPredicate;
   private boolean processesFilesIndependently = false;
+  private boolean processesHiddenFiles = false;
 
   public String name() {
     return name;
@@ -75,6 +74,10 @@ public class DefaultSensorDescriptor implements SensorDescriptor {
 
   public boolean isProcessesFilesIndependently() {
     return processesFilesIndependently;
+  }
+
+  public boolean isProcessesHiddenFiles() {
+    return processesHiddenFiles;
   }
 
   @Override
@@ -130,6 +133,12 @@ public class DefaultSensorDescriptor implements SensorDescriptor {
   @Override
   public SensorDescriptor processesFilesIndependently() {
     this.processesFilesIndependently = true;
+    return this;
+  }
+
+  @Override
+  public SensorDescriptor processesHiddenFiles() {
+    this.processesHiddenFiles = true;
     return this;
   }
 }

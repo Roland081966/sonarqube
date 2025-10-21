@@ -74,7 +74,7 @@ public class ProjectDao implements Dao {
     if (keys.isEmpty()) {
       return emptyList();
     }
-    return mapper(session).selectProjectsByKeys(keys);
+    return executeLargeInputs(keys, partition -> mapper(session).selectProjectsByKeys(partition));
   }
 
   public List<ProjectDto> selectApplicationsByKeys(DbSession session, Set<String> keys) {
@@ -174,5 +174,9 @@ public class ProjectDao implements Dao {
 
   public int countAiCodeFixDisabledProjects(DbSession session) {
     return mapper(session).countProjectsByAiCodeFixEnablement(false);
+  }
+
+  public Set<String> selectAiCodeFixEnabledProjectKeys(DbSession session) {
+    return mapper(session).selectProjectKeysByAiCodeFixEnablement(true);
   }
 }

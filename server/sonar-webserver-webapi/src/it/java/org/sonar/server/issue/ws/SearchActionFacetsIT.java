@@ -29,7 +29,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import org.sonar.api.config.Configuration;
 import org.sonar.api.issue.Issue;
 import org.sonar.api.resources.Languages;
-import org.sonar.api.rules.RuleType;
+import org.sonar.core.rule.RuleType;
 import org.sonar.api.server.ws.WebService;
 import org.sonar.api.utils.Durations;
 import org.sonar.api.utils.System2;
@@ -48,6 +48,7 @@ import org.sonar.server.issue.index.IssueIteratorFactory;
 import org.sonar.server.issue.index.IssueQueryFactory;
 import org.sonar.server.permission.index.PermissionIndexer;
 import org.sonar.server.permission.index.WebAuthorizationTypeSupport;
+import org.sonar.server.issue.FromSonarQubeUpdateFeature;
 import org.sonar.server.tester.UserSessionRule;
 import org.sonar.server.ws.WsActionTester;
 import org.sonarqube.ws.Common;
@@ -60,6 +61,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.groups.Tuple.tuple;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 import static org.sonar.api.server.ws.WebService.Param.FACETS;
 import static org.sonar.db.component.ComponentTesting.newDirectory;
 import static org.sonar.db.component.ComponentTesting.newFileDto;
@@ -95,8 +97,13 @@ class SearchActionFacetsIT {
   private final SearchResponseFormat searchResponseFormat = new SearchResponseFormat(new Durations(), languages,
     new TextRangeResponseFormatter(), userFormatter);
   private final IssueIndexSyncProgressChecker issueIndexSyncProgressChecker = new IssueIndexSyncProgressChecker(db.getDbClient());
+  private final FromSonarQubeUpdateFeature fromSonarQubeUpdateFeature = mock(FromSonarQubeUpdateFeature.class);
+  
+  {
+    when(fromSonarQubeUpdateFeature.isAvailable()).thenReturn(true);
+  }
   private final WsActionTester ws = new WsActionTester(
-    new SearchAction(userSession, issueIndex, issueQueryFactory, issueIndexSyncProgressChecker, searchResponseLoader, searchResponseFormat, System2.INSTANCE, db.getDbClient()));
+    new SearchAction(userSession, issueIndex, issueQueryFactory, issueIndexSyncProgressChecker, searchResponseLoader, searchResponseFormat, System2.INSTANCE, db.getDbClient(), fromSonarQubeUpdateFeature));
 
   @Test
   void display_all_facets() {
@@ -119,7 +126,7 @@ class SearchActionFacetsIT {
       .executeProtobuf(SearchWsResponse.class);
 
     Map<String, Number> expectedStatuses = ImmutableMap.<String, Number>builder().put("OPEN", 1L).put("CONFIRMED", 0L)
-      .put("REOPENED", 0L).put("RESOLVED", 0L).put("CLOSED", 0L).build();
+      .put("REOPENED", 0L).put("RESOLVED", 0L).put("CLOSED", 0L).put("IN_SANDBOX", 0L).build();
 
     assertThat(response.getFacets().getFacetsList())
       .extracting(Common.Facet::getProperty, facet -> facet.getValuesList().stream().collect(toMap(FacetValue::getVal, FacetValue::getCount)))
@@ -307,7 +314,7 @@ class SearchActionFacetsIT {
         // Assignees contains one additional element : it's the empty string that will return number of unassigned issues
         tuple("assignees", 101),
         // Following facets returned fixed number of elements
-        tuple("statuses", 5),
+        tuple("statuses", 6),
         tuple("resolutions", 5),
         tuple("severities", 5),
         tuple("types", 3));
@@ -363,7 +370,7 @@ class SearchActionFacetsIT {
       .executeProtobuf(SearchWsResponse.class);
 
     Map<String, Number> expectedStatuses = ImmutableMap.<String, Number>builder().put("OPEN", 1L).put("CONFIRMED", 0L)
-      .put("REOPENED", 0L).put("RESOLVED", 0L).put("CLOSED", 0L).build();
+      .put("REOPENED", 0L).put("RESOLVED", 0L).put("CLOSED", 0L).put("IN_SANDBOX", 0L).build();
 
     assertThat(response.getFacets().getFacetsList())
       .extracting(Common.Facet::getProperty, facet -> facet.getValuesList().stream().collect(toMap(FacetValue::getVal, FacetValue::getCount)))

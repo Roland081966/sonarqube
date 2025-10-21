@@ -33,12 +33,12 @@ import org.sonar.api.resources.Language;
 import org.sonar.api.resources.Languages;
 import org.sonar.api.rule.RuleKey;
 import org.sonar.api.rules.CleanCodeAttribute;
-import org.sonar.api.rules.RuleType;
 import org.sonar.api.utils.DateUtils;
 import org.sonar.api.utils.Duration;
 import org.sonar.api.utils.Durations;
 import org.sonar.api.utils.Paging;
 import org.sonar.core.rule.ImpactFormatter;
+import org.sonar.core.rule.RuleType;
 import org.sonar.db.component.BranchDto;
 import org.sonar.db.component.BranchType;
 import org.sonar.db.component.ComponentDto;
@@ -52,7 +52,6 @@ import org.sonar.markdown.Markdown;
 import org.sonar.server.es.Facets;
 import org.sonar.server.issue.TextRangeResponseFormatter;
 import org.sonar.server.issue.index.IssueScope;
-import org.sonar.server.issue.workflow.Transition;
 import org.sonar.server.ws.MessageFormattingUtils;
 import org.sonarqube.ws.Common;
 import org.sonarqube.ws.Common.Comment;
@@ -75,8 +74,8 @@ import static java.lang.String.format;
 import static java.util.Collections.emptyList;
 import static java.util.Objects.requireNonNull;
 import static java.util.Optional.ofNullable;
-import static org.sonar.db.component.ComponentQualifiers.UNIT_TEST_FILE;
 import static org.sonar.api.rule.RuleKey.EXTERNAL_RULE_REPO_PREFIX;
+import static org.sonar.db.component.ComponentQualifiers.UNIT_TEST_FILE;
 import static org.sonar.server.issue.index.IssueIndex.FACET_ASSIGNED_TO_ME;
 import static org.sonar.server.issue.index.IssueIndex.FACET_PROJECTS;
 import static org.sonar.server.issue.ws.SearchAdditionalField.ACTIONS;
@@ -103,14 +102,14 @@ public class SearchResponseFormat {
   }
 
   SearchWsResponse formatSearch(Set<SearchAdditionalField> fields, SearchResponseData data, Paging paging, Facets facets,
-    boolean showAuthor) {
+    boolean showAuthor, List<String> supportedFacets) {
     SearchWsResponse.Builder response = SearchWsResponse.newBuilder();
 
     formatPaging(paging, response);
     ofNullable(data.getEffortTotal()).ifPresent(response::setEffortTotal);
     response.addAllIssues(createIssues(fields, data, showAuthor));
     response.addAllComponents(formatComponents(data));
-    formatFacets(data, facets, response);
+    formatFacets(data, facets, response, supportedFacets);
     if (fields.contains(SearchAdditionalField.RULES)) {
       response.setRules(formatRules(data));
     }
@@ -206,13 +205,14 @@ public class SearchResponseFormat {
       issueBuilder.setSeverity(Common.Severity.valueOf(dto.getSeverity()));
     }
     ofNullable(data.getUserByUuid(dto.getAssigneeUuid())).ifPresent(assignee -> issueBuilder.setAssignee(assignee.getLogin()));
- 
+
     ofNullable(emptyToNull(dto.getResolution())).ifPresent(issueBuilder::setResolution);
     issueBuilder.setStatus(dto.getStatus());
     ofNullable(dto.getIssueStatus()).map(IssueStatus::name).ifPresent(issueBuilder::setIssueStatus);
     issueBuilder.setMessage(nullToEmpty(dto.getMessage()));
     issueBuilder.addAllMessageFormattings(MessageFormattingUtils.dbMessageFormattingToWs(dto.parseMessageFormattings()));
     issueBuilder.addAllTags(dto.getTags());
+    issueBuilder.addAllInternalTags(dto.getInternalTags());
     issueBuilder.addAllCodeVariants(dto.getCodeVariants());
     Long effort = dto.getEffort();
     if (effort != null) {
@@ -236,8 +236,7 @@ public class SearchResponseFormat {
 
     issueBuilder.setScope(UNIT_TEST_FILE.equals(component.qualifier()) ? IssueScope.TEST.name() : IssueScope.MAIN.name());
     issueBuilder.setPrioritizedRule(dto.isPrioritizedRule());
-
-    Optional.ofNullable(dto.getCveId()).ifPresent(issueBuilder::setCveId);
+    issueBuilder.setFromSonarQubeUpdate(dto.isFromSonarQubeUpdate());
   }
 
   private static void addAdditionalFieldsToIssueBuilder(Collection<SearchAdditionalField> fields, SearchResponseData data, IssueDto dto,
@@ -272,11 +271,9 @@ public class SearchResponseFormat {
 
   private static Transitions createIssueTransition(SearchResponseData data, IssueDto dto) {
     Transitions.Builder wsTransitions = Transitions.newBuilder();
-    List<Transition> transitions = data.getTransitionsForIssueKey(dto.getKey());
+    List<String> transitions = data.getTransitionsForIssueKey(dto.getKey());
     if (transitions != null) {
-      for (Transition transition : transitions) {
-        wsTransitions.addTransitions(transition.key());
-      }
+      wsTransitions.addAllTransitions(transitions);
     }
     return wsTransitions.build();
   }
@@ -406,9 +403,9 @@ public class SearchResponseFormat {
     return wsLangs;
   }
 
-  private static void formatFacets(SearchResponseData data, Facets facets, SearchWsResponse.Builder wsSearch) {
+  private static void formatFacets(SearchResponseData data, Facets facets, SearchWsResponse.Builder wsSearch, List<String> supportedFacets) {
     Common.Facets.Builder wsFacets = Common.Facets.newBuilder();
-    SearchAction.SUPPORTED_FACETS.stream()
+    supportedFacets.stream()
       .filter(f -> !f.equals(FACET_PROJECTS))
       .filter(f -> !f.equals(FACET_ASSIGNED_TO_ME))
       .filter(f -> !f.equals(PARAM_ASSIGNEES))

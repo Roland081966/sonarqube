@@ -35,7 +35,7 @@ import org.sonar.api.issue.IssueStatus;
 import org.sonar.api.issue.impact.Severity;
 import org.sonar.api.issue.impact.SoftwareQuality;
 import org.sonar.api.rules.CleanCodeAttribute;
-import org.sonar.api.rules.RuleType;
+import org.sonar.core.rule.RuleType;
 import org.sonar.api.utils.Duration;
 import org.sonar.core.issue.DefaultImpact;
 import org.sonar.core.issue.DefaultIssue;
@@ -727,6 +727,29 @@ class IssueFieldsSetterTest {
 
     issue.setCodeVariants(newCodeVariants);
     boolean updated = underTest.setCodeVariants(issue, currentCodeVariants, context);
+    assertThat(updated).isFalse();
+    assertThat(issue.currentChange()).isNull();
+  }
+
+  @Test
+  void setInternalTags_whenInternalTagAdded_shouldBeUpdated() {
+    Set<String> currentInternalTags = new HashSet<>(List.of("security"));
+    Set<String> newInternalTags = new HashSet<>(List.of("security", "performance"));
+
+    issue.setInternalTags(newInternalTags);
+    boolean updated = underTest.setInternalTags(issue, currentInternalTags, context);
+    assertThat(updated).isTrue();
+    assertThat(issue.internalTags()).contains("security", "performance");
+    assertThat(issue.mustSendNotifications()).isFalse();
+  }
+
+  @Test
+  void setInternalTags_whenInternalTagsUnchanged_shouldNotBeUpdated() {
+    Set<String> currentInternalTags = new HashSet<>(List.of("security", "performance"));
+    Set<String> newInternalTags = new HashSet<>(List.of("performance", "security"));
+
+    issue.setInternalTags(newInternalTags);
+    boolean updated = underTest.setInternalTags(issue, currentInternalTags, context);
     assertThat(updated).isFalse();
     assertThat(issue.currentChange()).isNull();
   }

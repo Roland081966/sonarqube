@@ -98,11 +98,23 @@ public class FileStructure {
     return new File(dir, "analysis-warnings.pb");
   }
 
-  public File dependencies() {
-    return new File(dir, "dependencies.pb");
+  public File analysisData() {
+    return new File(dir, "analysis-data.pb");
   }
 
   public File root() {
     return dir;
+  }
+
+  public File scaDir() {
+    File sca = new File(dir, "sca");
+    if (!sca.exists() && !sca.mkdirs()) {
+      throw new IllegalStateException("Unable to create directory: " + sca);
+    }
+    return sca;
+  }
+
+  public File dependencyFilesArchive() {
+    return new File(scaDir(), "dependency-files.tar.xz");
   }
 }

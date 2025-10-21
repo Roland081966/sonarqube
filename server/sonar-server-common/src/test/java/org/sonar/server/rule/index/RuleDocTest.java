@@ -22,7 +22,7 @@ package org.sonar.server.rule.index;
 import java.util.Set;
 import org.junit.Test;
 import org.sonar.api.rules.CleanCodeAttribute;
-import org.sonar.api.rules.RuleType;
+import org.sonar.core.rule.RuleType;
 import org.sonar.db.rule.RuleDescriptionSectionContextDto;
 import org.sonar.db.rule.RuleDescriptionSectionDto;
 import org.sonar.db.rule.RuleDto;
@@ -56,6 +56,7 @@ public class RuleDocTest {
     assertThat(ruleDoc.getCwe()).isEqualTo(securityStandards.getCwe());
     assertThat(ruleDoc.getOwaspTop10()).isEqualTo(securityStandards.getOwaspTop10());
     assertThat(ruleDoc.getOwaspTop10For2021()).isEqualTo(securityStandards.getOwaspTop10For2021());
+    assertThat(ruleDoc.getOwaspMobileTop10For2024()).isEqualTo(securityStandards.getOwaspMobileTop10For2024());
     assertThat(ruleDoc.getSansTop25()).isEqualTo(securityStandards.getSansTop25());
     assertThat(ruleDoc.getSonarSourceSecurityCategory()).isEqualTo(securityStandards.getSqCategory());
     assertThat(ruleDoc.name()).isEqualTo(ruleForIndexingDto.getName());

@@ -37,7 +37,7 @@ import org.junit.runner.RunWith;
 import org.sonar.api.config.internal.MapSettings;
 import org.sonar.api.server.authentication.IdentityProvider;
 import org.sonar.api.utils.DateUtils;
-import org.sonar.api.web.UserRole;
+import org.sonar.db.permission.ProjectPermission;
 import org.sonar.core.util.UuidFactory;
 import org.sonar.db.DbSession;
 import org.sonar.db.DbTester;
@@ -451,6 +451,39 @@ public class UserServiceIT {
   }
 
   @Test
+  public void search_with_paging_and_multiple_scm_accounts_should_return_correct_pagination() {
+    db.users().insertUser(u -> u.setLogin("user-1").setScmAccounts(asList("scm1-1", "scm1-2", "scm1-3")));
+    db.users().insertUser(u -> u.setLogin("user-2").setScmAccounts(asList("scm2-1")));
+    db.users().insertUser(u -> u.setLogin("user-3").setScmAccounts(asList("scm3-1", "scm3-2")));
+    db.users().insertUser(u -> u.setLogin("user-4").setScmAccounts(asList()));
+    db.users().insertUser(u -> u.setLogin("user-5").setScmAccounts(asList("scm5-1", "scm5-2", "scm5-3", "scm5-4")));
+
+    // Request page 1 with page size 3 - should return exactly 3 users
+    SearchResults<UserInformation> firstPage = userService.findUsers(UsersSearchRequest.builder().setPage(1).setPageSize(3).build());
+
+    assertThat(firstPage.searchResults())
+      .extracting(u -> u.userDto().getLogin())
+      .hasSize(3) // Should return exactly 3 users, not more due to SCM account duplication
+      .containsExactly("user-1", "user-2", "user-3");
+    assertThat(firstPage.total()).isEqualTo(5);
+
+    // Request page 2 with page size 3 - should return remaining 2 users
+    SearchResults<UserInformation> secondPage = userService.findUsers(UsersSearchRequest.builder().setPage(2).setPageSize(3).build());
+
+    assertThat(secondPage.searchResults())
+      .extracting(u -> u.userDto().getLogin())
+      .hasSize(2) // Should return exactly 2 remaining users
+      .containsExactly("user-4", "user-5");
+    assertThat(secondPage.total()).isEqualTo(5);
+
+    // Verify that SCM accounts are correctly returned for each user
+    assertThat(firstPage.searchResults())
+      .filteredOn(u -> u.userDto().getLogin().equals("user-1"))
+      .extracting(u -> u.userDto().getSortedScmAccounts())
+      .containsExactly(asList("scm1-1", "scm1-2", "scm1-3"));
+  }
+
+  @Test
   public void search_whenFilteringConnectionDate_shouldApplyFilter() {
     final Instant lastConnection = Instant.now();
     UserDto user = db.users().insertUser(u -> u
@@ -577,8 +610,8 @@ public class UserServiceIT {
     ComponentDto project = db.components().insertPrivateProject().getMainBranchComponent();
     db.users().insertGlobalPermissionOnUser(user, GlobalPermission.SCAN);
     db.users().insertGlobalPermissionOnUser(user, GlobalPermission.ADMINISTER_QUALITY_PROFILES);
-    db.users().insertProjectPermissionOnUser(user, UserRole.USER, project);
-    db.users().insertProjectPermissionOnUser(user, UserRole.CODEVIEWER, project);
+    db.users().insertProjectPermissionOnUser(user, ProjectPermission.USER, project);
+    db.users().insertProjectPermissionOnUser(user, ProjectPermission.CODEVIEWER, project);
 
     userService.deactivate(user.getUuid(), false);
 
@@ -592,8 +625,8 @@ public class UserServiceIT {
     UserDto user = db.users().insertUser();
     PermissionTemplateDto template = db.permissionTemplates().insertTemplate();
     PermissionTemplateDto anotherTemplate = db.permissionTemplates().insertTemplate();
-    db.permissionTemplates().addUserToTemplate(template.getUuid(), user.getUuid(), UserRole.USER, template.getName(), user.getLogin());
-    db.permissionTemplates().addUserToTemplate(anotherTemplate.getUuid(), user.getUuid(), UserRole.CODEVIEWER, anotherTemplate.getName(), user.getLogin());
+    db.permissionTemplates().addUserToTemplate(template.getUuid(), user.getUuid(), ProjectPermission.USER, template.getName(), user.getLogin());
+    db.permissionTemplates().addUserToTemplate(anotherTemplate.getUuid(), user.getUuid(), ProjectPermission.CODEVIEWER, anotherTemplate.getName(), user.getLogin());
 
     userService.deactivate(user.getUuid(), false);
 
@@ -844,6 +877,52 @@ public class UserServiceIT {
     assertThat(updatedUser.getExternalIdentityProvider()).isEqualTo("valid_provider");
     assertThat(updatedUser.getExternalId()).isEqualTo("prov_id");
     assertThat(updatedUser.getExternalLogin()).isEqualTo("prov_login");
+  }
+
+  @Test
+  public void updateUser_whenUpdatingScmAccountsAndInstanceManaged_shouldChange() {
+    when(managedInstanceService.isInstanceExternallyManaged()).thenReturn(true);
+
+    UserDto userDto = db.users().insertUser();
+    UpdateUser updateUser = new UpdateUser();
+    updateUser.setScmAccounts(List.of("newaccount"));
+
+    userService.updateUser(userDto.getUuid(), updateUser);
+
+    UserDto updatedUser = db.users().selectUserByLogin(userDto.getLogin()).orElseThrow();
+
+    assertThat(updatedUser.getSortedScmAccounts()).isEqualTo(List.of("newaccount"));
+  }
+
+  @DataProvider
+  public static Object[][] managedInstanceBlockedFields() {
+    return new Object[][] {
+      {"email", (Function<UpdateUser, UpdateUser>) updateUser -> updateUser.setEmail("new@email.com")},
+      {"email", (Function<UpdateUser, UpdateUser>) updateUser -> updateUser.setName("new name")},
+      {"email", (Function<UpdateUser, UpdateUser>) updateUser -> updateUser.setExternalIdentityProviderLogin("new-external-login")},
+      {"email", (Function<UpdateUser, UpdateUser>) updateUser -> updateUser.setExternalIdentityProvider("LDAP")},
+      {"email", (Function<UpdateUser, UpdateUser>) updateUser -> updateUser.setExternalIdentityProviderId("new-provider-id")},
+    };
+  }
+
+  @Test
+  @UseDataProvider("managedInstanceBlockedFields")
+  public void updateUser_whenUpdatingBlockedFieldAndInstanceManaged_shouldThrow(String fieldName,
+    Function<UpdateUser, UpdateUser> updateUserFunction) {
+    doThrow(BadRequestException.create("User information's cannot be updated when the instance is externally managed"))
+      .when(managedInstanceChecker).throwIfInstanceIsManaged(any());
+
+    UserDto userDto = db.users().insertUser();
+
+    assertThatThrownBy(() -> updateUser(userDto, updateUserFunction))
+      .isInstanceOf(BadRequestException.class)
+      .hasMessage("User information's cannot be updated when the instance is externally managed");
+  }
+
+  private void updateUser(UserDto userDto, Function<UpdateUser, UpdateUser> updateUserFunction) {
+    UpdateUser updateUser = new UpdateUser();
+    updateUser = updateUserFunction.apply(updateUser);
+    userService.updateUser(userDto.getUuid(), updateUser);
   }
 
   @DataProvider

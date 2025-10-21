@@ -30,9 +30,9 @@ import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.sonar.api.impl.utils.TestSystem2;
 import org.sonar.api.issue.IssueStatus;
-import org.sonar.api.rules.RuleType;
 import org.sonar.api.server.ws.WebService;
 import org.sonar.api.utils.System2;
+import org.sonar.core.rule.RuleType;
 import org.sonar.core.util.SequenceUuidFactory;
 import org.sonar.db.DbClient;
 import org.sonar.db.DbTester;
@@ -41,6 +41,7 @@ import org.sonar.db.component.ComponentDto;
 import org.sonar.db.component.ProjectData;
 import org.sonar.db.issue.IssueChangeDto;
 import org.sonar.db.issue.IssueDto;
+import org.sonar.db.permission.ProjectPermission;
 import org.sonar.db.rule.RuleDto;
 import org.sonar.db.user.UserDto;
 import org.sonar.server.es.EsTester;
@@ -58,8 +59,14 @@ import org.sonar.server.issue.notification.IssuesChangesNotificationBuilder;
 import org.sonar.server.issue.notification.IssuesChangesNotificationBuilder.ChangedIssue;
 import org.sonar.server.issue.notification.IssuesChangesNotificationBuilder.UserChange;
 import org.sonar.server.issue.notification.IssuesChangesNotificationSerializer;
-import org.sonar.server.issue.workflow.FunctionExecutor;
 import org.sonar.server.issue.workflow.IssueWorkflow;
+import org.sonar.server.issue.workflow.codequalityissue.CodeQualityIssueWorkflow;
+import org.sonar.server.issue.workflow.codequalityissue.CodeQualityIssueWorkflowActionsFactory;
+import org.sonar.server.issue.workflow.codequalityissue.CodeQualityIssueWorkflowDefinition;
+import org.sonar.server.issue.workflow.securityhotspot.SecurityHotspotWorkflow;
+import org.sonar.server.issue.workflow.securityhotspot.SecurityHotspotWorkflowActionsFactory;
+import org.sonar.server.issue.workflow.securityhotspot.SecurityHotspotWorkflowDefinition;
+import org.sonar.server.issue.workflow.securityhotspot.SecurityHotspotWorkflowTransition;
 import org.sonar.server.notification.NotificationManager;
 import org.sonar.server.pushapi.issues.IssueChangeEventService;
 import org.sonar.server.rule.DefaultRuleFinder;
@@ -82,23 +89,23 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
-import static org.sonar.api.issue.DefaultTransitions.RESOLVE_AS_REVIEWED;
 import static org.sonar.api.issue.Issue.RESOLUTION_FALSE_POSITIVE;
 import static org.sonar.api.issue.Issue.RESOLUTION_FIXED;
 import static org.sonar.api.issue.Issue.STATUS_CLOSED;
 import static org.sonar.api.issue.Issue.STATUS_CONFIRMED;
+import static org.sonar.api.issue.Issue.STATUS_IN_SANDBOX;
 import static org.sonar.api.issue.Issue.STATUS_OPEN;
 import static org.sonar.api.issue.Issue.STATUS_RESOLVED;
 import static org.sonar.api.rule.Severity.MAJOR;
 import static org.sonar.api.rule.Severity.MINOR;
-import static org.sonar.api.rules.RuleType.BUG;
-import static org.sonar.api.rules.RuleType.CODE_SMELL;
-import static org.sonar.api.rules.RuleType.VULNERABILITY;
-import static org.sonar.api.web.UserRole.ISSUE_ADMIN;
-import static org.sonar.api.web.UserRole.SECURITYHOTSPOT_ADMIN;
-import static org.sonar.api.web.UserRole.USER;
+import static org.sonar.core.rule.RuleType.BUG;
+import static org.sonar.core.rule.RuleType.CODE_SMELL;
+import static org.sonar.core.rule.RuleType.VULNERABILITY;
 import static org.sonar.db.component.ComponentTesting.newFileDto;
 import static org.sonar.db.issue.IssueChangeDto.TYPE_COMMENT;
+import static org.sonar.db.permission.ProjectPermission.ISSUE_ADMIN;
+import static org.sonar.db.permission.ProjectPermission.SECURITYHOTSPOT_ADMIN;
+import static org.sonar.db.permission.ProjectPermission.USER;
 import static org.sonar.server.issue.notification.IssuesChangesNotificationBuilderTesting.projectBranchOf;
 import static org.sonar.server.issue.notification.IssuesChangesNotificationBuilderTesting.projectOf;
 import static org.sonar.server.issue.notification.IssuesChangesNotificationBuilderTesting.ruleOf;
@@ -121,7 +128,9 @@ public class BulkChangeActionIT {
 
   private IssueChangeEventService issueChangeEventService = mock(IssueChangeEventService.class);
   private IssueFieldsSetter issueFieldsSetter = new IssueFieldsSetter();
-  private IssueWorkflow issueWorkflow = new IssueWorkflow(new FunctionExecutor(issueFieldsSetter), issueFieldsSetter, mock(TaintChecker.class));
+  private IssueWorkflow issueWorkflow = new IssueWorkflow(
+    new CodeQualityIssueWorkflow(new CodeQualityIssueWorkflowActionsFactory(issueFieldsSetter), new CodeQualityIssueWorkflowDefinition(), mock(TaintChecker.class)),
+    new SecurityHotspotWorkflow(new SecurityHotspotWorkflowActionsFactory(issueFieldsSetter), new SecurityHotspotWorkflowDefinition()));
   private WebIssueStorage issueStorage = new WebIssueStorage(system2, dbClient,
     new DefaultRuleFinder(dbClient, mock(RuleDescriptionFormatter.class)),
     new IssueIndexer(es.client(), dbClient, new IssueIteratorFactory(dbClient), null), new SequenceUuidFactory());
@@ -136,7 +145,6 @@ public class BulkChangeActionIT {
 
   @Before
   public void setUp() {
-    issueWorkflow.start();
     addActions();
   }
 
@@ -385,7 +393,7 @@ public class BulkChangeActionIT {
 
     BulkChangeWsResponse response = call(builder()
       .setIssues(singletonList(issue.getKey()))
-      .setDoTransition(RESOLVE_AS_REVIEWED)
+      .setDoTransition(SecurityHotspotWorkflowTransition.RESOLVE_AS_REVIEWED.getKey())
       .setSendNotifications(true)
       .build());
 
@@ -494,6 +502,64 @@ public class BulkChangeActionIT {
     assertThat(changedIssue.getRule()).isEqualTo(ruleOf(rule));
     assertThat(changedIssue.getProject()).isEqualTo(projectOf(project));
     assertThat(builder.getChange()).isEqualTo(new UserChange(NOW, userOf(user)));
+  }
+
+  @Test
+  public void transition_from_in_sandbox_using_reopen() {
+    UserDto user = db.users().insertUser();
+    userSession.logIn(user);
+    ProjectData projectData = db.components().insertPrivateProject();
+    ComponentDto project = projectData.getMainBranchComponent();
+    ComponentDto file = db.components().insertComponent(newFileDto(project));
+    addUserProjectPermissions(user, projectData, USER, ISSUE_ADMIN);
+    RuleDto rule = db.rules().insertIssueRule();
+    
+    IssueDto issue1InSandbox = db.issues().insertIssue(rule, project, file, i -> i
+      .setStatus(STATUS_IN_SANDBOX)
+      .setResolution(null));
+    IssueDto issue2InSandbox = db.issues().insertIssue(rule, project, file, i -> i
+      .setStatus(STATUS_IN_SANDBOX)
+      .setResolution(null));
+    IssueDto issueOpen = db.issues().insertIssue(rule, project, file, i -> i
+      .setStatus(STATUS_OPEN)
+      .setResolution(null));
+
+    BulkChangeWsResponse response = call(builder()
+      .setIssues(asList(issue1InSandbox.getKey(), issue2InSandbox.getKey(), issueOpen.getKey()))
+      .setDoTransition("reopen")
+      .build());
+
+    checkResponse(response, 3, 2, 1, 0);
+    
+    IssueDto reloadedIssue1 = db.getDbClient().issueDao().selectByKey(db.getSession(), issue1InSandbox.getKey()).orElseThrow();
+    IssueDto reloadedIssue2 = db.getDbClient().issueDao().selectByKey(db.getSession(), issue2InSandbox.getKey()).orElseThrow();
+    IssueDto reloadedIssueOpen = db.getDbClient().issueDao().selectByKey(db.getSession(), issueOpen.getKey()).orElseThrow();
+    
+    assertThat(reloadedIssue1.getStatus()).isEqualTo(STATUS_OPEN);
+    assertThat(reloadedIssue2.getStatus()).isEqualTo(STATUS_OPEN);
+    assertThat(reloadedIssueOpen.getStatus()).isEqualTo(STATUS_OPEN);
+  }
+
+  @Test
+  public void verify_unsandbox_transition_does_not_exist() {
+    UserDto user = db.users().insertUser();
+    userSession.logIn(user);
+    ProjectData projectData = db.components().insertPrivateProject();
+    ComponentDto project = projectData.getMainBranchComponent();
+    ComponentDto file = db.components().insertComponent(newFileDto(project));
+    addUserProjectPermissions(user, projectData, USER, ISSUE_ADMIN);
+    RuleDto rule = db.rules().insertIssueRule();
+    
+    IssueDto issueInSandbox = db.issues().insertIssue(rule, project, file, i -> i
+      .setStatus(STATUS_IN_SANDBOX)
+      .setResolution(null));
+
+    // Try to use UNSANDBOX transition (should fail)
+    assertThatThrownBy(() -> call(builder()
+      .setIssues(singletonList(issueInSandbox.getKey()))
+      .setDoTransition("unsandbox")
+      .build()))
+      .hasMessageContaining("do_transition");
   }
 
   @Test
@@ -790,8 +856,8 @@ public class BulkChangeActionIT {
     return request.executeProtobuf(BulkChangeWsResponse.class);
   }
 
-  private void addUserProjectPermissions(UserDto user, ProjectData project, String... permissions) {
-    for (String permission : permissions) {
+  private void addUserProjectPermissions(UserDto user, ProjectData project, ProjectPermission... permissions) {
+    for (ProjectPermission permission : permissions) {
       db.users().insertProjectPermissionOnUser(user, permission, project.getProjectDto());
       userSession.addProjectPermission(permission, project.getProjectDto());
       userSession.addProjectBranchMapping(project.projectUuid(), project.getMainBranchComponent());

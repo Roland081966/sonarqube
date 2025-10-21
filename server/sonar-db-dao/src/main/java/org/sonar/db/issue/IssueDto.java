@@ -42,7 +42,7 @@ import org.sonar.api.issue.impact.Severity;
 import org.sonar.api.issue.impact.SoftwareQuality;
 import org.sonar.api.rule.RuleKey;
 import org.sonar.api.rules.CleanCodeAttribute;
-import org.sonar.api.rules.RuleType;
+import org.sonar.core.rule.RuleType;
 import org.sonar.api.utils.Duration;
 import org.sonar.core.issue.DefaultIssue;
 import org.sonar.db.component.ComponentDto;
@@ -88,6 +88,7 @@ public final class IssueDto implements Serializable {
   private boolean isNewCodeReferenceIssue;
   private String ruleDescriptionContextKey;
   private boolean prioritizedRule;
+  private boolean fromSonarQubeUpdate;
 
   // functional dates stored as Long
   private Long issueCreationDate;
@@ -108,6 +109,7 @@ public final class IssueDto implements Serializable {
   private String projectKey;
   private String filePath;
   private String tags;
+  private String internalTags;
   private String codeVariants;
   // populate only when retrieving closed issue for issue tracking
   private String closedChangeData;
@@ -118,9 +120,6 @@ public final class IssueDto implements Serializable {
   private Set<ImpactDto> ruleDefaultImpacts = new LinkedHashSet<>();
   private CleanCodeAttribute cleanCodeAttribute;
   private CleanCodeAttribute ruleCleanCodeAttribute;
-
-  // issues dependency fields, one-one relationship
-  private String cveId;
 
   public IssueDto() {
     // nothing to do
@@ -149,6 +148,7 @@ public final class IssueDto implements Serializable {
       .setRuleKey(issue.ruleKey().repository(), issue.ruleKey().rule())
       .setExternal(issue.isFromExternalRuleEngine())
       .setTags(issue.tags())
+      .setInternalTags(issue.internalTags())
       .setRuleDescriptionContextKey(issue.getRuleDescriptionContextKey().orElse(null))
       .setComponentUuid(issue.componentUuid())
       .setComponentKey(issue.componentKey())
@@ -164,10 +164,10 @@ public final class IssueDto implements Serializable {
       .setCodeVariants(issue.codeVariants())
       .setCleanCodeAttribute(issue.getCleanCodeAttribute())
       .setPrioritizedRule(issue.isPrioritizedRule())
+      .setFromSonarQubeUpdate(issue.isFromSonarQubeUpdate())
       // technical dates
       .setCreatedAt(now)
-      .setUpdatedAt(now)
-      .setCveId(issue.getCveId());
+      .setUpdatedAt(now);
 
     issue.getImpacts().forEach(i -> issueDto.addImpact(new ImpactDto(i.softwareQuality(), i.severity(), i.manualSeverity())));
     return issueDto;
@@ -203,6 +203,7 @@ public final class IssueDto implements Serializable {
       .setRuleKey(issue.ruleKey().repository(), issue.ruleKey().rule())
       .setExternal(issue.isFromExternalRuleEngine())
       .setTags(issue.tags())
+      .setInternalTags(issue.internalTags())
       .setRuleDescriptionContextKey(issue.getRuleDescriptionContextKey().orElse(null))
       .setComponentUuid(issue.componentUuid())
       .setComponentKey(issue.componentKey())
@@ -217,6 +218,7 @@ public final class IssueDto implements Serializable {
       .setCodeVariants(issue.codeVariants())
       .setCleanCodeAttribute(issue.getCleanCodeAttribute())
       .setPrioritizedRule(issue.isPrioritizedRule())
+      .setFromSonarQubeUpdate(issue.isFromSonarQubeUpdate())
       // technical date
       .setUpdatedAt(now);
 
@@ -694,6 +696,30 @@ public final class IssueDto implements Serializable {
     return tags;
   }
 
+  public Set<String> getInternalTags() {
+    return ImmutableSet.copyOf(STRING_LIST_SPLITTER.split(internalTags == null ? "" : internalTags));
+  }
+
+  public String getInternalTagsString() {
+    return internalTags;
+  }
+
+  public IssueDto setInternalTags(@Nullable Collection<String> internalTags) {
+    if (internalTags == null || internalTags.isEmpty()) {
+      setInternalTagsString(null);
+    } else {
+      setInternalTagsString(STRING_LIST_JOINER.join(internalTags));
+    }
+    return this;
+  }
+
+  public IssueDto setInternalTagsString(@Nullable String internalTags) {
+    checkArgument(internalTags == null || internalTags.length() <= 4000,
+      "Value is too long for column ISSUES.INTERNAL_TAGS: %s", internalTags);
+    this.internalTags = internalTags;
+    return this;
+  }
+
   public Set<String> getCodeVariants() {
     return ImmutableSet.copyOf(STRING_LIST_SPLITTER.split(codeVariants == null ? "" : codeVariants));
   }
@@ -873,12 +899,12 @@ public final class IssueDto implements Serializable {
     return this;
   }
 
-  public String getCveId() {
-    return cveId;
+  public boolean isFromSonarQubeUpdate() {
+    return fromSonarQubeUpdate;
   }
 
-  public IssueDto setCveId(@Nullable String cveId) {
-    this.cveId = cveId;
+  public IssueDto setFromSonarQubeUpdate(boolean fromSonarQubeUpdate) {
+    this.fromSonarQubeUpdate = fromSonarQubeUpdate;
     return this;
   }
 
@@ -890,7 +916,7 @@ public final class IssueDto implements Serializable {
   public DefaultIssue toDefaultIssue() {
     DefaultIssue issue = new DefaultIssue();
     issue.setKey(kee);
-    issue.setType(RuleType.valueOf(type));
+    issue.setType(RuleType.fromDbConstant(type));
     issue.setStatus(status);
     issue.setResolution(resolution);
     issue.setMessage(message);
@@ -901,6 +927,7 @@ public final class IssueDto implements Serializable {
     issue.setChecksum(checksum);
     issue.setSeverity(severity);
     issue.setPrioritizedRule(prioritizedRule);
+    issue.setFromSonarQubeUpdate(fromSonarQubeUpdate);
     issue.setAssigneeUuid(assigneeUuid);
     issue.setAssigneeLogin(assigneeLogin);
     issue.setComponentKey(componentKey);
@@ -910,6 +937,7 @@ public final class IssueDto implements Serializable {
     issue.setManualSeverity(manualSeverity);
     issue.setRuleKey(getRuleKey());
     issue.setTags(getTags());
+    issue.setInternalTags(getInternalTags());
     issue.setRuleDescriptionContextKey(ruleDescriptionContextKey);
     issue.setLanguage(language);
     issue.setAuthorLogin(authorLogin);
@@ -925,7 +953,6 @@ public final class IssueDto implements Serializable {
     issue.setCodeVariants(getCodeVariants());
     issue.setCleanCodeAttribute(cleanCodeAttribute);
     impacts.forEach(i -> issue.addImpact(i.getSoftwareQuality(), i.getSeverity(), i.isManualSeverity()));
-    issue.setCveId(cveId);
     return issue;
   }
 }

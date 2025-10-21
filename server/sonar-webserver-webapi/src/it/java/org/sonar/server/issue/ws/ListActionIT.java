@@ -25,15 +25,14 @@ import com.tngtech.java.junit.dataprovider.UseDataProvider;
 import java.time.Clock;
 import java.util.List;
 import java.util.stream.IntStream;
-import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.sonar.api.resources.Languages;
 import org.sonar.api.rule.RuleKey;
 import org.sonar.api.rule.RuleStatus;
-import org.sonar.api.rules.RuleType;
 import org.sonar.api.utils.Durations;
+import org.sonar.core.rule.RuleType;
 import org.sonar.core.util.UuidFactoryFast;
 import org.sonar.db.DbClient;
 import org.sonar.db.DbTester;
@@ -54,8 +53,13 @@ import org.sonar.server.issue.NewCodePeriodResolver;
 import org.sonar.server.issue.TaintChecker;
 import org.sonar.server.issue.TextRangeResponseFormatter;
 import org.sonar.server.issue.TransitionService;
-import org.sonar.server.issue.workflow.FunctionExecutor;
 import org.sonar.server.issue.workflow.IssueWorkflow;
+import org.sonar.server.issue.workflow.codequalityissue.CodeQualityIssueWorkflow;
+import org.sonar.server.issue.workflow.codequalityissue.CodeQualityIssueWorkflowActionsFactory;
+import org.sonar.server.issue.workflow.codequalityissue.CodeQualityIssueWorkflowDefinition;
+import org.sonar.server.issue.workflow.securityhotspot.SecurityHotspotWorkflow;
+import org.sonar.server.issue.workflow.securityhotspot.SecurityHotspotWorkflowActionsFactory;
+import org.sonar.server.issue.workflow.securityhotspot.SecurityHotspotWorkflowDefinition;
 import org.sonar.server.tester.UserSessionRule;
 import org.sonar.server.ws.MessageFormattingUtils;
 import org.sonar.server.ws.TestRequest;
@@ -104,7 +108,9 @@ public class ListActionIT {
 
   private final DbClient dbClient = db.getDbClient();
   private final IssueFieldsSetter issueFieldsSetter = new IssueFieldsSetter();
-  private final IssueWorkflow issueWorkflow = new IssueWorkflow(new FunctionExecutor(issueFieldsSetter), issueFieldsSetter, mock(TaintChecker.class));
+  private final IssueWorkflow issueWorkflow = new IssueWorkflow(
+    new CodeQualityIssueWorkflow(new CodeQualityIssueWorkflowActionsFactory(issueFieldsSetter), new CodeQualityIssueWorkflowDefinition(), mock(TaintChecker.class)),
+    new SecurityHotspotWorkflow(new SecurityHotspotWorkflowActionsFactory(issueFieldsSetter), new SecurityHotspotWorkflowDefinition()));
   private final SearchResponseLoader searchResponseLoader = new SearchResponseLoader(userSession, dbClient, new TransitionService(userSession, issueWorkflow));
   private final Languages languages = new Languages();
   private final UserResponseFormatter userFormatter = new UserResponseFormatter(new AvatarResolverImpl());
@@ -112,11 +118,6 @@ public class ListActionIT {
   private final ComponentFinder componentFinder = TestComponentFinder.from(db);
   private final WsActionTester ws = new WsActionTester(
     new ListAction(userSession, dbClient, new NewCodePeriodResolver(dbClient, Clock.systemUTC()), searchResponseLoader, searchResponseFormat, componentFinder));
-
-  @Before
-  public void setUp() {
-    issueWorkflow.start();
-  }
 
   @Test
   public void whenNoComponentOrProjectProvided_shouldFailWithMessage() {
@@ -204,7 +205,8 @@ public class ListActionIT {
       .replaceAllImpacts(List.of(new ImpactDto().setSoftwareQuality(MAINTAINABILITY).setSeverity(org.sonar.api.issue.impact.Severity.BLOCKER)))
       .setAuthorLogin("John")
       .setAssigneeUuid(simon.getUuid())
-      .setTags(asList("bug", "owasp"))
+      .setTags(List.of("bug", "owasp"))
+      .setInternalTags(List.of("internal1", "internal2"))
       .setIssueCreationDate(parseDate("2014-09-03"))
       .setIssueUpdateDate(parseDate("2017-12-04"))
       .setCodeVariants(List.of("variant1", "variant2")));
@@ -221,13 +223,13 @@ public class ListActionIT {
     assertThat(response.getIssuesList())
       .extracting(
         Issue::getKey, Issue::getRule, Issue::getSeverity, Issue::getComponent, Issue::getResolution, Issue::getStatus, Issue::getMessage, Issue::getMessageFormattingsList,
-        Issue::getEffort, Issue::getAssignee, Issue::getAuthor, Issue::getLine, Issue::getHash, Issue::getTagsList, Issue::getCreationDate, Issue::getUpdateDate,
-        Issue::getQuickFixAvailable, Issue::getCodeVariantsList, Issue::getImpactsList)
+        Issue::getEffort, Issue::getAssignee, Issue::getAuthor, Issue::getLine, Issue::getHash, Issue::getTagsList, Issue::getInternalTagsList, Issue::getCreationDate,
+        Issue::getUpdateDate, Issue::getQuickFixAvailable, Issue::getCodeVariantsList, Issue::getImpactsList)
       .containsExactlyInAnyOrder(
         tuple(issue.getKey(), rule.getKey().toString(), Severity.BLOCKER, file.getKey(), "", STATUS_OPEN, "the message",
           MessageFormattingUtils.dbMessageFormattingListToWs(List.of(MESSAGE_FORMATTING)), "10min",
-          simon.getLogin(), "John", 42, "a227e508d6646b55a086ee11d63b21e9", asList("bug", "owasp"), formatDateTime(issue.getIssueCreationDate()),
-          formatDateTime(issue.getIssueUpdateDate()), false, List.of("variant1", "variant2"),
+          simon.getLogin(), "John", 42, "a227e508d6646b55a086ee11d63b21e9", List.of("bug", "owasp"), List.of("internal1", "internal2"),
+          formatDateTime(issue.getIssueCreationDate()), formatDateTime(issue.getIssueUpdateDate()), false, List.of("variant1", "variant2"),
           List.of(newBuilder().setSoftwareQuality(Common.SoftwareQuality.MAINTAINABILITY).setSeverity(Common.ImpactSeverity.ImpactSeverity_BLOCKER).build())));
 
     assertThat(response.getComponentsList())

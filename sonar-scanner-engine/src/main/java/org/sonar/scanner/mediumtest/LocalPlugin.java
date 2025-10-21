@@ -25,9 +25,13 @@ import org.sonar.core.platform.PluginInfo;
 import org.sonar.core.plugin.PluginType;
 import org.sonar.scanner.bootstrap.ScannerPlugin;
 
-public record LocalPlugin(String pluginKey, Plugin pluginInstance, Set<String> requiredForLanguages) {
+public record LocalPlugin(PluginInfo pluginInfo, Plugin pluginInstance, Set<String> requiredForLanguages) {
+
+  public LocalPlugin(String pluginKey, Plugin pluginInstance, Set<String> requiredForLanguages) {
+    this(new PluginInfo(pluginKey).setOrganizationName("SonarSource"), pluginInstance, requiredForLanguages);
+  }
 
   public ScannerPlugin toScannerPlugin() {
-    return new ScannerPlugin(pluginKey, 1L, PluginType.BUNDLED, new PluginInfo(pluginKey));
+    return new ScannerPlugin(pluginInfo.getKey(), 1L, PluginType.BUNDLED, pluginInfo);
   }
 }

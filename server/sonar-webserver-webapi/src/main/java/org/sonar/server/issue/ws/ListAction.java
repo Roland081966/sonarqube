@@ -23,13 +23,13 @@ import com.google.common.base.Preconditions;
 import java.util.EnumSet;
 import java.util.List;
 import javax.annotation.Nullable;
-import org.sonar.api.rules.RuleType;
+import org.sonar.core.rule.RuleType;
 import org.sonar.api.server.ws.Change;
 import org.sonar.api.server.ws.Request;
 import org.sonar.api.server.ws.Response;
 import org.sonar.api.server.ws.WebService;
 import org.sonar.api.utils.Paging;
-import org.sonar.api.web.UserRole;
+import org.sonar.db.permission.ProjectPermission;
 import org.sonar.db.DbClient;
 import org.sonar.db.DbSession;
 import org.sonar.db.Pagination;
@@ -97,6 +97,7 @@ public class ListAction implements IssuesWsAction {
         "<br>Requires the 'Browse' permission on the specified project. ")
       .setSince("10.2")
       .setChangelog(
+        new Change("2025.5", "Response field 'internalTags' has been added"),
         new Change("10.8", format("The parameter '%s' are not deprecated anymore.", PARAM_TYPES)),
         new Change("10.8", "The response fields 'severity' and 'type' are not deprecated anymore."),
         new Change("10.4", format("Parameter '%s' is deprecated.", PARAM_TYPES)),
@@ -189,13 +190,13 @@ public class ListAction implements IssuesWsAction {
       .orElseThrow(() -> new IllegalStateException("Branch does not exist: " + componentDto.branchUuid()));
     ProjectDto projectDto = dbClient.projectDao().selectByUuid(dbSession, branchDto.getProjectUuid())
       .orElseThrow(() -> new IllegalArgumentException("Project does not exist: " + wsRequest.project));
-    userSession.checkEntityPermission(UserRole.USER, projectDto);
+    userSession.checkEntityPermission(ProjectPermission.USER, projectDto);
     return new ProjectAndBranch(projectDto, branchDto);
   }
 
   private ProjectAndBranch checkProjectAndBranchPermission(WsRequest wsRequest, DbSession dbSession) {
     ProjectAndBranch projectAndBranch = componentFinder.getProjectAndBranch(dbSession, wsRequest.project, wsRequest.branch, wsRequest.pullRequest);
-    userSession.checkEntityPermission(UserRole.USER, projectAndBranch.getProject());
+    userSession.checkEntityPermission(ProjectPermission.USER, projectAndBranch.getProject());
     return projectAndBranch;
   }
 

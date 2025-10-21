@@ -31,8 +31,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.sonar.api.issue.impact.Severity;
 import org.sonar.api.issue.impact.SoftwareQuality;
-import org.sonar.api.rules.RuleType;
-import org.sonar.ce.task.projectanalysis.batch.BatchReportReaderRule;
+import org.sonar.core.rule.RuleType;
+import org.sonar.ce.common.scanner.ScannerReportReaderRule;
 import org.sonar.ce.task.projectanalysis.component.Component;
 import org.sonar.ce.task.projectanalysis.component.TreeRootHolderRule;
 import org.sonar.ce.task.projectanalysis.measure.Measure;
@@ -56,6 +56,7 @@ import static org.sonar.api.issue.Issue.RESOLUTION_FIXED;
 import static org.sonar.api.issue.Issue.RESOLUTION_WONT_FIX;
 import static org.sonar.api.issue.Issue.STATUS_CLOSED;
 import static org.sonar.api.issue.Issue.STATUS_CONFIRMED;
+import static org.sonar.api.issue.Issue.STATUS_IN_SANDBOX;
 import static org.sonar.api.issue.Issue.STATUS_OPEN;
 import static org.sonar.api.issue.Issue.STATUS_RESOLVED;
 import static org.sonar.api.issue.impact.Severity.BLOCKER;
@@ -82,6 +83,8 @@ import static org.sonar.api.measures.CoreMetrics.FALSE_POSITIVE_ISSUES;
 import static org.sonar.api.measures.CoreMetrics.FALSE_POSITIVE_ISSUES_KEY;
 import static org.sonar.api.measures.CoreMetrics.HIGH_IMPACT_ACCEPTED_ISSUES;
 import static org.sonar.api.measures.CoreMetrics.HIGH_IMPACT_ACCEPTED_ISSUES_KEY;
+import static org.sonar.server.metric.IssueCountMetrics.ISSUES_IN_SANDBOX;
+import static org.sonar.server.metric.IssueCountMetrics.NEW_ISSUES_IN_SANDBOX;
 import static org.sonar.api.measures.CoreMetrics.INFO_VIOLATIONS;
 import static org.sonar.api.measures.CoreMetrics.MAINTAINABILITY_ISSUES;
 import static org.sonar.api.measures.CoreMetrics.MAJOR_VIOLATIONS;
@@ -123,9 +126,9 @@ import static org.sonar.api.measures.CoreMetrics.VULNERABILITIES;
 import static org.sonar.api.measures.CoreMetrics.VULNERABILITIES_KEY;
 import static org.sonar.api.rule.Severity.CRITICAL;
 import static org.sonar.api.rule.Severity.MAJOR;
-import static org.sonar.api.rules.RuleType.BUG;
-import static org.sonar.api.rules.RuleType.CODE_SMELL;
-import static org.sonar.api.rules.RuleType.SECURITY_HOTSPOT;
+import static org.sonar.core.rule.RuleType.BUG;
+import static org.sonar.core.rule.RuleType.CODE_SMELL;
+import static org.sonar.core.rule.RuleType.SECURITY_HOTSPOT;
 import static org.sonar.ce.task.projectanalysis.component.ReportComponent.builder;
 import static org.sonar.ce.task.projectanalysis.issue.IssueCounter.IMPACT_TO_JSON_METRIC_KEY;
 import static org.sonar.ce.task.projectanalysis.issue.IssueCounter.IMPACT_TO_NEW_JSON_METRIC_KEY;
@@ -173,7 +176,7 @@ class IssueCounterTest {
   private static final Component PROJECT = builder(Component.Type.PROJECT, 4).addChildren(FILE1, FILE2, FILE3).build();
 
   @RegisterExtension
-  private final BatchReportReaderRule reportReader = new BatchReportReaderRule();
+  private final ScannerReportReaderRule reportReader = new ScannerReportReaderRule();
 
   @RegisterExtension
   private final TreeRootHolderRule treeRootHolder = new TreeRootHolderRule();
@@ -207,6 +210,8 @@ class IssueCounterTest {
     .add(NEW_SECURITY_HOTSPOTS)
     .add(NEW_ACCEPTED_ISSUES)
     .add(HIGH_IMPACT_ACCEPTED_ISSUES)
+    .add(ISSUES_IN_SANDBOX)
+    .add(NEW_ISSUES_IN_SANDBOX)
     .add(RELIABILITY_ISSUES)
     .add(MAINTAINABILITY_ISSUES)
     .add(SECURITY_ISSUES)
@@ -767,5 +772,94 @@ class IssueCounterTest {
 
   private DefaultIssue createNewSecurityHotspot() {
     return createNewIssue(null, STATUS_OPEN, "MAJOR", SECURITY_HOTSPOT);
+  }
+
+  @Test
+  void onIssue_whenSandboxIssues_shouldCountOnlyInSandboxMetrics() {
+    underTest.beforeComponent(FILE1);
+    underTest.onIssue(FILE1, createIssue(null, STATUS_OPEN, org.sonar.api.rule.Severity.BLOCKER));
+    underTest.onIssue(FILE1, createIssue(null, STATUS_IN_SANDBOX, org.sonar.api.rule.Severity.BLOCKER));
+    underTest.onIssue(FILE1, createIssue(null, STATUS_IN_SANDBOX, org.sonar.api.rule.Severity.MAJOR));
+    underTest.onIssue(FILE1, createIssue(null, STATUS_CONFIRMED, MAJOR));
+    underTest.afterComponent(FILE1);
+
+    underTest.beforeComponent(PROJECT);
+    underTest.afterComponent(PROJECT);
+
+    assertMeasures(FILE1, 
+      entry(ISSUES_IN_SANDBOX.key(), 2),
+      entry(BLOCKER_VIOLATIONS_KEY, 1), // Only non-sandbox issues
+      entry(MAJOR_VIOLATIONS_KEY, 1), // Only non-sandbox issues  
+      entry(VIOLATIONS_KEY, 2) // Only non-sandbox issues
+    );
+    assertMeasures(PROJECT,
+      entry(ISSUES_IN_SANDBOX.key(), 2),
+      entry(BLOCKER_VIOLATIONS_KEY, 1),
+      entry(MAJOR_VIOLATIONS_KEY, 1),
+      entry(VIOLATIONS_KEY, 2)
+    );
+  }
+
+  @Test
+  void onIssue_whenNewSandboxIssues_shouldCountOnlyInNewSandboxMetrics() {
+    when(newIssueClassifier.isEnabled()).thenReturn(true);
+
+    underTest.beforeComponent(FILE1);
+    underTest.onIssue(FILE1, createNewIssue(null, STATUS_OPEN, org.sonar.api.rule.Severity.BLOCKER));
+    underTest.onIssue(FILE1, createNewIssue(null, STATUS_IN_SANDBOX, org.sonar.api.rule.Severity.BLOCKER));
+    underTest.onIssue(FILE1, createNewIssue(null, STATUS_IN_SANDBOX, MAJOR, BUG));
+    underTest.onIssue(FILE1, createNewIssue(null, STATUS_CONFIRMED, MAJOR, BUG));
+    underTest.afterComponent(FILE1);
+
+    underTest.beforeComponent(PROJECT);
+    underTest.afterComponent(PROJECT);
+
+    assertMeasures(FILE1,
+      entry(NEW_ISSUES_IN_SANDBOX.key(), 2),
+      entry(NEW_BLOCKER_VIOLATIONS_KEY, 1), // Only non-sandbox new issues
+      entry(NEW_MAJOR_VIOLATIONS_KEY, 1), // Only non-sandbox new issues
+      entry(NEW_VIOLATIONS_KEY, 2), // Only non-sandbox new issues
+      entry(NEW_BUGS_KEY, 1) // Only non-sandbox new issues
+    );
+    assertMeasures(PROJECT,
+      entry(NEW_ISSUES_IN_SANDBOX.key(), 2),
+      entry(NEW_BLOCKER_VIOLATIONS_KEY, 1),
+      entry(NEW_MAJOR_VIOLATIONS_KEY, 1),
+      entry(NEW_VIOLATIONS_KEY, 2),
+      entry(NEW_BUGS_KEY, 1)
+    );
+  }
+
+  @Test
+  void onIssue_whenSandboxIssues_shouldExcludeFromSoftwareQualityMeasures() {
+    when(newIssueClassifier.isEnabled()).thenReturn(true);
+
+    underTest.beforeComponent(FILE1);
+    underTest.onIssue(FILE1, createIssue(null, STATUS_OPEN, MAINTAINABILITY, HIGH));
+    underTest.onIssue(FILE1, createIssue(null, STATUS_IN_SANDBOX, MAINTAINABILITY, HIGH));
+    underTest.onIssue(FILE1, createIssue(null, STATUS_IN_SANDBOX, SECURITY, BLOCKER));
+    underTest.onIssue(FILE1, createNewIssue(null, STATUS_OPEN, RELIABILITY, MEDIUM));
+    underTest.onIssue(FILE1, createNewIssue(null, STATUS_IN_SANDBOX, RELIABILITY, MEDIUM));
+    underTest.afterComponent(FILE1);
+
+    underTest.beforeComponent(PROJECT);
+    underTest.afterComponent(PROJECT);
+
+    assertMeasures(FILE1,
+      entry(ISSUES_IN_SANDBOX.key(), 3),
+      entry(NEW_ISSUES_IN_SANDBOX.key(), 1),
+      entry(SOFTWARE_QUALITY_MAINTAINABILITY_ISSUES.key(), 1), // Only non-sandbox issues
+      entry(SOFTWARE_QUALITY_SECURITY_ISSUES.key(), 0), // Sandbox issue not counted
+      entry(SOFTWARE_QUALITY_RELIABILITY_ISSUES.key(), 1), // Only non-sandbox new issues
+      entry(NEW_SOFTWARE_QUALITY_RELIABILITY_ISSUES.key(), 1) // Only non-sandbox new issues
+    );
+    assertMeasures(PROJECT,
+      entry(ISSUES_IN_SANDBOX.key(), 3),
+      entry(NEW_ISSUES_IN_SANDBOX.key(), 1),
+      entry(SOFTWARE_QUALITY_MAINTAINABILITY_ISSUES.key(), 1),
+      entry(SOFTWARE_QUALITY_SECURITY_ISSUES.key(), 0),
+      entry(SOFTWARE_QUALITY_RELIABILITY_ISSUES.key(), 1),
+      entry(NEW_SOFTWARE_QUALITY_RELIABILITY_ISSUES.key(), 1)
+    );
   }
 }

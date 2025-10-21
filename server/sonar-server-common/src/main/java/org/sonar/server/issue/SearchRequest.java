@@ -58,6 +58,7 @@ public class SearchRequest {
   private List<String> resolutions;
   private Boolean resolved;
   private Boolean prioritizedRule;
+  private Boolean fromSonarQubeUpdate;
   private List<String> rules;
   private String sort;
   private List<String> severities;
@@ -70,6 +71,7 @@ public class SearchRequest {
   private Set<String> types;
   private List<String> pciDss32;
   private List<String> pciDss40;
+  private List<String> owaspMobileTop10For2024;
   private List<String> owaspTop10;
   private List<String> owaspAsvs40;
   private List<String> owaspTop10For2021;
@@ -319,6 +321,16 @@ public class SearchRequest {
   }
 
   @CheckForNull
+  public Boolean getFromSonarQubeUpdate() {
+    return fromSonarQubeUpdate;
+  }
+
+  public SearchRequest setFromSonarQubeUpdate(@Nullable Boolean fromSonarQubeUpdate) {
+    this.fromSonarQubeUpdate = fromSonarQubeUpdate;
+    return this;
+  }
+
+  @CheckForNull
   public List<String> getRules() {
     return rules;
   }
@@ -415,6 +427,16 @@ public class SearchRequest {
 
   public SearchRequest setOwaspAsvs40(@Nullable List<String> owaspAsvs40) {
     this.owaspAsvs40 = owaspAsvs40;
+    return this;
+  }
+
+  @CheckForNull
+  public List<String> getOwaspMobileTop10For2024() {
+    return owaspMobileTop10For2024;
+  }
+
+  public SearchRequest setOwaspMobileTop10For2024(@Nullable List<String> owaspMobileTop10For2024) {
+    this.owaspMobileTop10For2024 = owaspMobileTop10For2024;
     return this;
   }
 

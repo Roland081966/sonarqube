@@ -26,8 +26,8 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.sonar.api.issue.Issue;
-import org.sonar.api.rules.RuleType;
 import org.sonar.core.issue.DefaultIssue;
+import org.sonar.core.rule.RuleType;
 import org.sonar.core.util.Uuids;
 import org.sonar.db.component.BranchDto;
 import org.sonar.db.component.BranchType;
@@ -35,10 +35,16 @@ import org.sonar.db.component.ComponentDto;
 import org.sonar.db.component.ComponentTesting;
 import org.sonar.db.issue.IssueDto;
 import org.sonar.db.issue.IssueTesting;
+import org.sonar.db.permission.ProjectPermission;
 import org.sonar.db.project.ProjectDto;
 import org.sonar.db.rule.RuleDto;
-import org.sonar.server.issue.workflow.FunctionExecutor;
 import org.sonar.server.issue.workflow.IssueWorkflow;
+import org.sonar.server.issue.workflow.codequalityissue.CodeQualityIssueWorkflow;
+import org.sonar.server.issue.workflow.codequalityissue.CodeQualityIssueWorkflowActionsFactory;
+import org.sonar.server.issue.workflow.codequalityissue.CodeQualityIssueWorkflowDefinition;
+import org.sonar.server.issue.workflow.securityhotspot.SecurityHotspotWorkflow;
+import org.sonar.server.issue.workflow.securityhotspot.SecurityHotspotWorkflowActionsFactory;
+import org.sonar.server.issue.workflow.securityhotspot.SecurityHotspotWorkflowDefinition;
 import org.sonar.server.tester.UserSessionRule;
 
 import static java.util.Collections.emptyList;
@@ -47,9 +53,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.sonar.api.issue.Issue.STATUS_CLOSED;
-import static org.sonar.api.web.UserRole.ISSUE_ADMIN;
 import static org.sonar.core.issue.IssueChangeContext.issueChangeContextByUserBuilder;
 import static org.sonar.db.component.ComponentTesting.newFileDto;
+import static org.sonar.db.permission.ProjectPermission.ISSUE_ADMIN;
 import static org.sonar.db.rule.RuleTesting.newRule;
 
 public class TransitionActionIT {
@@ -58,7 +64,9 @@ public class TransitionActionIT {
   public UserSessionRule userSession = UserSessionRule.standalone();
 
   private final IssueFieldsSetter updater = new IssueFieldsSetter();
-  private final IssueWorkflow workflow = new IssueWorkflow(new FunctionExecutor(updater), updater, mock(TaintChecker.class));
+  private final IssueWorkflow workflow = new IssueWorkflow(
+    new CodeQualityIssueWorkflow(new CodeQualityIssueWorkflowActionsFactory(updater), new CodeQualityIssueWorkflowDefinition(), mock(TaintChecker.class)),
+    new SecurityHotspotWorkflow(new SecurityHotspotWorkflowActionsFactory(updater), new SecurityHotspotWorkflowDefinition()));
   private final TransitionService transitionService = new TransitionService(userSession, workflow);
   private final Action.Context context = mock(Action.Context.class);
   private final DefaultIssue issue = newIssue().toDefaultIssue();
@@ -66,7 +74,6 @@ public class TransitionActionIT {
 
   @Before
   public void setUp() {
-    workflow.start();
     when(context.issue()).thenReturn(issue);
     when(context.issueChangeContext()).thenReturn(issueChangeContextByUserBuilder(new Date(), "user_uuid").build());
   }
@@ -116,7 +123,6 @@ public class TransitionActionIT {
     assertThat(action.supports(new DefaultIssue().setResolution(Issue.RESOLUTION_FIXED))).isTrue();
   }
 
-
   private IssueDto newIssue() {
     RuleDto rule = newRule().setUuid(Uuids.createFast());
     ComponentDto project = ComponentTesting.newPrivateProjectDto();
@@ -124,7 +130,7 @@ public class TransitionActionIT {
     return IssueTesting.newIssue(rule, project, file);
   }
 
-  private void loginAndAddProjectPermission(String login, String permission) {
+  private void loginAndAddProjectPermission(String login, ProjectPermission permission) {
     ProjectDto projectDto = ComponentTesting.newProjectDto();
     BranchDto branchDto = ComponentTesting.newBranchDto(projectDto.getUuid(), BranchType.BRANCH).setIsMain(true).setUuid(issue.projectUuid());
     userSession.logIn(login).addProjectPermission(permission, projectDto)

@@ -32,7 +32,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import javax.annotation.Nullable;
-import org.sonar.api.profiles.RulesProfile;
 import org.sonar.api.resources.Language;
 import org.sonar.api.resources.Languages;
 import org.sonar.api.rule.RuleKey;
@@ -107,7 +106,7 @@ public class BuiltInQProfileRepositoryImpl implements BuiltInQProfileRepository 
       .collect(Collectors.toSet());
 
     checkState(languagesWithoutBuiltInQProfiles.isEmpty(), "The following languages have no built-in quality profiles: %s",
-      languagesWithoutBuiltInQProfiles.isEmpty() ? "" : String.join("", languagesWithoutBuiltInQProfiles));
+      languagesWithoutBuiltInQProfiles.isEmpty() ? "" : String.join(", ", languagesWithoutBuiltInQProfiles));
   }
 
   private Map<String, Map<String, BuiltInQualityProfile>> validateAndClean(BuiltInQualityProfilesDefinition.Context context) {

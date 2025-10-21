@@ -39,7 +39,7 @@ import org.mockito.InOrder;
 import org.mockito.Mockito;
 import org.slf4j.event.Level;
 import org.sonar.api.issue.Issue;
-import org.sonar.api.rules.RuleType;
+import org.sonar.core.rule.RuleType;
 import org.sonar.api.testfixtures.log.LogTester;
 import org.sonar.core.issue.DefaultIssue;
 import org.sonar.db.component.BranchDto;
@@ -235,6 +235,34 @@ public class QGChangeEventListenersImplTest {
         .forEach(component4QGChangeEvent -> verifyListenerCalled(listener, component4QGChangeEvent, component4Issues));
     });
     verifyNoMoreInteractions(listener1, listener2, listener3);
+  }
+
+  @Test
+  public void broadcastOnAnyChange_whenNoListeners_thenDoesNothing() {
+    var qgChangeEventListeners = new QGChangeEventListenersImpl(Set.of());
+
+    qgChangeEventListeners.broadcastOnAnyChange(singletonList(component1QGChangeEvent), false);
+
+    verifyNoInteractions(listener1, listener2, listener3);
+  }
+
+  @Test
+  public void broadcastOnAnyChange_whenNoChangeEvents_thenDoesNothing() {
+    underTest.broadcastOnAnyChange(List.of(), false);
+
+    verifyNoInteractions(listener1, listener2, listener3);
+  }
+
+  @Test
+  public void broadcastOnAnyChange_whenListenersAndChangeEvents_thenBroadcastsToEachListener() {
+    underTest.broadcastOnAnyChange(singletonList(component1QGChangeEvent), false);
+
+    ArgumentCaptor<Set<ChangedIssue>> changedIssuesCaptor = newSetCaptor();
+    inOrder.verify(listener1).onIssueChanges(same(component1QGChangeEvent), changedIssuesCaptor.capture());
+    Set<ChangedIssue> changedIssues = changedIssuesCaptor.getValue();
+    inOrder.verify(listener2).onIssueChanges(same(component1QGChangeEvent), same(changedIssues));
+    inOrder.verify(listener3).onIssueChanges(same(component1QGChangeEvent), same(changedIssues));
+    inOrder.verifyNoMoreInteractions();
   }
 
   @Test

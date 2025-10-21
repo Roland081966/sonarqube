@@ -22,13 +22,15 @@ package org.sonar.server.metric;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.sonar.server.metric.IssueCountMetrics.ISSUES_IN_SANDBOX;
+import static org.sonar.server.metric.IssueCountMetrics.NEW_ISSUES_IN_SANDBOX;
 import static org.sonar.server.metric.IssueCountMetrics.PRIORITIZED_RULE_ISSUES;
 
 class IssueCountMetricsTest {
   @Test
   void getMetrics() {
     assertThat(new IssueCountMetrics().getMetrics())
-      .containsExactlyInAnyOrder(PRIORITIZED_RULE_ISSUES);
+      .containsExactlyInAnyOrder(PRIORITIZED_RULE_ISSUES, ISSUES_IN_SANDBOX, NEW_ISSUES_IN_SANDBOX);
   }
 
 }

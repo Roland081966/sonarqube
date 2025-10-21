@@ -21,7 +21,6 @@ package org.sonar.server.issue;
 
 import java.util.Date;
 import java.util.List;
-import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.sonar.core.issue.DefaultIssue;
@@ -30,19 +29,23 @@ import org.sonar.db.component.ComponentDto;
 import org.sonar.db.component.ProjectData;
 import org.sonar.db.issue.IssueDto;
 import org.sonar.db.rule.RuleDto;
-import org.sonar.server.issue.workflow.FunctionExecutor;
 import org.sonar.server.issue.workflow.IssueWorkflow;
-import org.sonar.server.issue.workflow.Transition;
+import org.sonar.server.issue.workflow.codequalityissue.CodeQualityIssueWorkflow;
+import org.sonar.server.issue.workflow.codequalityissue.CodeQualityIssueWorkflowActionsFactory;
+import org.sonar.server.issue.workflow.codequalityissue.CodeQualityIssueWorkflowDefinition;
+import org.sonar.server.issue.workflow.securityhotspot.SecurityHotspotWorkflow;
+import org.sonar.server.issue.workflow.securityhotspot.SecurityHotspotWorkflowActionsFactory;
+import org.sonar.server.issue.workflow.securityhotspot.SecurityHotspotWorkflowDefinition;
 import org.sonar.server.tester.UserSessionRule;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.sonar.api.issue.Issue.STATUS_CONFIRMED;
 import static org.sonar.api.issue.Issue.STATUS_OPEN;
-import static org.sonar.api.rules.RuleType.CODE_SMELL;
-import static org.sonar.api.web.UserRole.ISSUE_ADMIN;
 import static org.sonar.core.issue.IssueChangeContext.issueChangeContextByUserBuilder;
+import static org.sonar.core.rule.RuleType.CODE_SMELL;
 import static org.sonar.db.component.ComponentTesting.newFileDto;
+import static org.sonar.db.permission.ProjectPermission.ISSUE_ADMIN;
 
 public class TransitionServiceIT {
 
@@ -51,15 +54,12 @@ public class TransitionServiceIT {
   @Rule
   public UserSessionRule userSession = UserSessionRule.standalone();
 
-  private IssueFieldsSetter updater = new IssueFieldsSetter();
-  private IssueWorkflow workflow = new IssueWorkflow(new FunctionExecutor(updater), updater, mock(TaintChecker.class));
+  private final IssueFieldsSetter updater = new IssueFieldsSetter();
+  private final IssueWorkflow workflow = new IssueWorkflow(
+    new CodeQualityIssueWorkflow(new CodeQualityIssueWorkflowActionsFactory(updater), new CodeQualityIssueWorkflowDefinition(), mock(TaintChecker.class)),
+    new SecurityHotspotWorkflow(new SecurityHotspotWorkflowActionsFactory(updater), new SecurityHotspotWorkflowDefinition()));
 
-  private TransitionService underTest = new TransitionService(userSession, workflow);
-
-  @Before
-  public void setUp() {
-    workflow.start();
-  }
+  private final TransitionService underTest = new TransitionService(userSession, workflow);
 
   @Test
   public void list_transitions() {
@@ -70,9 +70,9 @@ public class TransitionServiceIT {
     userSession.logIn().addProjectPermission(ISSUE_ADMIN, project.getProjectDto())
       .registerBranches(project.getMainBranchDto());
 
-    List<Transition> result = underTest.listTransitions(issue.toDefaultIssue());
+    List<String> result = underTest.listTransitionKeys(issue.toDefaultIssue());
 
-    assertThat(result).extracting(Transition::key).containsExactly("accept", "falsepositive", "confirm", "resolve", "wontfix");
+    assertThat(result).containsExactly("accept", "falsepositive", "confirm", "resolve", "wontfix");
   }
 
   @Test
@@ -84,9 +84,9 @@ public class TransitionServiceIT {
     userSession.logIn().addProjectPermission(ISSUE_ADMIN, project.getProjectDto())
       .registerBranches(project.getMainBranchDto());
 
-    List<Transition> result = underTest.listTransitions(externalIssue.toDefaultIssue());
+    List<String> result = underTest.listTransitionKeys(externalIssue.toDefaultIssue());
 
-    assertThat(result).extracting(Transition::key).containsExactly("accept", "falsepositive", "confirm", "resolve", "wontfix");
+    assertThat(result).containsExactly("accept", "falsepositive", "confirm", "resolve", "wontfix");
   }
 
   @Test
@@ -97,9 +97,9 @@ public class TransitionServiceIT {
     IssueDto issue = db.issues().insert(rule, project, file, i -> i.setStatus(STATUS_OPEN).setResolution(null).setType(CODE_SMELL));
     userSession.logIn();
 
-    List<Transition> result = underTest.listTransitions(issue.toDefaultIssue());
+    List<String> result = underTest.listTransitionKeys(issue.toDefaultIssue());
 
-    assertThat(result).extracting(Transition::key).containsOnly("confirm");
+    assertThat(result).containsOnly("confirm");
   }
 
   @Test
@@ -109,7 +109,7 @@ public class TransitionServiceIT {
     RuleDto rule = db.rules().insert();
     IssueDto issue = db.issues().insert(rule, project, file, i -> i.setStatus(STATUS_OPEN).setResolution(null).setType(CODE_SMELL));
 
-    List<Transition> result = underTest.listTransitions(issue.toDefaultIssue());
+    List<String> result = underTest.listTransitionKeys(issue.toDefaultIssue());
 
     assertThat(result).isEmpty();
   }

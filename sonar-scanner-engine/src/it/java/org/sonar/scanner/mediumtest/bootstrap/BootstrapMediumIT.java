@@ -37,9 +37,11 @@ import org.sonarqube.ws.Ce;
 import org.sonarqube.ws.Qualityprofiles;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.okJson;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
@@ -92,6 +94,11 @@ class BootstrapMediumIT {
         }
         """)));
 
+    sonarqube.stubFor(get("/api/features/list")
+      .willReturn(okJson("""
+        []
+        """)));
+
     sonarqube.stubFor(get("/api/metrics/search?ps=500&p=1")
       .willReturn(okJson("""
         {
@@ -102,7 +109,8 @@ class BootstrapMediumIT {
         }
         """)));
 
-    sonarqube.stubFor(post("/api/ce/submit?projectKey=" + PROJECT_KEY)
+    sonarqube.stubFor(post(urlPathEqualTo("/api/ce/submit"))
+      .withQueryParam("projectKey", equalTo(PROJECT_KEY))
       .willReturn(aResponse()
         .withResponseBody(protobufBody(Ce.SubmitResponse.newBuilder()
           .build()))));
@@ -112,7 +120,7 @@ class BootstrapMediumIT {
   void should_fail_if_invalid_json_input() {
     var in = new ByteArrayInputStream("}".getBytes());
 
-    var exitCode = ScannerMain.run(in);
+    var exitCode = ScannerMain.run(in, System.out);
 
     assertThat(exitCode).isEqualTo(1);
     assertThat(logTester.getLogs(Level.ERROR)).hasSize(1);
@@ -123,7 +131,7 @@ class BootstrapMediumIT {
   @Test
   void should_warn_if_null_property_key() {
     ScannerMain.run(new ByteArrayInputStream("""
-      {"scannerProperties": [{"value": "aValueWithoutKey"}]}""".getBytes()));
+      {"scannerProperties": [{"value": "aValueWithoutKey"}]}""".getBytes()), System.out);
 
     assertThat(logTester.logs(Level.WARN)).contains("Ignoring property with null key. Value='aValueWithoutKey'");
   }
@@ -131,7 +139,7 @@ class BootstrapMediumIT {
   @Test
   void should_warn_if_null_property_value() {
     ScannerMain.run(new ByteArrayInputStream("""
-      {"scannerProperties": [{"key": "aKey", "value": null}]}""".getBytes()));
+      {"scannerProperties": [{"key": "aKey", "value": null}]}""".getBytes()), System.out);
 
     assertThat(logTester.logs(Level.WARN)).contains("Ignoring property with null value. Key='aKey'");
   }
@@ -139,7 +147,7 @@ class BootstrapMediumIT {
   @Test
   void should_warn_if_not_provided_property_value() {
     ScannerMain.run(new ByteArrayInputStream("""
-      {"scannerProperties": [{"key": "aKey"}]}""".getBytes()));
+      {"scannerProperties": [{"key": "aKey"}]}""".getBytes()), System.out);
 
     assertThat(logTester.logs(Level.WARN)).contains("Ignoring property with null value. Key='aKey'");
   }
@@ -147,7 +155,7 @@ class BootstrapMediumIT {
   @Test
   void should_warn_if_duplicate_property_keys() {
     ScannerMain.run(new ByteArrayInputStream("""
-      {"scannerProperties": [{"key": "aKey", "value": "aValue"}, {"key": "aKey", "value": "aValue"}]}""".getBytes()));
+      {"scannerProperties": [{"key": "aKey", "value": "aValue"}, {"key": "aKey", "value": "aValue"}]}""".getBytes()), System.out);
 
     assertThat(logTester.logs(Level.WARN)).contains("Duplicated properties. Key='aKey'");
   }
@@ -155,7 +163,7 @@ class BootstrapMediumIT {
   @Test
   void should_warn_if_null_property() {
     ScannerMain.run(new ByteArrayInputStream("""
-      {"scannerProperties": [{"key": "aKey", "value": "aValue"},]}""".getBytes()));
+      {"scannerProperties": [{"key": "aKey", "value": "aValue"},]}""".getBytes()), System.out);
 
     assertThat(logTester.logs(Level.WARN)).contains("Ignoring null or empty property");
   }
@@ -163,7 +171,7 @@ class BootstrapMediumIT {
   @Test
   void should_warn_if_empty_property() {
     ScannerMain.run(new ByteArrayInputStream("""
-      {"scannerProperties": [{}]}""".getBytes()));
+      {"scannerProperties": [{}]}""".getBytes()), System.out);
 
     assertThat(logTester.logs(Level.WARN)).contains("Ignoring null or empty property");
   }
@@ -224,7 +232,7 @@ class BootstrapMediumIT {
   }
 
   private int runScannerEngine(ScannerProperties scannerProperties) {
-    return ScannerMain.run(new ByteArrayInputStream(scannerProperties.toJson().getBytes()));
+    return ScannerMain.run(new ByteArrayInputStream(scannerProperties.toJson().getBytes()), System.out);
   }
 
   static class ScannerProperties {

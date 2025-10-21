@@ -370,16 +370,6 @@ public class ScannerReportReaderIT {
   }
 
   @Test
-  public void read_dependencies() {
-    ScannerReportWriter writer = new ScannerReportWriter(fileStructure);
-    ScannerReport.Dependency dep = ScannerReport.Dependency.newBuilder()
-      .build();
-    writer.appendDependency(dep);
-
-    assertThat(underTest.readDependencies()).toIterable().hasSize(1);
-  }
-
-  @Test
   public void return_null_when_no_file_source() {
     assertThat(underTest.readFileSource(UNKNOWN_COMPONENT_REF)).isNull();
   }
@@ -398,5 +388,28 @@ public class ScannerReportReaderIT {
   @Test
   public void readTelemetryEntries_whenFileDoesntExists() {
     assertThat(underTest.readTelemetryEntries()).toIterable().isEmpty();
+  }
+
+  @Test
+  public void readDependencyFilesArchive_withNoFile_returnsNull() {
+    assertThat(underTest.readDependencyFilesArchive()).isNull();
+  }
+
+  @Test
+  public void readDependencyFilesArchive_withFile_returnsFile() throws IOException {
+    ScannerReportWriter writer = new ScannerReportWriter(fileStructure);
+
+    temp.create();
+    File tempFile = temp.newFile("dependency-files.tar.xz");
+    byte[] expectedBytes = "hello world!".getBytes();
+    try (FileOutputStream fos = new FileOutputStream(tempFile)) {
+      fos.write(expectedBytes);
+    }
+
+    writer.writeScaFile(tempFile);
+
+    assertThat(underTest.readDependencyFilesArchive()).isNotNull();
+    var returnBytes = FileUtils.readFileToByteArray(underTest.readDependencyFilesArchive());
+    assertThat(returnBytes).isEqualTo(expectedBytes);
   }
 }

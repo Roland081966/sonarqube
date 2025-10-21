@@ -1,6 +1,6 @@
 pluginManagement {
   repositories {
-    def artifactoryPassword = System.env.'ARTIFACTORY_PRIVATE_PASSWORD'
+    def artifactoryPassword = System.env.'ARTIFACTORY_ACCESS_TOKEN'
 
     maven {
       if (artifactoryPassword) {
@@ -17,10 +17,10 @@ pluginManagement {
       }
     }
   }
-  plugins {
-    id 'com.bmuschko.docker-remote-api' version '9.4.0'
-    id 'org.ajoberstar.grgit' version '4.1.1'
-  }
+}
+plugins {
+  id("com.gradle.develocity") version("4.0.2")
+  id("com.gradle.common-custom-user-data-gradle-plugin") version "2.3"
 }
 
 rootProject.name = 'sonarqube'
@@ -44,6 +44,7 @@ include 'server:sonar-db-migration'
 include 'server:sonar-main'
 include 'server:sonar-process'
 include 'server:sonar-server-common'
+include 'server:sonar-statemachine'
 include 'server:sonar-telemetry'
 include 'server:sonar-telemetry-core'
 include 'server:sonar-webserver'
@@ -74,7 +75,30 @@ include 'sonar-testing-ldap'
 include 'sonar-ws'
 include 'sonar-ws-generator'
 
-ext.isCiServer = System.getenv().containsKey("CIRRUS_CI")
+ext.isCiServer = System.getenv().containsKey("GITHUB_ACTIONS")
+
+develocity {
+  projectId = "sonar-enterprise"
+  server = "https://develocity.sonar.build"
+  buildScan {
+    uploadInBackground.set(!isCiServer)
+    publishing.onlyIf { isCiServer && it.authenticated }
+    if (isCiServer) {
+      buildScan.value 'Branch', System.getenv()["GITHUB_REF_NAME"]
+      buildScan.value 'GitHub Actions Run', "https://github.com/${System.getenv('GITHUB_REPOSITORY')}/actions/runs/${System.getenv('GITHUB_RUN_ID')}"
+    }
+  }
+}
+
+buildCache {
+  local {
+    enabled = !isCiServer
+  }
+  remote(develocity.buildCache) {
+    push = isCiServer
+  }
+}
+
 
 // use Settings.getRootDir() so that it doesn't matter which directory you are executing from
 File extraSettings = new File(rootDir, 'private/private-settings.gradle')
@@ -82,9 +106,5 @@ if (extraSettings.exists()) {
   apply from: extraSettings
 }
 
-buildCache {
-  local {
-    enabled = !isCiServer
-  }
-}
+
 

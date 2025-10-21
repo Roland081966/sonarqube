@@ -92,6 +92,12 @@ message TelemetryEntry {
   string value = 2;
 }
 
+message AnalysisData {
+  string key = 1;
+  string mime_type = 2;
+  bytes data = 3;
+}
+
 message ActiveRule {
   string rule_repository = 1;
   string rule_key = 2;
@@ -208,6 +214,7 @@ message Issue {
   repeated MessageFormatting msgFormatting = 10;
   repeated string codeVariants = 11;
   repeated Impact overriddenImpacts = 12;
+  repeated string internal_tags = 13;
 }
 
 message ExternalIssue {
@@ -398,14 +405,4 @@ enum SoftwareQuality {
   MAINTAINABILITY = 1;
   RELIABILITY = 2;
   SECURITY = 3;
-}
-
-message Dependency {
-  string key = 1;
-  string name = 2;
-  optional string package_manager = 3;
-  optional string full_name = 4;
-  optional string description = 5;
-  optional string version = 6;
-  repeated string parent_dependency_key = 7;
 }

@@ -29,16 +29,16 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import java.util.Objects;
 import javax.annotation.Nullable;
 import org.apache.lucene.search.TotalHits;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.search.SearchHit;
-import org.sonar.api.issue.DefaultTransitions;
 import org.sonar.api.issue.IssueStatus;
 import org.sonar.api.issue.impact.SoftwareQuality;
 import org.sonar.api.rule.Severity;
 import org.sonar.api.rules.CleanCodeAttributeCategory;
-import org.sonar.api.rules.RuleType;
 import org.sonar.api.server.ws.Change;
 import org.sonar.api.server.ws.Request;
 import org.sonar.api.server.ws.Response;
@@ -46,6 +46,7 @@ import org.sonar.api.server.ws.WebService;
 import org.sonar.api.server.ws.WebService.Param;
 import org.sonar.api.utils.Paging;
 import org.sonar.api.utils.System2;
+import org.sonar.core.rule.RuleType;
 import org.sonar.db.DbClient;
 import org.sonar.db.DbSession;
 import org.sonar.db.user.UserDto;
@@ -57,7 +58,9 @@ import org.sonar.server.issue.index.IssueIndexSyncProgressChecker;
 import org.sonar.server.issue.index.IssueQuery;
 import org.sonar.server.issue.index.IssueQueryFactory;
 import org.sonar.server.issue.index.IssueScope;
+import org.sonar.server.issue.workflow.codequalityissue.CodeQualityIssueWorkflowTransition;
 import org.sonar.server.security.SecurityStandards.SQCategory;
+import org.sonar.server.issue.FromSonarQubeUpdateFeature;
 import org.sonar.server.user.UserSession;
 import org.sonarqube.ws.Issues.SearchWsResponse;
 
@@ -72,7 +75,6 @@ import static java.util.Optional.ofNullable;
 import static org.sonar.api.issue.Issue.RESOLUTIONS;
 import static org.sonar.api.issue.Issue.RESOLUTION_FIXED;
 import static org.sonar.api.issue.Issue.RESOLUTION_REMOVED;
-import static org.sonar.api.issue.Issue.STATUS_IN_REVIEW;
 import static org.sonar.api.issue.Issue.STATUS_OPEN;
 import static org.sonar.api.issue.Issue.STATUS_REOPENED;
 import static org.sonar.api.issue.Issue.STATUS_REVIEWED;
@@ -126,11 +128,13 @@ import static org.sonarqube.ws.client.issue.IssuesWsParameters.PARAM_LANGUAGES;
 import static org.sonarqube.ws.client.issue.IssuesWsParameters.PARAM_ON_COMPONENT_ONLY;
 import static org.sonarqube.ws.client.issue.IssuesWsParameters.PARAM_OWASP_ASVS_40;
 import static org.sonarqube.ws.client.issue.IssuesWsParameters.PARAM_OWASP_ASVS_LEVEL;
+import static org.sonarqube.ws.client.issue.IssuesWsParameters.PARAM_OWASP_MOBILE_TOP_10_2024;
 import static org.sonarqube.ws.client.issue.IssuesWsParameters.PARAM_OWASP_TOP_10;
 import static org.sonarqube.ws.client.issue.IssuesWsParameters.PARAM_OWASP_TOP_10_2021;
 import static org.sonarqube.ws.client.issue.IssuesWsParameters.PARAM_PCI_DSS_32;
 import static org.sonarqube.ws.client.issue.IssuesWsParameters.PARAM_PCI_DSS_40;
 import static org.sonarqube.ws.client.issue.IssuesWsParameters.PARAM_PRIORITIZED_RULE;
+import static org.sonarqube.ws.client.issue.IssuesWsParameters.PARAM_FROM_SONAR_QUBE_UPDATE;
 import static org.sonarqube.ws.client.issue.IssuesWsParameters.PARAM_PROJECTS;
 import static org.sonarqube.ws.client.issue.IssuesWsParameters.PARAM_PULL_REQUEST;
 import static org.sonarqube.ws.client.issue.IssuesWsParameters.PARAM_RESOLUTIONS;
@@ -151,7 +155,7 @@ public class SearchAction implements IssuesWsAction {
   private static final Set<String> ISSUE_SCOPES = Arrays.stream(IssueScope.values()).map(Enum::name).collect(Collectors.toSet());
   private static final EnumSet<RuleType> ALL_RULE_TYPES_EXCEPT_SECURITY_HOTSPOTS = EnumSet.complementOf(EnumSet.of(RuleType.SECURITY_HOTSPOT));
 
-  static final List<String> SUPPORTED_FACETS = List.of(
+  static final List<String> BASE_SUPPORTED_FACETS = List.of(
     FACET_PROJECTS,
     PARAM_FILES,
     FACET_ASSIGNED_TO_ME,
@@ -169,6 +173,7 @@ public class SearchAction implements IssuesWsAction {
     PARAM_PCI_DSS_32,
     PARAM_PCI_DSS_40,
     PARAM_OWASP_ASVS_40,
+    PARAM_OWASP_MOBILE_TOP_10_2024,
     PARAM_OWASP_TOP_10,
     PARAM_OWASP_TOP_10_2021,
     PARAM_STIG_ASD_V5R3,
@@ -188,6 +193,8 @@ public class SearchAction implements IssuesWsAction {
     "the componentKeys parameter. ";
   private static final String NEW_FACET_ADDED_MESSAGE = "Facet '%s' has been added";
   private static final String NEW_PARAM_ADDED_MESSAGE = "Param '%s' has been added";
+  private static final String V_2025_3 = "2025.3";
+  private static final String V_2025_5 = "2025.5";
   private static final Set<String> FACETS_REQUIRING_PROJECT = newHashSet(PARAM_FILES, PARAM_DIRECTORIES);
 
   private final UserSession userSession;
@@ -198,10 +205,12 @@ public class SearchAction implements IssuesWsAction {
   private final SearchResponseFormat searchResponseFormat;
   private final System2 system2;
   private final DbClient dbClient;
+  private final FromSonarQubeUpdateFeature fromSonarQubeUpdateFeature;
 
   public SearchAction(UserSession userSession, IssueIndex issueIndex, IssueQueryFactory issueQueryFactory,
     IssueIndexSyncProgressChecker issueIndexSyncProgressChecker,
-    SearchResponseLoader searchResponseLoader, SearchResponseFormat searchResponseFormat, System2 system2, DbClient dbClient) {
+    SearchResponseLoader searchResponseLoader, SearchResponseFormat searchResponseFormat, System2 system2, DbClient dbClient,
+    FromSonarQubeUpdateFeature fromSonarQubeUpdateFeature) {
     this.userSession = userSession;
     this.issueIndex = issueIndex;
     this.issueQueryFactory = issueQueryFactory;
@@ -210,6 +219,16 @@ public class SearchAction implements IssuesWsAction {
     this.searchResponseFormat = searchResponseFormat;
     this.system2 = system2;
     this.dbClient = dbClient;
+    this.fromSonarQubeUpdateFeature = fromSonarQubeUpdateFeature;
+  }
+
+  private List<String> getSupportedFacets() {
+    return Stream.concat(
+      BASE_SUPPORTED_FACETS.stream(),
+      Stream.of(
+        fromSonarQubeUpdateFeature.isAvailable() ? PARAM_FROM_SONAR_QUBE_UPDATE : null
+      ).filter(Objects::nonNull)
+    ).toList();
   }
 
   @Override
@@ -222,6 +241,11 @@ public class SearchAction implements IssuesWsAction {
         + "<br/>When issue indexing is in progress returns 503 service unavailable HTTP code.")
       .setSince("3.6")
       .setChangelog(
+        new Change(V_2025_5, "Response field 'internalTags' has been added"),
+        new Change(V_2025_5, format(NEW_FACET_ADDED_MESSAGE, PARAM_FROM_SONAR_QUBE_UPDATE)),
+        new Change(V_2025_5, format(NEW_PARAM_ADDED_MESSAGE, PARAM_FROM_SONAR_QUBE_UPDATE)),
+        new Change(V_2025_3, format(NEW_FACET_ADDED_MESSAGE, PARAM_OWASP_MOBILE_TOP_10_2024)),
+        new Change(V_2025_3, format(NEW_PARAM_ADDED_MESSAGE, PARAM_OWASP_MOBILE_TOP_10_2024)),
         new Change("10.8", "The response fields 'severity' and 'type' are not deprecated anymore.."),
         new Change("10.8", "The fields 'severity' and 'type' are not deprecated anymore."),
         new Change("10.8", format("The parameters '%s' and '%s' are not deprecated anymore.", PARAM_SEVERITIES, PARAM_TYPES)),
@@ -236,9 +260,9 @@ public class SearchAction implements IssuesWsAction {
         new Change("10.6", format(NEW_PARAM_ADDED_MESSAGE, PARAM_PRIORITIZED_RULE)),
         new Change("10.4", "Added new param '%s'".formatted(PARAM_FIXED_IN_PULL_REQUEST)),
         new Change("10.4",
-          "Value '%s' for 'transition' response field is deprecated, use '%s' instead".formatted(DefaultTransitions.WONT_FIX,
-            DefaultTransitions.ACCEPT)),
-        new Change("10.4", "Possible value '%s' for 'transition' response field has been added".formatted(DefaultTransitions.ACCEPT)),
+          "Value '%s' for 'transition' response field is deprecated, use '%s' instead".formatted(CodeQualityIssueWorkflowTransition.WONT_FIX,
+            CodeQualityIssueWorkflowTransition.ACCEPT)),
+        new Change("10.4", "Possible value '%s' for 'transition' response field has been added".formatted(CodeQualityIssueWorkflowTransition.ACCEPT)),
         new Change("10.4", format(NEW_PARAM_ADDED_MESSAGE, PARAM_ISSUE_STATUSES)),
         new Change("10.4", format("Parameters '%s' and '%s' are deprecated in favor of '%s'.", PARAM_RESOLUTIONS, PARAM_STATUSES, PARAM_ISSUE_STATUSES)),
         new Change("10.4", format("Parameters '%s' and '%s' are deprecated, use '%s' and '%s' instead.", PARAM_SEVERITIES, PARAM_TYPES,
@@ -284,7 +308,7 @@ public class SearchAction implements IssuesWsAction {
           "api/hotspots"),
         new Change("8.2", "response field 'fromHotspot' has been deprecated and is no more populated"),
         new Change("8.2", "Status 'IN_REVIEW' for Security Hotspots has been deprecated"),
-        new Change("7.8", format("added new Security Hotspots statuses : %s, %s and %s", STATUS_TO_REVIEW, STATUS_IN_REVIEW,
+        new Change("7.8", format("added new Security Hotspots statuses : %s, %s and %s", STATUS_TO_REVIEW, "IN_REVIEW",
           STATUS_REVIEWED)),
         new Change("7.8", "Security hotspots are returned by default"),
         new Change("7.7", format("Value 'authors' in parameter '%s' is deprecated, please use '%s' instead", FACETS, PARAM_AUTHOR)),
@@ -307,7 +331,7 @@ public class SearchAction implements IssuesWsAction {
     action.addPagingParams(100, MAX_PAGE_SIZE);
     action.createParam(FACETS)
       .setDescription("Comma-separated list of the facets to be computed. No facet is computed by default.")
-      .setPossibleValues(SUPPORTED_FACETS);
+      .setPossibleValues(getSupportedFacets());
     action.addSortParams(IssueQuery.SORTS, null, true);
     action.createParam(PARAM_ADDITIONAL_FIELDS)
       .setSince("5.2")
@@ -352,6 +376,11 @@ public class SearchAction implements IssuesWsAction {
     action.createParam(PARAM_PRIORITIZED_RULE)
       .setDescription("To match issues with prioritized rule or not")
       .setBooleanPossibleValues();
+    if (fromSonarQubeUpdateFeature.isAvailable()) {
+      action.createParam(PARAM_FROM_SONAR_QUBE_UPDATE)
+        .setDescription("To match issues detected because of SonarQube updates")
+        .setBooleanPossibleValues();
+    }
     action.createParam(PARAM_RULES)
       .setDescription("Comma-separated list of coding rule keys. Format is &lt;repository&gt;:&lt;rule&gt;")
       .setExampleValue("java:S1144");
@@ -379,6 +408,10 @@ public class SearchAction implements IssuesWsAction {
       .setDescription("Comma-separated list of OWASP ASVS v4.0 categories.")
       .setSince("9.7")
       .setExampleValue("6,10.1.1");
+    action.createParam(PARAM_OWASP_MOBILE_TOP_10_2024)
+      .setDescription("Comma-separated list of OWASP Mobile Top 10 2024 lowercase categories.")
+      .setSince(V_2025_3)
+      .setPossibleValues("m1", "m2", "m3", "m4", "m5", "m6", "m7", "m8", "m9", "m10");
     action.createParam(PARAM_OWASP_TOP_10)
       .setDescription("Comma-separated list of OWASP Top 10 2017 lowercase categories.")
       .setSince("7.3")
@@ -443,7 +476,8 @@ public class SearchAction implements IssuesWsAction {
       .setExampleValue("1m2w (1 month 2 weeks)");
     action.createParam(PARAM_IN_NEW_CODE_PERIOD)
       .setDescription("To retrieve issues created in the new code period.<br>" +
-        "If this parameter is set to a truthy value, createdAfter must not be set and one component uuid or key must be provided.")
+        "If this parameter is set to a truthy value, createdAfter must not be set and one component uuid or key must be provided.<br>" +
+        "This parameter is ignored if the requested component is Application or Portfolio.")
       .setBooleanPossibleValues()
       .setSince("9.4");
     action.createParam(PARAM_TIMEZONE)
@@ -565,7 +599,7 @@ public class SearchAction implements IssuesWsAction {
 
     // FIXME allow long in Paging
     Paging paging = forPageIndex(options.getPage()).withPageSize(options.getLimit()).andTotal((int) getTotalHits(result).value);
-    return searchResponseFormat.formatSearch(additionalFields, data, paging, facets, userSession.isLoggedIn());
+    return searchResponseFormat.formatSearch(additionalFields, data, paging, facets, userSession.isLoggedIn(), getSupportedFacets());
   }
 
   private static TotalHits getTotalHits(SearchResponse response) {
@@ -620,6 +654,7 @@ public class SearchAction implements IssuesWsAction {
     addMandatoryValuesToFacet(facets, PARAM_PCI_DSS_32, request.getPciDss32());
     addMandatoryValuesToFacet(facets, PARAM_PCI_DSS_40, request.getPciDss40());
     addMandatoryValuesToFacet(facets, PARAM_OWASP_ASVS_40, request.getOwaspAsvs40());
+    addMandatoryValuesToFacet(facets, PARAM_OWASP_MOBILE_TOP_10_2024, request.getOwaspMobileTop10For2024());
     addMandatoryValuesToFacet(facets, PARAM_OWASP_TOP_10, request.getOwaspTop10());
     addMandatoryValuesToFacet(facets, PARAM_OWASP_TOP_10_2021, request.getOwaspTop10For2021());
     addMandatoryValuesToFacet(facets, PARAM_STIG_ASD_V5R3, request.getStigAsdV5R3());
@@ -695,6 +730,7 @@ public class SearchAction implements IssuesWsAction {
       .setResolutions(request.paramAsStrings(PARAM_RESOLUTIONS))
       .setResolved(request.paramAsBoolean(PARAM_RESOLVED))
       .setPrioritizedRule(request.paramAsBoolean(PARAM_PRIORITIZED_RULE))
+      .setFromSonarQubeUpdate(fromSonarQubeUpdateFeature.isAvailable() ? request.paramAsBoolean(PARAM_FROM_SONAR_QUBE_UPDATE) : null)
       .setRules(request.paramAsStrings(PARAM_RULES))
       .setSort(request.param(Param.SORT))
       .setSeverities(request.paramAsStrings(PARAM_SEVERITIES))
@@ -709,6 +745,7 @@ public class SearchAction implements IssuesWsAction {
       .setPciDss40(request.paramAsStrings(PARAM_PCI_DSS_40))
       .setOwaspAsvsLevel(request.paramAsInt(PARAM_OWASP_ASVS_LEVEL))
       .setOwaspAsvs40(request.paramAsStrings(PARAM_OWASP_ASVS_40))
+      .setOwaspMobileTop10For2024(request.paramAsStrings(PARAM_OWASP_MOBILE_TOP_10_2024))
       .setOwaspTop10(request.paramAsStrings(PARAM_OWASP_TOP_10))
       .setOwaspTop10For2021(request.paramAsStrings(PARAM_OWASP_TOP_10_2021))
       .setStigAsdV5R3(request.paramAsStrings(PARAM_STIG_ASD_V5R3))

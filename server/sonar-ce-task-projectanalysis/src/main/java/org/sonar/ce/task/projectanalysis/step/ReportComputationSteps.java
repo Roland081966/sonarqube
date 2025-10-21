@@ -22,7 +22,6 @@ package org.sonar.ce.task.projectanalysis.step;
 import java.util.Arrays;
 import java.util.List;
 import org.sonar.ce.task.container.TaskContainer;
-import org.sonar.ce.task.projectanalysis.dependency.PersistProjectDependenciesStep;
 import org.sonar.ce.task.projectanalysis.filemove.FileMoveDetectionStep;
 import org.sonar.ce.task.projectanalysis.filemove.PullRequestFileMoveDetectionStep;
 import org.sonar.ce.task.projectanalysis.language.HandleUnanalyzedLanguagesStep;
@@ -53,11 +52,6 @@ public class ReportComputationSteps extends AbstractComputationSteps {
     ValidateProjectStep.class,
     LoadQualityProfilesStep.class,
 
-    SendAnalysisTelemetryStep.class,
-
-    // Dependencies
-    BuildProjectDependenciesStep.class,
-
     // Pre analysis operations
     PreMeasuresComputationChecksStep.class,
     SqUpgradeDetectionEventsStep.class,
@@ -73,6 +67,9 @@ public class ReportComputationSteps extends AbstractComputationSteps {
     // load duplications related stuff
     LoadDuplicationsFromReportStep.class,
     LoadCrossProjectDuplicationsRepositoryStep.class,
+
+    // Dependencies
+    ScaStep.class,
 
     // data computation
     SizeMeasuresStep.class,
@@ -109,7 +106,7 @@ public class ReportComputationSteps extends AbstractComputationSteps {
     // Persist data
     PersistScannerAnalysisCacheStep.class,
     PersistComponentsStep.class,
-    PersistProjectDependenciesStep.class,
+    PersistReferenceBranchPeriodStep.class,
     PersistAnalysisStep.class,
     PersistAnalysisPropertiesStep.class,
     PersistProjectMeasuresStep.class,
@@ -123,6 +120,7 @@ public class ReportComputationSteps extends AbstractComputationSteps {
     PersistCrossProjectDuplicationIndexStep.class,
     EnableAnalysisStep.class,
     PersistPullRequestFixedIssueStep.class,
+    PersistScaStep.class,
 
     UpdateQualityProfilesLastUsedDateStep.class,
     PurgeDatastoresStep.class,
@@ -137,7 +135,10 @@ public class ReportComputationSteps extends AbstractComputationSteps {
 
     ExecuteStatelessOnFinishStep.class,
     PublishTaskResultStep.class,
-    TriggerViewRefreshStep.class);
+    TriggerViewRefreshStep.class,
+
+    // send analysis and steps statistics telemetry
+    SendAnalysisTelemetryStep.class);
 
   public ReportComputationSteps(TaskContainer taskContainer) {
     super(taskContainer);

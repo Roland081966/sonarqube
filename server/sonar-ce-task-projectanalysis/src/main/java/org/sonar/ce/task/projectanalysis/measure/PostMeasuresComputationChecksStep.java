@@ -22,13 +22,14 @@ package org.sonar.ce.task.projectanalysis.measure;
 import java.util.Optional;
 import org.sonar.api.ce.ComputeEngineSide;
 import org.sonar.api.measures.CoreMetrics;
+import org.sonar.ce.common.scanner.ScannerReportReader;
 import org.sonar.ce.task.projectanalysis.analysis.AnalysisMetadataHolder;
+import org.sonar.ce.task.projectanalysis.analysis.Branch;
 import org.sonar.ce.task.projectanalysis.component.Component;
 import org.sonar.ce.task.projectanalysis.component.TreeRootHolder;
 import org.sonar.ce.task.projectanalysis.metric.Metric;
 import org.sonar.ce.task.projectanalysis.metric.MetricRepository;
 import org.sonar.ce.task.step.ComputationStep;
-import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * Execute {@link PostMeasuresComputationCheck} instances in no specific order.
@@ -42,25 +43,17 @@ public class PostMeasuresComputationChecksStep implements ComputationStep {
   private final MetricRepository metricRepository;
   private final MeasureRepository measureRepository;
   private final AnalysisMetadataHolder analysisMetadataHolder;
+  private final ScannerReportReader reportReader;
   private final PostMeasuresComputationCheck[] extensions;
 
-  @Autowired(required = false)
   public PostMeasuresComputationChecksStep(TreeRootHolder treeRootHolder, MetricRepository metricRepository, MeasureRepository measureRepository,
-    AnalysisMetadataHolder analysisMetadataHolder, PostMeasuresComputationCheck[] extensions) {
+    AnalysisMetadataHolder analysisMetadataHolder, ScannerReportReader reportReader, PostMeasuresComputationCheck[] extensions) {
     this.treeRootHolder = treeRootHolder;
     this.metricRepository = metricRepository;
     this.measureRepository = measureRepository;
     this.analysisMetadataHolder = analysisMetadataHolder;
+    this.reportReader = reportReader;
     this.extensions = extensions;
-  }
-
-  /**
-   * Used when zero {@link PostMeasuresComputationCheck} are registered into container.
-   */
-  @Autowired(required = false)
-  public PostMeasuresComputationChecksStep(TreeRootHolder treeRootHolder, MetricRepository metricRepository, MeasureRepository measureRepository,
-    AnalysisMetadataHolder analysisMetadataHolder) {
-    this(treeRootHolder, metricRepository, measureRepository, analysisMetadataHolder, new PostMeasuresComputationCheck[0]);
   }
 
   @Override
@@ -81,6 +74,21 @@ public class PostMeasuresComputationChecksStep implements ComputationStep {
     @Override
     public String getProjectUuid() {
       return analysisMetadataHolder.getProject().getUuid();
+    }
+
+    @Override
+    public String getAnalysisUuid() {
+      return analysisMetadataHolder.getUuid();
+    }
+
+    @Override
+    public Branch getBranch() {
+      return analysisMetadataHolder.getBranch();
+    }
+
+    @Override
+    public ScannerReportReader getReportReader() {
+      return reportReader;
     }
 
     @Override

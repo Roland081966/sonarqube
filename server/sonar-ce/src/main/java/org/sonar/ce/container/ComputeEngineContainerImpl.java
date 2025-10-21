@@ -26,6 +26,7 @@ import javax.annotation.CheckForNull;
 import org.slf4j.LoggerFactory;
 import org.sonar.api.SonarEdition;
 import org.sonar.api.SonarQubeSide;
+import org.sonar.api.SonarRuntime;
 import org.sonar.api.internal.MetadataLoader;
 import org.sonar.api.internal.SonarRuntimeImpl;
 import org.sonar.api.server.profile.BuiltInQualityProfileAnnotationLoader;
@@ -64,8 +65,8 @@ import org.sonar.core.extension.CoreExtensionRepositoryImpl;
 import org.sonar.core.extension.CoreExtensionsLoader;
 import org.sonar.core.language.LanguagesProvider;
 import org.sonar.core.metric.SoftwareQualitiesMetrics;
-import org.sonar.core.platform.Container;
 import org.sonar.core.platform.EditionProvider;
+import org.sonar.core.platform.ExtensionContainer;
 import org.sonar.core.platform.PlatformEditionProvider;
 import org.sonar.core.platform.PluginClassLoader;
 import org.sonar.core.platform.PluginClassloaderFactory;
@@ -103,13 +104,20 @@ import org.sonar.server.issue.notification.MyNewIssuesEmailTemplate;
 import org.sonar.server.issue.notification.MyNewIssuesNotificationHandler;
 import org.sonar.server.issue.notification.NewIssuesEmailTemplate;
 import org.sonar.server.issue.notification.NewIssuesNotificationHandler;
-import org.sonar.server.issue.workflow.FunctionExecutor;
 import org.sonar.server.issue.workflow.IssueWorkflow;
+import org.sonar.server.issue.workflow.codequalityissue.CodeQualityIssueWorkflow;
+import org.sonar.server.issue.workflow.codequalityissue.CodeQualityIssueWorkflowActionsFactory;
+import org.sonar.server.issue.workflow.codequalityissue.CodeQualityIssueWorkflowDefinition;
+import org.sonar.server.issue.workflow.securityhotspot.SecurityHotspotWorkflow;
+import org.sonar.server.issue.workflow.securityhotspot.SecurityHotspotWorkflowActionsFactory;
+import org.sonar.server.issue.workflow.securityhotspot.SecurityHotspotWorkflowDefinition;
 import org.sonar.server.l18n.ServerI18n;
+import org.sonar.server.log.DistributedServerLogging;
 import org.sonar.server.log.ServerLogging;
 import org.sonar.server.measure.index.ProjectMeasuresIndexer;
 import org.sonar.server.metric.IssueCountMetrics;
 import org.sonar.server.metric.UnanalyzedLanguageMetrics;
+import org.sonar.server.network.NetworkInterfaceProvider;
 import org.sonar.server.notification.DefaultNotificationManager;
 import org.sonar.server.notification.NotificationService;
 import org.sonar.server.notification.email.EmailNotificationChannel;
@@ -197,32 +205,17 @@ public class ComputeEngineContainerImpl implements ComputeEngineContainer {
 
   private static void startLevel1(SpringComponentContainer level1) {
     level1.startComponents();
-    level1.getComponentByType(CoreExtensionsLoader.class)
-      .load();
-    level1.getComponentByType(CECoreExtensionsInstaller.class)
-      .install(level1, hasPlatformLevel(1), noAdditionalSideFilter());
   }
 
   private static void startLevel2(SpringComponentContainer level2) {
-    level2.getParent().getComponentByType(CECoreExtensionsInstaller.class)
-      .install(level2, hasPlatformLevel(2), noAdditionalSideFilter());
-
     level2.startComponents();
   }
 
   private static void startLevel3(SpringComponentContainer level3) {
-    level3.getParent().getComponentByType(CECoreExtensionsInstaller.class)
-      .install(level3, hasPlatformLevel(3), noAdditionalSideFilter());
-
     level3.startComponents();
   }
 
   private static void startLevel4(SpringComponentContainer level4) {
-    level4.getParent().getComponentByType(CECoreExtensionsInstaller.class)
-      .install(level4, hasPlatformLevel4OrNone(), noAdditionalSideFilter());
-    level4.getParent().getComponentByType(ServerExtensionInstaller.class)
-      .installExtensions(level4);
-
     level4.startComponents();
 
     PlatformEditionProvider editionProvider = level4.getComponentByType(PlatformEditionProvider.class);
@@ -269,16 +262,18 @@ public class ComputeEngineContainerImpl implements ComputeEngineContainer {
     return level4;
   }
 
-  private static void populateLevel1(Container container, Props props, ComputeEngineStatus computeEngineStatus) {
+  private static void populateLevel1(SpringComponentContainer level1Container, Props props, ComputeEngineStatus computeEngineStatus) {
     Version apiVersion = MetadataLoader.loadApiVersion(System2.INSTANCE);
     Version sqVersion = MetadataLoader.loadSQVersion(System2.INSTANCE);
     SonarEdition edition = MetadataLoader.loadEdition(System2.INSTANCE);
-    container.add(
+    SonarRuntime sonarRuntime = SonarRuntimeImpl.forSonarQube(apiVersion, SonarQubeSide.COMPUTE_ENGINE, edition);
+
+    level1Container.add(
       props.rawProperties(),
       ThreadLocalSettings.class,
       new ConfigurationProvider(),
       new SonarQubeVersion(sqVersion),
-      SonarRuntimeImpl.forSonarQube(apiVersion, SonarQubeSide.COMPUTE_ENGINE, edition),
+      sonarRuntime,
       CeProcessLogging.class,
       UuidFactoryImpl.INSTANCE,
       NetworkUtilsImpl.INSTANCE,
@@ -293,6 +288,8 @@ public class ComputeEngineContainerImpl implements ComputeEngineContainer {
       System2.INSTANCE,
       Paths2Impl.getInstance(),
       Clock.systemDefaultZone(),
+
+      NetworkInterfaceProvider.class,
 
       // DB
       new DaoModule(),
@@ -309,16 +306,25 @@ public class ComputeEngineContainerImpl implements ComputeEngineContainer {
       computeEngineStatus,
       NoOpAuditPersister.class,
 
-      DefaultDocumentationLinkGenerator.class,
+      DefaultDocumentationLinkGenerator.class);
+    level1Container.add(toArray(CorePropertyDefinitions.all()));
 
-      CoreExtensionRepositoryImpl.class,
-      CoreExtensionsLoader.class,
-      CECoreExtensionsInstaller.class);
-    container.add(toArray(CorePropertyDefinitions.all()));
+    addCoreExtensionMechanism(level1Container, sonarRuntime);
   }
 
-  private static void populateLevel2(Container container) {
-    container.add(
+  private static void addCoreExtensionMechanism(SpringComponentContainer level1Container, SonarRuntime sonarRuntime) {
+    var coreExtensionRepository = new CoreExtensionRepositoryImpl();
+    var coreExtensionsLoader = new CoreExtensionsLoader(coreExtensionRepository);
+    var ceCoreExtensionsInstaller = new CECoreExtensionsInstaller(sonarRuntime, coreExtensionRepository);
+
+    level1Container.add(coreExtensionRepository, coreExtensionsLoader, ceCoreExtensionsInstaller);
+
+    coreExtensionsLoader.load();
+    ceCoreExtensionsInstaller.install(level1Container, hasPlatformLevel(1), noAdditionalSideFilter());
+  }
+
+  private static void populateLevel2(ExtensionContainer level2Container) {
+    level2Container.add(
       new MigrationConfigurationModule(),
       DatabaseVersion.class,
       DatabaseCompatibility.class,
@@ -339,20 +345,29 @@ public class ComputeEngineContainerImpl implements ComputeEngineContainer {
       ServerI18n.class, // used by RuleI18nManager
       Durations.class // used in Web Services and DebtCalculator
     );
+
+    level2Container.getParent().getOptionalComponentByType(CECoreExtensionsInstaller.class)
+      .orElseThrow(() -> new IllegalStateException("Core extension loading mechanism is not available"))
+      .install(level2Container, hasPlatformLevel(2), noAdditionalSideFilter());
   }
 
-  private static void populateLevel3(Container container) {
-    container.add(
+  private static void populateLevel3(SpringComponentContainer level3Container) {
+    level3Container.add(
       new StartupMetadataProvider(),
       JdbcUrlSanitizer.class,
       ServerIdChecksum.class,
       UriReader.class,
       ServerImpl.class,
       SynchronousAsyncExecution.class);
+
+    level3Container.getParent().getOptionalComponentByType(CECoreExtensionsInstaller.class)
+      .orElseThrow(() -> new IllegalStateException("Core extension loading mechanism is not available"))
+      .install(level3Container, hasPlatformLevel(3), noAdditionalSideFilter());
+
   }
 
-  private static void populateLevel4(Container container, Props props) {
-    container.add(
+  private static void populateLevel4(SpringComponentContainer level4Container, Props props) {
+    level4Container.add(
       RuleDescriptionFormatter.class,
       ComponentTypes.class,
       DefaultComponentTypes.get(),
@@ -396,9 +411,15 @@ public class ComputeEngineContainerImpl implements ComputeEngineContainer {
       IssueIndexer.class,
       IssueIteratorFactory.class,
       IssueFieldsSetter.class, // used in Web Services and CE's DebtCalculator
-      FunctionExecutor.class, // used by IssueWorkflow
       TaintChecker.class,
-      IssueWorkflow.class, // used in Web Services and CE's DebtCalculator
+      // used in Web Services and CE's DebtCalculator
+      IssueWorkflow.class,
+      CodeQualityIssueWorkflow.class,
+      CodeQualityIssueWorkflowActionsFactory.class,
+      CodeQualityIssueWorkflowDefinition.class,
+      SecurityHotspotWorkflow.class,
+      SecurityHotspotWorkflowActionsFactory.class,
+      SecurityHotspotWorkflowDefinition.class,
       NewIssuesEmailTemplate.class,
       MyNewIssuesEmailTemplate.class,
       NewIssuesNotificationHandler.class,
@@ -417,7 +438,6 @@ public class ComputeEngineContainerImpl implements ComputeEngineContainer {
       new ReportAnalysisFailureNotificationModule(),
 
       // System
-      ServerLogging.class,
       CEQueueStatusImpl.class,
 
       // SonarSource editions
@@ -454,7 +474,7 @@ public class ComputeEngineContainerImpl implements ComputeEngineContainer {
     );
 
     if (props.valueAsBoolean(CLUSTER_ENABLED.getKey())) {
-      container.add(
+      level4Container.add(
         new CeCleaningModule(),
 
         // system health
@@ -462,12 +482,22 @@ public class ComputeEngineContainerImpl implements ComputeEngineContainer {
 
         // system info
         DbSection.class,
+        DistributedServerLogging.class,
         ProcessInfoProvider.class);
     } else {
-      container.add(
+      level4Container.add(
         new CeCleaningModule(),
+        ServerLogging.class,
         StandaloneCeDistributedInformation.class);
     }
+
+    level4Container.getParent().getOptionalComponentByType(CECoreExtensionsInstaller.class)
+      .orElseThrow(() -> new IllegalStateException("Core extension loading mechanism is not available"))
+      .install(level4Container, hasPlatformLevel4OrNone(), noAdditionalSideFilter());
+
+    level4Container.getParent().getOptionalComponentByType(ServerExtensionInstaller.class)
+      .orElseThrow(() -> new IllegalStateException("Core extension loading mechanism is not available"))
+      .installExtensions(level4Container);
   }
 
   private static Object[] startupComponents() {

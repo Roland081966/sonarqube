@@ -23,8 +23,10 @@ import com.google.protobuf.AbstractMessageLite;
 import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.OutputStream;
 import javax.annotation.concurrent.Immutable;
+import org.apache.commons.io.FileUtils;
 import org.sonar.core.util.ContextException;
 import org.sonar.core.util.Protobuf;
 
@@ -164,13 +166,22 @@ public class ScannerReportWriter {
     return file;
   }
 
-  public void appendDependency(ScannerReport.Dependency dependency) {
-    File file = fileStructure.dependencies();
-    appendDelimitedTo(file, dependency, "dependency");
+  public File appendAnalysisData(ScannerReport.AnalysisData analysisData) {
+    File file = fileStructure.analysisData();
+    appendDelimitedTo(file, analysisData, "analysis data for " + analysisData.getKey());
+    return file;
   }
 
   public File getSourceFile(int componentRef) {
     return fileStructure.fileFor(FileStructure.Domain.SOURCE, componentRef);
   }
 
+  public void writeScaFile(File scaFile) {
+    File sca = fileStructure.scaDir();
+    try {
+      FileUtils.copyFileToDirectory(scaFile, sca);
+    } catch (IOException e) {
+      throw new IllegalStateException(String.format("Unable to copy sca file '%s' to sca folder", scaFile), e);
+    }
+  }
 }

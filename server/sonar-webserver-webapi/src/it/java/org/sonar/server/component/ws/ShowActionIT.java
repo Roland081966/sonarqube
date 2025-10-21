@@ -29,11 +29,12 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.sonar.api.server.ws.Change;
 import org.sonar.api.server.ws.WebService;
 import org.sonar.api.utils.System2;
-import org.sonar.api.web.UserRole;
+import org.sonar.db.permission.ProjectPermission;
 import org.sonar.db.DbTester;
 import org.sonar.db.component.ComponentDbTester;
 import org.sonar.db.component.ComponentDto;
 import org.sonar.db.component.ComponentQualifiers;
+import org.sonar.db.component.PortfolioData;
 import org.sonar.db.component.ProjectData;
 import org.sonar.server.component.TestComponentFinder;
 import org.sonar.server.exceptions.ForbiddenException;
@@ -51,7 +52,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.tuple;
 import static org.sonar.api.utils.DateUtils.formatDateTime;
 import static org.sonar.api.utils.DateUtils.parseDateTime;
-import static org.sonar.api.web.UserRole.USER;
+import static org.sonar.db.permission.ProjectPermission.USER;
 import static org.sonar.db.component.BranchDto.DEFAULT_MAIN_BRANCH_NAME;
 import static org.sonar.db.component.BranchType.BRANCH;
 import static org.sonar.db.component.BranchType.PULL_REQUEST;
@@ -59,6 +60,7 @@ import static org.sonar.db.component.ComponentTesting.newDirectory;
 import static org.sonar.db.component.ComponentTesting.newDirectoryOnBranch;
 import static org.sonar.db.component.ComponentTesting.newFileDto;
 import static org.sonar.db.component.ComponentTesting.newPrivateProjectDto;
+import static org.sonar.db.component.ComponentTesting.newProjectCopy;
 import static org.sonar.db.component.SnapshotTesting.newAnalysis;
 import static org.sonar.test.JsonAssert.assertJson;
 import static org.sonarqube.ws.client.component.ComponentsWsParameters.PARAM_BRANCH;
@@ -243,6 +245,19 @@ public class ShowActionIT {
   }
 
   @Test
+  public void should_return_analysis_date_for_portfolio_project() {
+    ProjectData project = db.components().insertPrivateProject();
+    db.components().insertSnapshot(project.getMainBranchDto(), c -> c.setAnalysisDate(12345L).setCreatedAt(12345L));
+    PortfolioData portfolio = db.components().insertPrivatePortfolioData();
+    ComponentDto projectSnapshot = db.components().insertComponent(newProjectCopy(project, portfolio));
+
+    userSession.addPortfolioPermission(USER, portfolio.getPortfolioDto());
+
+    ShowWsResponse result = newRequest(projectSnapshot.getKey());
+    assertThat(result.getComponent().getAnalysisDate()).isEqualTo(formatDateTime(new Date(12345L)));
+  }
+
+  @Test
   public void should_return_visibility_for_portfolio() {
     ComponentDto view = db.components().insertPrivatePortfolio();
     userSession.addPortfolioPermission(USER, view);
@@ -273,7 +288,7 @@ public class ShowActionIT {
   public void branch() {
     ProjectData projectData = db.components().insertPrivateProject();
     ComponentDto mainBranch = projectData.getMainBranchComponent();
-    userSession.addProjectPermission(UserRole.USER, projectData.getProjectDto());
+    userSession.addProjectPermission(ProjectPermission.USER, projectData.getProjectDto());
     String branchKey = "my_branch";
     ComponentDto branch = db.components().insertProjectBranch(mainBranch, b -> b.setKey(branchKey));
     userSession.addProjectBranchMapping(projectData.projectUuid(), branch);
@@ -299,7 +314,7 @@ public class ShowActionIT {
   public void dont_show_branch_if_main_branch() {
     ProjectData projectData = db.components().insertPrivateProject();
     ComponentDto mainBranch = projectData.getMainBranchComponent();
-    userSession.addProjectPermission(UserRole.USER, projectData.getProjectDto())
+    userSession.addProjectPermission(ProjectPermission.USER, projectData.getProjectDto())
       .registerBranches(projectData.getMainBranchDto());
 
     ShowWsResponse response = ws.newRequest()
@@ -316,7 +331,7 @@ public class ShowActionIT {
   public void pull_request() {
     ProjectData projectData = db.components().insertPrivateProject();
     ComponentDto mainBranch = projectData.getMainBranchComponent();
-    userSession.addProjectPermission(UserRole.USER, projectData.getProjectDto());
+    userSession.addProjectPermission(ProjectPermission.USER, projectData.getProjectDto());
     String pullRequest = "pr-1234";
     ComponentDto branch = db.components().insertProjectBranch(mainBranch, b -> b.setKey(pullRequest).setBranchType(PULL_REQUEST));
     userSession.addProjectBranchMapping(projectData.projectUuid(), branch);
@@ -376,7 +391,7 @@ public class ShowActionIT {
     userSession.addProjectBranchMapping(projectData3.projectUuid(), branch4);
     userSession.addProjectBranchMapping(projectData3.projectUuid(), branch5);
 
-    userSession.addProjectPermission(UserRole.USER, projectData1.getProjectDto(), projectData2.getProjectDto(), projectData3.getProjectDto())
+    userSession.addProjectPermission(ProjectPermission.USER, projectData1.getProjectDto(), projectData2.getProjectDto(), projectData3.getProjectDto())
         .registerBranches(projectData1.getMainBranchDto(), projectData2.getMainBranchDto(), projectData3.getMainBranchDto());
     userSession.registerPortfolios(portfolio1, portfolio2, subview);
     userSession.registerProjects(projectData1.getProjectDto(), projectData2.getProjectDto(), projectData3.getProjectDto());
@@ -453,7 +468,7 @@ public class ShowActionIT {
     ProjectData projectData = db.components().insertPrivateProject();
     ComponentDto mainBranch = projectData.getMainBranchComponent();
     ComponentDto file = db.components().insertComponent(newFileDto(mainBranch));
-    userSession.addProjectPermission(UserRole.USER, projectData.getProjectDto())
+    userSession.addProjectPermission(ProjectPermission.USER, projectData.getProjectDto())
       .registerBranches(projectData.getMainBranchDto());
     db.components().insertProjectBranch(mainBranch, b -> b.setKey("my_branch"));
 

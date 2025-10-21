@@ -39,6 +39,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import javax.annotation.Nullable;
 import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -47,7 +48,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.sonar.db.component.ComponentQualifiers;
 import org.sonar.api.rule.RuleKey;
-import org.sonar.api.rules.RuleType;
+import org.sonar.core.rule.RuleType;
 import org.sonar.api.server.ServerSide;
 import org.sonar.db.DbClient;
 import org.sonar.db.DbSession;
@@ -75,8 +76,8 @@ import static org.sonar.api.measures.CoreMetrics.ANALYSIS_FROM_SONARQUBE_9_4_KEY
 import static org.sonar.api.utils.DateUtils.longToDate;
 import static org.sonar.api.utils.DateUtils.parseEndingDateOrDateTime;
 import static org.sonar.api.utils.DateUtils.parseStartingDateOrDateTime;
-import static org.sonar.api.web.UserRole.SCAN;
-import static org.sonar.api.web.UserRole.USER;
+import static org.sonar.db.permission.ProjectPermission.SCAN;
+import static org.sonar.db.permission.ProjectPermission.USER;
 import static org.sonar.db.newcodeperiod.NewCodePeriodType.REFERENCE_BRANCH;
 import static org.sonarqube.ws.client.issue.IssuesWsParameters.PARAM_COMPONENTS;
 import static org.sonarqube.ws.client.issue.IssuesWsParameters.PARAM_COMPONENT_UUIDS;
@@ -94,6 +95,7 @@ public class IssueQueryFactory {
   private static final Logger LOGGER = LoggerFactory.getLogger(IssueQueryFactory.class);
 
   public static final String UNKNOWN = "<UNKNOWN>";
+  public static final String STATUS_IN_SANDBOX = "IN_SANDBOX";
   public static final List<String> ISSUE_STATUSES = STATUSES.stream()
     .filter(s -> !s.equals(STATUS_TO_REVIEW))
     .filter(s -> !s.equals(STATUS_REVIEWED))
@@ -138,6 +140,7 @@ public class IssueQueryFactory {
         .issueStatuses(request.getIssueStatuses())
         .resolved(request.getResolved())
         .prioritizedRule(request.getPrioritizedRule())
+        .fromSonarQubeUpdate(request.getFromSonarQubeUpdate())
         .rules(ruleDtos)
         .ruleUuids(ruleUuids)
         .assigneeUuids(request.getAssigneeUuids())
@@ -150,6 +153,7 @@ public class IssueQueryFactory {
         .pciDss40(request.getPciDss40())
         .owaspAsvs40(request.getOwaspAsvs40())
         .owaspAsvsLevel(request.getOwaspAsvsLevel())
+        .owaspMobileTop10For2024(request.getOwaspMobileTop10For2024())
         .owaspTop10(request.getOwaspTop10())
         .owaspTop10For2021(request.getOwaspTop10For2021())
         .stigAsdR5V3(request.getStigAsdV5R3())
@@ -167,6 +171,8 @@ public class IssueQueryFactory {
       List<ComponentDto> allComponents = new ArrayList<>();
       boolean effectiveOnComponentOnly = mergeDeprecatedComponentParameters(dbSession, request, allComponents);
       addComponentParameters(builder, dbSession, effectiveOnComponentOnly, allComponents, request);
+      // SONAR-25108
+      unsetMainBranch(builder, issueKeys != null && !issueKeys.isEmpty(), allComponents, request);
 
       setCreatedAfterFromRequest(dbSession, builder, request, allComponents, timeZone);
       String sort = request.getSort();
@@ -266,16 +272,20 @@ public class IssueQueryFactory {
       ComponentDto component = componentUuids.iterator().next();
 
       if (!QUALIFIERS_WITHOUT_LEAK_PERIOD.contains(component.qualifier()) && request.getPullRequest() == null) {
-        Optional<SnapshotDto> snapshot = getLastAnalysis(dbSession, component);
-        if (!snapshot.isEmpty() && isLastAnalysisFromReAnalyzedReferenceBranch(dbSession, snapshot.get())) {
-          builder.newCodeOnReference(true);
-          return;
-        }
-        // if last analysis has no period date, then no issue should be considered new.
-        Date createdAfterFromSnapshot = findCreatedAfterFromComponentUuid(snapshot);
-        setCreatedAfterFromDates(builder, createdAfterFromSnapshot, null, false);
+        setInNewCodePeriod(dbSession, builder, component.uuid());
       }
     }
+  }
+
+  private void setInNewCodePeriod(DbSession dbSession, IssueQuery.Builder builder, String componentUuid) {
+    Optional<SnapshotDto> snapshot = getLastAnalysis(dbSession, componentUuid);
+    if (!snapshot.isEmpty() && isLastAnalysisFromReAnalyzedReferenceBranch(dbSession, snapshot.get())) {
+      builder.newCodeOnReference(true);
+      return;
+    }
+    // if last analysis has no period date, then no issue should be considered new.
+    Date createdAfterFromSnapshot = findCreatedAfterFromComponentUuid(snapshot);
+    setCreatedAfterFromDates(builder, createdAfterFromSnapshot, null, false);
   }
 
   private static boolean notInNewCodePeriod(SearchRequest request) {
@@ -298,8 +308,8 @@ public class IssueQueryFactory {
       .isPresent();
   }
 
-  private Optional<SnapshotDto> getLastAnalysis(DbSession dbSession, ComponentDto component) {
-    return dbClient.snapshotDao().selectLastAnalysisByComponentUuid(dbSession, component.uuid());
+  private Optional<SnapshotDto> getLastAnalysis(DbSession dbSession, String componentUuid) {
+    return dbClient.snapshotDao().selectLastAnalysisByComponentUuid(dbSession, componentUuid);
   }
 
   private List<SnapshotDto> getLastAnalysis(DbSession dbSession, Set<String> projectUuids) {
@@ -509,6 +519,14 @@ public class IssueQueryFactory {
     } else {
       BranchDto branchDto = findComponentBranch(session, component);
       builder.mainBranch(branchDto.isMain());
+    }
+  }
+
+  private static void unsetMainBranch(IssueQuery.Builder builder, boolean hasIssueKey, List<ComponentDto> components, SearchRequest request) {
+    var pullRequest = request.getPullRequest();
+    var branch = request.getBranch();
+    if ((components.isEmpty() || UNKNOWN_COMPONENT.equals(components.get(0)) || (pullRequest == null && branch == null)) && hasIssueKey) {
+      builder.mainBranch(null);
     }
   }
 }

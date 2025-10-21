@@ -33,6 +33,8 @@ public class QualityGateModule extends Module {
       QualityGateFinder.class,
       QualityGateEvaluatorImpl.class,
       QualityGateFallbackManager.class,
-      SonarWayQualityGate.class);
+      SonarWayQualityGate.class,
+      BaseAllowedQualityGateRatingMetricKeysSource.class,
+      ValidQualityGateRatingMetricKeysProvider.class);
   }
 }

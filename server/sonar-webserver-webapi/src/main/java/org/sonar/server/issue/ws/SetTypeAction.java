@@ -23,7 +23,7 @@ import com.google.common.io.Resources;
 import java.util.Date;
 import java.util.EnumSet;
 import java.util.Map;
-import org.sonar.api.rules.RuleType;
+import org.sonar.core.rule.RuleType;
 import org.sonar.api.server.ws.Change;
 import org.sonar.api.server.ws.Request;
 import org.sonar.api.server.ws.Response;
@@ -41,7 +41,7 @@ import org.sonar.server.issue.IssueFinder;
 import org.sonar.server.pushapi.issues.IssueChangeEventService;
 import org.sonar.server.user.UserSession;
 
-import static org.sonar.api.web.UserRole.ISSUE_ADMIN;
+import static org.sonar.db.permission.ProjectPermission.ISSUE_ADMIN;
 import static org.sonar.core.issue.IssueChangeContext.issueChangeContextByUserBuilder;
 import static org.sonar.db.component.BranchType.BRANCH;
 import static org.sonarqube.ws.client.issue.IssuesWsParameters.ACTION_SET_TYPE;

@@ -133,9 +133,31 @@ public class GithubApplicationClientImpl implements GithubApplicationClient {
 
     if (!"http".equalsIgnoreCase(apiEndpoint.getScheme()) && !"https".equalsIgnoreCase(apiEndpoint.getScheme())) {
       throw new IllegalArgumentException("Only http and https schemes are supported");
-    } else if (!"api.github.com".equalsIgnoreCase(apiEndpoint.getHost()) && !apiEndpoint.getPath().toLowerCase(Locale.ENGLISH).startsWith("/api/v3")) {
+    } else if (!isValidGitHubUrl(apiEndpoint)) {
       throw new IllegalArgumentException("Invalid GitHub URL");
     }
+  }
+
+  private static boolean isValidGitHubUrl(URI apiEndpoint) {
+    String host = apiEndpoint.getHost();
+    String path = apiEndpoint.getPath();
+    if (host == null) {
+      return false;
+    }
+
+    String lowerCaseHost = host.toLowerCase(Locale.ENGLISH);
+    // GitHub.com (official public GitHub)
+    if ("api.github.com".equals(lowerCaseHost)) {
+      return true;
+    }
+
+    // GitHub Enterprise Server - standard format: https://github.company.com/api/v3/
+    if (path != null && path.toLowerCase(Locale.ENGLISH).startsWith("/api/v3")) {
+      return true;
+    }
+
+    // GitHub Enterprise Cloud with data residency - official format: https://api.company.ghe.com
+    return lowerCaseHost.startsWith("api.") && lowerCaseHost.endsWith(".ghe.com");
   }
 
   @Override
@@ -315,6 +337,9 @@ public class GithubApplicationClientImpl implements GithubApplicationClient {
         baseAppUrl = appUrl.substring(0, apiIndex);
       } else if (appUrl.startsWith("https://api.github.com")) {
         baseAppUrl = "https://github.com";
+      } else if (appUrl.startsWith("https://api.") && appUrl.contains(".ghe.com")) {
+        // For GHE instances with api.xx.ghe.com format, remove the "api." prefix
+        baseAppUrl = appUrl.replace("https://api.", "https://");
       } else {
         baseAppUrl = appUrl;
       }
@@ -327,9 +352,9 @@ public class GithubApplicationClientImpl implements GithubApplicationClient {
 
       Optional<String> content = response.getContent();
       Optional<UserAccessToken> accessToken = content.flatMap(c -> Arrays.stream(c.split("&"))
-        .filter(t -> t.startsWith("access_token="))
-        .map(t -> t.split("=")[1])
-        .findAny())
+          .filter(t -> t.startsWith("access_token="))
+          .map(t -> t.split("=")[1])
+          .findAny())
         .map(UserAccessToken::new);
 
       if (accessToken.isPresent()) {

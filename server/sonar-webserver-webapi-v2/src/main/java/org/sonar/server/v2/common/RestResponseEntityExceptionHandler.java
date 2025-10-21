@@ -27,7 +27,9 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.sonar.server.authentication.event.AuthenticationException;
+import org.sonar.server.exceptions.BadRequestException;
 import org.sonar.server.exceptions.ServerException;
+import org.sonar.server.exceptions.TooManyRequestsException;
 import org.sonar.server.v2.api.model.RestError;
 import org.springframework.core.convert.ConversionFailedException;
 import org.springframework.http.HttpStatus;
@@ -46,6 +48,8 @@ import org.springframework.web.context.request.async.AsyncRequestTimeoutExceptio
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.NoHandlerFoundException;
+
+import static org.springframework.http.HttpStatus.TOO_MANY_REQUESTS;
 
 @RestControllerAdvice
 public class RestResponseEntityExceptionHandler {
@@ -129,6 +133,12 @@ public class RestResponseEntityExceptionHandler {
     return buildResponse(HttpStatus.PAYLOAD_TOO_LARGE, ErrorMessages.SIZE_EXCEEDED);
   }
 
+  @ExceptionHandler(TooManyRequestsException.class)
+  protected ResponseEntity<RestError> handleTooManyRequestsException(TooManyRequestsException ex) {
+    final String errorMessage = Optional.ofNullable(ex.getMessage()).orElse(ErrorMessages.TOO_MANY_REQUESTS.getMessage());
+    return buildResponse(TOO_MANY_REQUESTS, errorMessage);
+  }
+
   // endregion client
 
   // region security
@@ -175,6 +185,13 @@ public class RestResponseEntityExceptionHandler {
     final HttpStatus httpStatus = Optional.ofNullable(HttpStatus.resolve(ex.httpCode())).orElse(HttpStatus.INTERNAL_SERVER_ERROR);
     final String errorMessage = Optional.ofNullable(ex.getMessage()).orElse(ErrorMessages.INTERNAL_SERVER_ERROR.getMessage());
     return buildResponse(httpStatus, errorMessage);
+  }
+
+  @ExceptionHandler(BadRequestException.class)
+  protected ResponseEntity<RestError> handleBadRequestException(BadRequestException ex) {
+    return ex.getRelatedField()
+      .map(field -> ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new RestError(ex.getMessage(), field)))
+      .orElse(handleServerException(ex));
   }
 
   @ExceptionHandler({Exception.class})

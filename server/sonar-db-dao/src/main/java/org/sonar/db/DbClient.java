@@ -38,10 +38,6 @@ import org.sonar.db.component.ComponentDao;
 import org.sonar.db.component.ComponentKeyUpdaterDao;
 import org.sonar.db.component.ProjectLinkDao;
 import org.sonar.db.component.SnapshotDao;
-import org.sonar.db.dependency.CveCweDao;
-import org.sonar.db.dependency.CveDao;
-import org.sonar.db.dependency.IssuesDependencyDao;
-import org.sonar.db.dependency.ProjectDependenciesDao;
 import org.sonar.db.duplication.DuplicationDao;
 import org.sonar.db.entity.EntityDao;
 import org.sonar.db.es.EsQueueDao;
@@ -51,6 +47,8 @@ import org.sonar.db.issue.AnticipatedTransitionDao;
 import org.sonar.db.issue.IssueChangeDao;
 import org.sonar.db.issue.IssueDao;
 import org.sonar.db.issue.IssueFixedDao;
+import org.sonar.db.jira.dao.AtlassianAuthenticationDetailsDao;
+import org.sonar.db.jira.dao.JiraProjectBindingDao;
 import org.sonar.db.measure.MeasureDao;
 import org.sonar.db.measure.ProjectMeasureDao;
 import org.sonar.db.metric.MetricDao;
@@ -146,6 +144,8 @@ public class DbClient {
   private final IssueDao issueDao;
   private final RegulatoryReportDao regulatoryReportDao;
   private final IssueChangeDao issueChangeDao;
+  private final JiraProjectBindingDao jiraProjectBindingDao;
+  private final AtlassianAuthenticationDetailsDao atlassianAuthenticationDetailsDao;
   private final CeActivityDao ceActivityDao;
   private final CeQueueDao ceQueueDao;
   private final CeTaskInputDao ceTaskInputDao;
@@ -204,10 +204,6 @@ public class DbClient {
   private final ProjectExportDao projectExportDao;
   private final IssueFixedDao issueFixedDao;
   private final TelemetryMetricsSentDao telemetryMetricsSentDao;
-  private final CveDao cveDao;
-  private final CveCweDao cveCweDao;
-  private final IssuesDependencyDao issuesDependencyDao;
-  private final ProjectDependenciesDao projectDependenciesDao;
 
   public DbClient(Database database, MyBatis myBatis, DBSessions dbSessions, Dao... daos) {
     this.database = database;
@@ -244,6 +240,8 @@ public class DbClient {
     permissionTemplateCharacteristicDao = getDao(map, PermissionTemplateCharacteristicDao.class);
     issueDao = getDao(map, IssueDao.class);
     issueChangeDao = getDao(map, IssueChangeDao.class);
+    jiraProjectBindingDao = getDao(map, JiraProjectBindingDao.class);
+    atlassianAuthenticationDetailsDao = getDao(map, AtlassianAuthenticationDetailsDao.class);
     ceActivityDao = getDao(map, CeActivityDao.class);
     ceQueueDao = getDao(map, CeQueueDao.class);
     ceTaskInputDao = getDao(map, CeTaskInputDao.class);
@@ -304,10 +302,6 @@ public class DbClient {
     projectExportDao = getDao(map, ProjectExportDao.class);
     issueFixedDao = getDao(map, IssueFixedDao.class);
     telemetryMetricsSentDao = getDao(map, TelemetryMetricsSentDao.class);
-    cveDao = getDao(map, CveDao.class);
-    cveCweDao = getDao(map, CveCweDao.class);
-    issuesDependencyDao = getDao(map, IssuesDependencyDao.class);
-    projectDependenciesDao = getDao(map, ProjectDependenciesDao.class);
   }
 
   public DbSession openSession(boolean batch) {
@@ -360,6 +354,14 @@ public class DbClient {
 
   public IssueFixedDao issueFixedDao() {
     return issueFixedDao;
+  }
+
+  public JiraProjectBindingDao jiraProjectBindingDao() {
+    return jiraProjectBindingDao;
+  }
+
+  public AtlassianAuthenticationDetailsDao atlassianAuthenticationDetailsDao() {
+    return atlassianAuthenticationDetailsDao;
   }
 
   public TelemetryMetricsSentDao telemetryMetricsSentDao() {
@@ -670,21 +672,5 @@ public class DbClient {
 
   public ProjectExportDao projectExportDao() {
     return projectExportDao;
-  }
-
-  public CveDao cveDao() {
-    return cveDao;
-  }
-
-  public CveCweDao cveCweDao() {
-    return cveCweDao;
-  }
-
-  public IssuesDependencyDao issuesDependencyDao() {
-    return issuesDependencyDao;
-  }
-
-  public ProjectDependenciesDao projectDependenciesDao() {
-    return projectDependenciesDao;
   }
 }

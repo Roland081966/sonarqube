@@ -24,7 +24,7 @@ import java.util.Random;
 import java.util.function.Consumer;
 import javax.annotation.Nullable;
 import org.sonar.api.issue.Issue;
-import org.sonar.api.rules.RuleType;
+import org.sonar.core.rule.RuleType;
 import org.sonar.core.issue.DefaultIssueComment;
 import org.sonar.core.issue.FieldDiffs;
 import org.sonar.core.util.Uuids;
@@ -32,14 +32,13 @@ import org.sonar.db.DbTester;
 import org.sonar.db.component.BranchDto;
 import org.sonar.db.component.ComponentDto;
 import org.sonar.db.component.ProjectData;
-import org.sonar.db.dependency.IssuesDependencyDto;
 import org.sonar.db.rule.RuleDto;
 import org.sonar.db.user.UserDto;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Arrays.stream;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.sonar.api.rules.RuleType.SECURITY_HOTSPOT;
+import static org.sonar.core.rule.RuleType.SECURITY_HOTSPOT;
 import static org.sonar.db.component.ComponentTesting.newFileDto;
 import static org.sonar.db.issue.IssueTesting.newIssue;
 
@@ -254,11 +253,6 @@ public class IssueDbTester {
 
   public void insertNewCodeReferenceIssue(IssueDto issue) {
     db.getDbClient().issueDao().insertAsNewCodeOnReferenceBranch(db.getSession(), IssueTesting.newCodeReferenceIssue(issue));
-    db.commit();
-  }
-
-  public void insertIssuesDependency(IssuesDependencyDto issuesDependencyDto) {
-    db.getDbClient().issuesDependencyDao().insert(db.getSession(), issuesDependencyDto);
     db.commit();
   }
 }

@@ -19,6 +19,9 @@
  */
 package org.sonar.scanner.mediumtest;
 
+import static java.util.Collections.emptySet;
+
+import jakarta.annotation.Priority;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -38,7 +41,6 @@ import java.util.Properties;
 import java.util.Set;
 import javax.annotation.CheckForNull;
 import javax.annotation.Nullable;
-import jakarta.annotation.Priority;
 import org.apache.commons.io.FileUtils;
 import org.junit.jupiter.api.extension.AfterTestExecutionCallback;
 import org.junit.jupiter.api.extension.BeforeTestExecutionCallback;
@@ -60,6 +62,7 @@ import org.sonar.api.utils.Version;
 import org.sonar.batch.bootstrapper.Batch;
 import org.sonar.batch.bootstrapper.EnvironmentInformation;
 import org.sonar.batch.bootstrapper.LogOutput;
+import org.sonar.core.platform.PluginInfo;
 import org.sonar.scanner.bootstrap.GlobalAnalysisMode;
 import org.sonar.scanner.cache.AnalysisCacheLoader;
 import org.sonar.scanner.protocol.internal.SensorCacheData;
@@ -86,8 +89,6 @@ import org.sonarqube.ws.NewCodePeriods;
 import org.sonarqube.ws.Qualityprofiles.SearchWsResponse.QualityProfile;
 import org.sonarqube.ws.Rules.Rule;
 
-import static java.util.Collections.emptySet;
-
 /**
  * Main utility class for writing scanner medium tests.
  */
@@ -111,6 +112,7 @@ public class ScannerMediumTester extends ExternalResource implements BeforeTestE
   private final CeTaskReportDataHolder reportMetadataHolder = new CeTaskReportDataHolderExt();
   private final FakeLanguagesLoader languagesLoader = new FakeLanguagesLoader();
   private final FakeLanguagesProvider languagesProvider = new FakeLanguagesProvider();
+  private final FakeFeatureFlagsLoader featureFlagsLoader = new FakeFeatureFlagsLoader();
   private LogOutput logOutput = null;
 
   private static void createWorkingDirs() throws IOException {
@@ -142,6 +144,11 @@ public class ScannerMediumTester extends ExternalResource implements BeforeTestE
 
   public ScannerMediumTester registerPlugin(String pluginKey, Plugin instance) {
     pluginInstaller.add(pluginKey, instance);
+    return this;
+  }
+
+  public ScannerMediumTester registerPlugin(PluginInfo pluginInfo, Plugin instance) {
+    pluginInstaller.add(pluginInfo, instance);
     return this;
   }
 
@@ -310,6 +317,10 @@ public class ScannerMediumTester extends ExternalResource implements BeforeTestE
     languagesProvider.addLanguage(key, name, publishAllFiles);
   }
 
+  public void enableFeature(String featureName) {
+    featureFlagsLoader.enableFeature(featureName);
+  }
+
   public static class AnalysisBuilder {
     private final Map<String, String> taskProperties = new HashMap<>();
     private final ScannerMediumTester tester;
@@ -343,6 +354,7 @@ public class ScannerMediumTester extends ExternalResource implements BeforeTestE
           tester.reportMetadataHolder,
           tester.languagesLoader,
           tester.languagesProvider,
+          tester.featureFlagsLoader,
           result);
       if (tester.logOutput != null) {
         builder.setLogOutput(tester.logOutput);

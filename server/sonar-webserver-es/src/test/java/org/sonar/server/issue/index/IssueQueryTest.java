@@ -65,6 +65,7 @@ class IssueQueryTest {
       .asc(true)
       .codeVariants(List.of("codeVariant1", "codeVariant2"))
       .prioritizedRule(true)
+      .fromSonarQubeUpdate(true)
       .build();
     assertThat(query.issueKeys()).containsOnly("ABCDE");
     assertThat(query.severities()).containsOnly(Severity.BLOCKER);
@@ -92,6 +93,7 @@ class IssueQueryTest {
     assertThat(query.asc()).isTrue();
     assertThat(query.codeVariants()).containsOnly("codeVariant1", "codeVariant2");
     assertThat(query.prioritizedRule()).isTrue();
+    assertThat(query.fromSonarQubeUpdate()).isTrue();
   }
 
   @Test
@@ -125,6 +127,15 @@ class IssueQueryTest {
 
     assertThat(query.owaspTop10()).containsOnly("a1", "a2");
     assertThat(query.owaspTop10For2021()).containsOnly("a3", "a4");
+  }
+
+  @Test
+  void build_owasp_mobile_query() {
+    IssueQuery query = IssueQuery.builder()
+      .owaspMobileTop10For2024(List.of("m5", "m6"))
+      .build();
+
+    assertThat(query.owaspMobileTop10For2024()).containsOnly("m5", "m6");
   }
 
   @Test
@@ -230,6 +241,7 @@ class IssueQueryTest {
     assertThat(query.sort()).isNull();
     assertThat(query.createdAfterByProjectUuids()).isEmpty();
     assertThat(query.prioritizedRule()).isNull();
+    assertThat(query.fromSonarQubeUpdate()).isNull();
   }
 
   @Test

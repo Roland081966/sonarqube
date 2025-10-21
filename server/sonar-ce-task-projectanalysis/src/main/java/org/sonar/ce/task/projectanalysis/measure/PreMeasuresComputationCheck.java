@@ -24,6 +24,7 @@ import org.sonar.api.ce.ComputeEngineSide;
 import org.sonar.api.config.Configuration;
 import org.sonar.ce.task.projectanalysis.analysis.Branch;
 
+
 /**
  * Extension point that is called during processing of a task
  * by {@link PreMeasuresComputationChecksStep}.

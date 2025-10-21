@@ -59,7 +59,7 @@ public enum GlobalPermission {
         return p;
       }
     }
-    throw new IllegalArgumentException("Unsupported permission: " + key);
+    throw new IllegalArgumentException("Unsupported global permission: " + key);
   }
 
   public static boolean contains(String key) {

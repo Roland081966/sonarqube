@@ -19,43 +19,20 @@
  */
 package org.sonar.server.qualityprofile.ws;
 
-import com.google.common.collect.ImmutableMap;
-import java.io.Reader;
-import java.util.Collections;
-import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
-import org.sonar.api.config.Configuration;
-import org.sonar.api.profiles.ProfileImporter;
-import org.sonar.api.profiles.RulesProfile;
-import org.sonar.api.rules.RulePriority;
 import org.sonar.api.server.ws.WebService;
 import org.sonar.api.server.ws.WebService.Param;
 import org.sonar.api.utils.System2;
-import org.sonar.api.utils.ValidationMessages;
-import org.sonar.api.utils.Version;
-import org.sonar.core.platform.SonarQubeVersion;
 import org.sonar.core.util.UuidFactoryFast;
-import org.sonar.core.util.UuidFactoryImpl;
 import org.sonar.db.DbClient;
 import org.sonar.db.DbSession;
 import org.sonar.db.DbTester;
 import org.sonar.db.qualityprofile.QProfileDto;
-import org.sonar.db.rule.RuleDto;
-import org.sonar.db.rule.RuleTesting;
 import org.sonar.server.es.EsTester;
-import org.sonar.server.exceptions.BadRequestException;
 import org.sonar.server.exceptions.ForbiddenException;
-import org.sonar.server.pushapi.qualityprofile.QualityProfileChangeEventService;
-import org.sonar.server.qualityprofile.QProfileExporters;
 import org.sonar.server.qualityprofile.QProfileFactoryImpl;
-import org.sonar.server.qualityprofile.QProfileRules;
-import org.sonar.server.qualityprofile.QProfileRulesImpl;
-import org.sonar.server.qualityprofile.builtin.RuleActivator;
 import org.sonar.server.qualityprofile.index.ActiveRuleIndexer;
-import org.sonar.server.rule.index.RuleIndex;
-import org.sonar.server.rule.index.RuleIndexer;
-import org.sonar.server.rule.index.RuleQuery;
 import org.sonar.server.tester.UserSessionRule;
 import org.sonar.server.ws.TestRequest;
 import org.sonar.server.ws.TestResponse;
@@ -67,7 +44,6 @@ import org.sonarqube.ws.Qualityprofiles.CreateWsResponse.QualityProfile;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Mockito.mock;
 import static org.sonar.db.permission.GlobalPermission.ADMINISTER_QUALITY_PROFILES;
 import static org.sonar.db.permission.GlobalPermission.SCAN;
 import static org.sonar.server.language.LanguageTesting.newLanguages;
@@ -75,9 +51,6 @@ import static org.sonar.server.language.LanguageTesting.newLanguages;
 class CreateActionIT {
 
   private static final String XOO_LANGUAGE = "xoo";
-  private static final RuleDto RULE = RuleTesting.newXooX1()
-    .setSeverity("MINOR")
-    .setLanguage(XOO_LANGUAGE);
 
   @RegisterExtension
   private final DbTester db = DbTester.create();
@@ -86,21 +59,12 @@ class CreateActionIT {
   @RegisterExtension
   private final UserSessionRule userSession = UserSessionRule.standalone();
 
-  private final Configuration config = mock(Configuration.class);
   private final DbClient dbClient = db.getDbClient();
   private final DbSession dbSession = db.getSession();
-  private final RuleIndex ruleIndex = new RuleIndex(es.client(), System2.INSTANCE, config);
-  private final RuleIndexer ruleIndexer = new RuleIndexer(es.client(), dbClient);
   private final ActiveRuleIndexer activeRuleIndexer = new ActiveRuleIndexer(dbClient, es.client());
-  private final ProfileImporter[] profileImporters = createImporters();
-  private final QualityProfileChangeEventService qualityProfileChangeEventService = mock(QualityProfileChangeEventService.class);
-  private final SonarQubeVersion sonarQubeVersion = new SonarQubeVersion(Version.create(10, 3));
-  private final RuleActivator ruleActivator = new RuleActivator(System2.INSTANCE, dbClient, UuidFactoryImpl.INSTANCE, null, userSession, mock(Configuration.class), sonarQubeVersion);
-  private final QProfileRules qProfileRules = new QProfileRulesImpl(dbClient, ruleActivator, ruleIndex, activeRuleIndexer, qualityProfileChangeEventService);
-  private final QProfileExporters qProfileExporters = new QProfileExporters(dbClient, null, qProfileRules, profileImporters);
 
   private final CreateAction underTest = new CreateAction(dbClient, new QProfileFactoryImpl(dbClient, UuidFactoryFast.getInstance(), System2.INSTANCE, activeRuleIndexer),
-    qProfileExporters, newLanguages(XOO_LANGUAGE), userSession, activeRuleIndexer, profileImporters);
+    newLanguages(XOO_LANGUAGE), userSession);
 
   private WsActionTester ws = new WsActionTester(underTest);
 
@@ -111,7 +75,7 @@ class CreateActionIT {
     assertThat(definition.responseExampleAsString()).isNotEmpty();
     assertThat(definition.isPost()).isTrue();
     assertThat(definition.params()).extracting(Param::key)
-      .containsExactlyInAnyOrder("language", "name", "backup_with_messages", "backup_with_errors", "backup_xoo_lint");
+      .containsExactlyInAnyOrder("language", "name");
   }
 
   @Test
@@ -136,30 +100,6 @@ class CreateActionIT {
   }
 
   @Test
-  void create_profile_from_backup_xml() {
-    logInAsQProfileAdministrator();
-    insertRule(RULE);
-
-    executeRequest("New Profile", XOO_LANGUAGE, ImmutableMap.of("xoo_lint", "<xml/>"));
-
-    QProfileDto dto = dbClient.qualityProfileDao().selectByNameAndLanguage(dbSession, "New Profile", XOO_LANGUAGE);
-    assertThat(dto.getKee()).isNotNull();
-    assertThat(dbClient.activeRuleDao().selectByProfileUuid(dbSession, dto.getKee())).hasSize(1);
-    assertThat(ruleIndex.searchAll(new RuleQuery().setQProfile(dto).setActivation(true))).toIterable().hasSize(1);
-  }
-
-  @Test
-  void create_profile_with_messages() {
-    logInAsQProfileAdministrator();
-
-    CreateWsResponse response = executeRequest("Profile with messages", XOO_LANGUAGE, ImmutableMap.of("with_messages", "<xml/>"));
-
-    QualityProfile profile = response.getProfile();
-    assertThat(profile.getInfos().getInfosList()).containsOnly("an info");
-    assertThat(profile.getWarnings().getWarningsList()).containsOnly("a warning");
-  }
-
-  @Test
   void fail_if_unsufficient_privileges() {
     userSession
       .logIn()
@@ -172,16 +112,6 @@ class CreateActionIT {
     })
       .isInstanceOf(ForbiddenException.class)
       .hasMessage("Insufficient privileges");
-  }
-
-  @Test
-  void fail_if_import_generate_error() {
-    logInAsQProfileAdministrator();
-
-    assertThatThrownBy(() -> {
-      executeRequest("Profile with errors", XOO_LANGUAGE, ImmutableMap.of("with_errors", "<xml/>"));
-    })
-      .isInstanceOf(BadRequestException.class);
   }
 
   @Test
@@ -199,77 +129,15 @@ class CreateActionIT {
     assertThat(response.getMediaType()).isEqualTo(MediaTypes.JSON);
   }
 
-  private void insertRule(RuleDto ruleDto) {
-    dbClient.ruleDao().insert(dbSession, ruleDto);
-    dbSession.commit();
-    ruleIndexer.commitAndIndex(dbSession, ruleDto.getUuid());
-  }
-
   private CreateWsResponse executeRequest(String name, String language) {
-    return executeRequest(name, language, Collections.emptyMap());
-  }
-
-  private CreateWsResponse executeRequest(String name, String language, Map<String, String> xmls) {
     TestRequest request = ws.newRequest()
       .setParam("name", name)
       .setParam("language", language);
-    for (Map.Entry<String, String> entry : xmls.entrySet()) {
-      request.setParam("backup_" + entry.getKey(), entry.getValue());
-    }
     return executeRequest(request);
   }
 
   private CreateWsResponse executeRequest(TestRequest request) {
     return request.executeProtobuf(CreateWsResponse.class);
-  }
-
-  private ProfileImporter[] createImporters() {
-    class DefaultProfileImporter extends ProfileImporter {
-      private DefaultProfileImporter() {
-        super("xoo_lint", "Xoo Lint");
-        setSupportedLanguages(XOO_LANGUAGE);
-      }
-
-      @Override
-      public RulesProfile importProfile(Reader reader, ValidationMessages messages) {
-        RulesProfile rulesProfile = RulesProfile.create();
-        rulesProfile.activateRule(org.sonar.api.rules.Rule.create(RULE.getRepositoryKey(), RULE.getRuleKey()), RulePriority.BLOCKER);
-        return rulesProfile;
-      }
-    }
-
-    class ProfileImporterGeneratingMessages extends ProfileImporter {
-      private ProfileImporterGeneratingMessages() {
-        super("with_messages", "With messages");
-        setSupportedLanguages(XOO_LANGUAGE);
-      }
-
-      @Override
-      public RulesProfile importProfile(Reader reader, ValidationMessages messages) {
-        RulesProfile rulesProfile = RulesProfile.create();
-        messages.addWarningText("a warning");
-        messages.addInfoText("an info");
-        return rulesProfile;
-      }
-    }
-
-    class ProfileImporterGeneratingErrors extends ProfileImporter {
-      private ProfileImporterGeneratingErrors() {
-        super("with_errors", "With errors");
-        setSupportedLanguages(XOO_LANGUAGE);
-      }
-
-      @Override
-      public RulesProfile importProfile(Reader reader, ValidationMessages messages) {
-        RulesProfile rulesProfile = RulesProfile.create();
-        messages.addErrorText("error!");
-        return rulesProfile;
-      }
-    }
-
-    return new ProfileImporter[] {
-      new DefaultProfileImporter(), new ProfileImporterGeneratingMessages(), new ProfileImporterGeneratingErrors()
-    };
   }
 
   private void logInAsQProfileAdministrator() {

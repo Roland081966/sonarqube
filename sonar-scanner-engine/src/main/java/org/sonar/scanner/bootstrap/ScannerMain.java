@@ -21,17 +21,21 @@ package org.sonar.scanner.bootstrap;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.OutputStreamAppender;
 import com.google.gson.Gson;
 import com.google.gson.annotations.SerializedName;
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import javax.annotation.CheckForNull;
+import javax.annotation.Nullable;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.LoggerFactory;
 import org.sonar.api.utils.MessageException;
@@ -49,11 +53,13 @@ public class ScannerMain {
   private static final String SCANNER_APP_VERSION_KEY = "sonar.scanner.appVersion";
 
   public static void main(String... args) {
-    System.exit(run(System.in));
+    System.exit(run(System.in, System.out));
   }
 
-  public static int run(InputStream in) {
-    try {
+  public static int run(InputStream in, OutputStream out) {
+    try (var ignored = new JGitCleanupService()) {
+      configureLogOutput(out);
+
       LOG.info("Starting SonarScanner Engine...");
       LOG.atInfo().log(ScannerMain::java);
 
@@ -67,9 +73,11 @@ public class ScannerMain {
 
       LOG.info("SonarScanner Engine completed successfully");
       return 0;
-    } catch (Exception e) {
-      handleException(e);
+    } catch (Throwable throwable) {
+      handleException(throwable);
       return 1;
+    } finally {
+      stopLogback();
     }
   }
 
@@ -87,30 +95,28 @@ public class ScannerMain {
     return sb.toString();
   }
 
-  private static void handleException(Exception e) {
-    var messageException = unwrapMessageException(e);
+  private static void handleException(Throwable throwable) {
+    var messageException = unwrapMessageException(throwable);
     if (messageException.isPresent()) {
       // Don't show the stacktrace for a message exception to not pollute the logs
       if (LoggerFactory.getLogger(ScannerMain.class).isDebugEnabled()) {
-        LOG.error(messageException.get(), e);
+        LOG.error(messageException.get(), throwable);
       } else {
         LOG.error(messageException.get());
       }
     } else {
-      LOG.error("Error during SonarScanner Engine execution", e);
+      LOG.error("Error during SonarScanner Engine execution", throwable);
     }
   }
 
-  private static Optional<String> unwrapMessageException(Exception t) {
-    Throwable y = t;
-    do {
-      if (y instanceof MessageException messageException) {
-        return Optional.of(messageException.getMessage());
-      }
-      y = y.getCause();
-    } while (y != null);
-
-    return Optional.empty();
+  private static Optional<String> unwrapMessageException(@Nullable Throwable throwable) {
+    if (throwable == null) {
+      return Optional.empty();
+    } else if (throwable instanceof MessageException messageException) {
+      return Optional.of(messageException.getMessage());
+    } else {
+      return unwrapMessageException(throwable.getCause());
+    }
   }
 
   private static @NotNull Map<String, String> parseInputProperties(InputStream in) {
@@ -155,6 +161,28 @@ public class ScannerMain {
     var verbose = LoggingConfiguration.isVerboseEnabled(properties);
     var rootLogger = (Logger) LoggerFactory.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME);
     rootLogger.setLevel(Level.toLevel(verbose ? LEVEL_ROOT_VERBOSE : LEVEL_ROOT_DEFAULT));
+  }
+
+  private static void configureLogOutput(OutputStream out) {
+    var loggerContext = (ch.qos.logback.classic.LoggerContext) LoggerFactory.getILoggerFactory();
+    var encoder = new ScannerLogbackEncoder();
+    encoder.setContext(loggerContext);
+    encoder.start();
+
+    var appender = new OutputStreamAppender<ILoggingEvent>();
+    appender.setEncoder(encoder);
+    appender.setContext(loggerContext);
+    appender.setOutputStream(out);
+    appender.start();
+
+    var rootLogger = (Logger) LoggerFactory.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME);
+    rootLogger.addAppender(appender);
+    rootLogger.setLevel(Level.toLevel(LEVEL_ROOT_DEFAULT));
+  }
+
+  private static void stopLogback() {
+    var loggerContext = (ch.qos.logback.classic.LoggerContext) LoggerFactory.getILoggerFactory();
+    loggerContext.stop();
   }
 
   private static class Input {

@@ -35,7 +35,7 @@ import org.apache.commons.lang3.builder.ReflectionToStringBuilder;
 import org.sonar.api.issue.impact.SoftwareQuality;
 import org.sonar.api.rule.RuleKey;
 import org.sonar.api.rule.RuleStatus;
-import org.sonar.api.rules.RuleType;
+import org.sonar.core.rule.RuleType;
 import org.sonar.db.issue.ImpactDto;
 import org.sonar.db.rule.RuleDescriptionSectionDto;
 import org.sonar.db.rule.RuleDto;
@@ -186,6 +186,16 @@ public class RuleDoc extends BaseDoc {
   }
 
   @CheckForNull
+  public Collection<String> getOwaspMobileTop10For2024() {
+    return getNullableField(RuleIndexDefinition.FIELD_RULE_OWASP_MOBILE_TOP_10_2024);
+  }
+
+  public RuleDoc setOwaspMobileTop10For2024(@Nullable Collection<String> o) {
+    setField(RuleIndexDefinition.FIELD_RULE_OWASP_MOBILE_TOP_10_2024, o);
+    return this;
+  }
+
+  @CheckForNull
   public Collection<String> getSansTop25() {
     return getNullableField(RuleIndexDefinition.FIELD_RULE_SANS_TOP_25);
   }
@@ -330,6 +340,7 @@ public class RuleDoc extends BaseDoc {
       .setCwe(securityStandards.getCwe())
       .setOwaspTop10(securityStandards.getOwaspTop10())
       .setOwaspTop10For2021(securityStandards.getOwaspTop10For2021())
+      .setOwaspMobileTop10For2024(securityStandards.getOwaspMobileTop10For2024())
       .setSansTop25(securityStandards.getSansTop25())
       .setSonarSourceSecurityCategory(securityStandards.getSqCategory())
       .setName(dto.getName())
@@ -349,7 +360,7 @@ public class RuleDoc extends BaseDoc {
   @CheckForNull
   private static RuleType getType(RuleForIndexingDto dto) {
     if (dto.isAdHoc() && dto.getAdHocType() != null) {
-      return RuleType.valueOf(dto.getAdHocType());
+      return RuleType.fromDbConstant(dto.getAdHocType());
     }
     return dto.getTypeAsRuleType();
   }

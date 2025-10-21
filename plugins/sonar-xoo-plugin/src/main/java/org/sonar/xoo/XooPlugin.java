@@ -24,6 +24,7 @@ import org.sonar.api.PropertyType;
 import org.sonar.api.SonarProduct;
 import org.sonar.api.config.PropertyDefinition;
 import org.sonar.api.config.PropertyDefinition.ConfigScope;
+import org.sonar.xoo.architecture.ArchitectureSensor;
 import org.sonar.xoo.coverage.ItCoverageSensor;
 import org.sonar.xoo.coverage.OverallCoverageSensor;
 import org.sonar.xoo.coverage.UtCoverageSensor;
@@ -32,6 +33,7 @@ import org.sonar.xoo.extensions.XooIssueFilter;
 import org.sonar.xoo.extensions.XooPostJob;
 import org.sonar.xoo.extensions.XooProjectBuilder;
 import org.sonar.xoo.global.DeprecatedGlobalSensor;
+import org.sonar.xoo.global.ErrorThrowingSensor;
 import org.sonar.xoo.global.GlobalProjectSensor;
 import org.sonar.xoo.lang.CpdTokenizerSensor;
 import org.sonar.xoo.lang.LineMeasureSensor;
@@ -44,6 +46,7 @@ import org.sonar.xoo.rule.ChecksSensor;
 import org.sonar.xoo.rule.CreateIssueByInternalKeySensor;
 import org.sonar.xoo.rule.CustomMessageSensor;
 import org.sonar.xoo.rule.HasTagSensor;
+import org.sonar.xoo.rule.InternalTagsIssueSensor;
 import org.sonar.xoo.rule.MarkAsUnchangedSensor;
 import org.sonar.xoo.rule.MultilineHotspotSensor;
 import org.sonar.xoo.rule.MultilineIssuesSensor;
@@ -77,9 +80,6 @@ import org.sonar.xoo.rule.Xoo2SonarWayProfile;
 import org.sonar.xoo.rule.XooBasicProfile;
 import org.sonar.xoo.rule.XooBuiltInQualityProfilesDefinition;
 import org.sonar.xoo.rule.XooEmptyProfile;
-import org.sonar.xoo.rule.XooFakeExporter;
-import org.sonar.xoo.rule.XooFakeImporter;
-import org.sonar.xoo.rule.XooFakeImporterWithMessages;
 import org.sonar.xoo.rule.XooRulesDefinition;
 import org.sonar.xoo.rule.XooSonarWayProfile;
 import org.sonar.xoo.rule.hotspot.HotspotWithContextsSensor;
@@ -137,10 +137,6 @@ public class XooPlugin implements Plugin {
       Xoo2BasicProfile.class,
       XooEmptyProfile.class,
 
-      XooFakeExporter.class,
-      XooFakeImporter.class,
-      XooFakeImporterWithMessages.class,
-
       // SCM
       XooScmProvider.class,
       XooBlameCommand.class,
@@ -191,11 +187,15 @@ public class XooPlugin implements Plugin {
       SensorMetrics.class,
       DeprecatedGlobalSensor.class,
       GlobalProjectSensor.class,
+      ErrorThrowingSensor.class,
 
       HotspotWithoutContextSensor.class,
       HotspotWithContextsSensor.class,
       HotspotWithSingleContextSensor.class,
       HotspotWithCodeVariantsSensor.class,
+
+      ArchitectureSensor.class,
+      InternalTagsIssueSensor.class,
 
       // Coverage
       UtCoverageSensor.class,

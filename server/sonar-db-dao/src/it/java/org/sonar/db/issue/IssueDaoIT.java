@@ -42,7 +42,7 @@ import org.sonar.api.issue.Issue;
 import org.sonar.api.issue.impact.Severity;
 import org.sonar.api.issue.impact.SoftwareQuality;
 import org.sonar.api.rule.RuleKey;
-import org.sonar.api.rules.RuleType;
+import org.sonar.core.rule.RuleType;
 import org.sonar.api.utils.System2;
 import org.sonar.db.DbSession;
 import org.sonar.db.DbTester;
@@ -52,8 +52,7 @@ import org.sonar.db.component.BranchDto;
 import org.sonar.db.component.BranchType;
 import org.sonar.db.component.ComponentDto;
 import org.sonar.db.component.ComponentTesting;
-import org.sonar.db.dependency.CveDto;
-import org.sonar.db.dependency.IssuesDependencyDto;
+import org.sonar.db.component.ProjectData;
 import org.sonar.db.protobuf.DbIssues;
 import org.sonar.db.rule.RuleDto;
 import org.sonar.db.rule.RuleTesting;
@@ -70,6 +69,7 @@ import static org.sonar.api.issue.Issue.RESOLUTION_FIXED;
 import static org.sonar.api.issue.Issue.RESOLUTION_WONT_FIX;
 import static org.sonar.api.issue.Issue.STATUS_CLOSED;
 import static org.sonar.api.issue.Issue.STATUS_CONFIRMED;
+import static org.sonar.api.issue.Issue.STATUS_IN_SANDBOX;
 import static org.sonar.api.issue.Issue.STATUS_OPEN;
 import static org.sonar.api.issue.Issue.STATUS_REOPENED;
 import static org.sonar.api.issue.Issue.STATUS_RESOLVED;
@@ -121,6 +121,7 @@ class IssueDaoIT {
   private final IssueDao underTest = db.getDbClient().issueDao();
 
   private ComponentDto projectDto;
+  private ProjectData projectData;
   private UserDto userDto;
 
   @BeforeEach
@@ -128,7 +129,8 @@ class IssueDaoIT {
     int i = db.countSql(db.getSession(), "select count(1) from rules_default_impacts");
 
     db.rules().insert(RULE.setIsExternal(true));
-    projectDto = db.components().insertPrivateProject(t -> t.setUuid(PROJECT_UUID).setKey(PROJECT_KEY)).getMainBranchComponent();
+    projectData = db.components().insertPrivateProject(t -> t.setUuid(PROJECT_UUID).setKey(PROJECT_KEY));
+    projectDto = projectData.getMainBranchComponent();
     db.components().insertComponent(newFileDto(projectDto).setUuid(FILE_UUID).setKey(FILE_KEY));
     userDto = db.users().insertUser(USER_LOGIN);
   }
@@ -164,6 +166,7 @@ class IssueDaoIT {
       .setProjectKey(PROJECT_KEY)
       .setExternal(true)
       .setTags(List.of("tag1", "tag2"))
+      .setInternalTags(List.of("internalTag1", "internalTag2"))
       .setCodeVariants(List.of("variant1", "variant2"))
       .setQuickFixAvailable(false)
       .setMessageFormattings(MESSAGE_FORMATTING);
@@ -219,21 +222,6 @@ class IssueDaoIT {
       .containsExactlyInAnyOrder(
         tuple(MEDIUM, RELIABILITY),
         tuple(LOW, SECURITY));
-  }
-
-  @Test
-  void selectByKeys_shouldFetchCveIds() {
-    prepareTables();
-    var cveDto1 = new CveDto("cve_uuid_1", "CVE-123", "Some CVE description", 1.0, 2.0, 3.0, 4L, 5L, 6L, 7L);
-    db.getDbClient().cveDao().insert(db.getSession(), cveDto1);
-    var cveDto2 = new CveDto("cve_uuid_2", "CVE-456", "Some CVE description", 1.0, 2.0, 3.0, 4L, 5L, 6L, 7L);
-    db.getDbClient().cveDao().insert(db.getSession(), cveDto2);
-    db.issues().insertIssuesDependency(new IssuesDependencyDto(ISSUE_KEY1, cveDto1.uuid()));
-    db.issues().insertIssuesDependency(new IssuesDependencyDto(ISSUE_KEY2, cveDto2.uuid()));
-
-    List<IssueDto> issues = underTest.selectByKeys(db.getSession(), asList("I1", "I2", "I3"));
-
-    assertThat(issues).extracting(IssueDto::getCveId).containsExactlyInAnyOrder(cveDto1.id(), cveDto2.id());
   }
 
   @Test
@@ -740,6 +728,55 @@ class IssueDaoIT {
   }
 
   @Test
+  void selectIssueImpactGroupsByComponent_whenSandboxIssues_shouldExcludeThem() {
+    ComponentDto project = db.components().insertPublicProject().getMainBranchComponent();
+    ComponentDto file = db.components().insertComponent(ComponentTesting.newFileDto(project));
+    RuleDto rule = db.rules().insert();
+    
+    db.issues().insert(rule, project, file,
+      i -> i.setStatus(STATUS_OPEN).setEffort(60L).replaceAllImpacts(List.of(createImpact(SECURITY, HIGH))));
+    db.issues().insert(rule, project, file,
+      i -> i.setStatus(STATUS_IN_SANDBOX).setEffort(60L).replaceAllImpacts(List.of(createImpact(SECURITY, HIGH))));
+    db.issues().insert(rule, project, file,
+      i -> i.setStatus(STATUS_RESOLVED).setResolution(RESOLUTION_WONT_FIX).setEffort(60L).replaceAllImpacts(List.of(createImpact(MAINTAINABILITY, MEDIUM))));
+    db.issues().insert(rule, project, file,
+      i -> i.setStatus(STATUS_IN_SANDBOX).setResolution(null).setEffort(60L).replaceAllImpacts(List.of(createImpact(MAINTAINABILITY, MEDIUM))));
+
+    Collection<IssueImpactGroupDto> result = underTest.selectIssueImpactGroupsByComponent(db.getSession(), file, Long.MAX_VALUE);
+
+    assertThat(result).hasSize(2);
+    assertThat(result.stream().mapToLong(IssueImpactGroupDto::getCount).sum()).isEqualTo(2);
+    assertThat(result.stream().filter(g -> g.getSoftwareQuality() == SECURITY).mapToLong(IssueImpactGroupDto::getCount).sum()).isEqualTo(1);
+    assertThat(result.stream().filter(g -> g.getSoftwareQuality() == MAINTAINABILITY).mapToLong(IssueImpactGroupDto::getCount).sum()).isEqualTo(1);
+    assertThat(result.stream().filter(g -> STATUS_OPEN.equals(g.getStatus())).mapToLong(IssueImpactGroupDto::getCount).sum()).isEqualTo(1);
+    assertThat(result.stream().filter(g -> STATUS_RESOLVED.equals(g.getStatus())).mapToLong(IssueImpactGroupDto::getCount).sum()).isEqualTo(1);
+  }
+
+  @Test
+  void selectIssueImpactSeverityGroupsByComponent_whenSandboxIssues_shouldExcludeThem() {
+    ComponentDto project = db.components().insertPublicProject().getMainBranchComponent();
+    ComponentDto file = db.components().insertComponent(ComponentTesting.newFileDto(project));
+    RuleDto rule = db.rules().insert();
+    
+    db.issues().insert(rule, project, file,
+      i -> i.setStatus(STATUS_OPEN).setEffort(60L).replaceAllImpacts(List.of(createImpact(RELIABILITY, BLOCKER))));
+    db.issues().insert(rule, project, file,
+      i -> i.setStatus(STATUS_IN_SANDBOX).setEffort(60L).replaceAllImpacts(List.of(createImpact(RELIABILITY, BLOCKER))));
+    db.issues().insert(rule, project, file,
+      i -> i.setStatus(STATUS_RESOLVED).setResolution(RESOLUTION_WONT_FIX).setEffort(60L).replaceAllImpacts(List.of(createImpact(SECURITY, HIGH), createImpact(MAINTAINABILITY, INFO))));
+    db.issues().insert(rule, project, file,
+      i -> i.setStatus(STATUS_IN_SANDBOX).setResolution(null).setEffort(60L).replaceAllImpacts(List.of(createImpact(SECURITY, HIGH))));
+
+    Collection<IssueImpactSeverityGroupDto> result = underTest.selectIssueImpactSeverityGroupsByComponent(db.getSession(), file, Long.MAX_VALUE);
+
+    assertThat(result).hasSize(3);
+    assertThat(result.stream().mapToLong(IssueImpactSeverityGroupDto::getCount).sum()).isEqualTo(3);
+    assertThat(result.stream().filter(g -> g.getSeverity() == BLOCKER).mapToLong(IssueImpactSeverityGroupDto::getCount).sum()).isEqualTo(1);
+    assertThat(result.stream().filter(g -> g.getSeverity() == HIGH).mapToLong(IssueImpactSeverityGroupDto::getCount).sum()).isEqualTo(1);
+    assertThat(result.stream().filter(g -> g.getSeverity() == INFO).mapToLong(IssueImpactSeverityGroupDto::getCount).sum()).isEqualTo(1);
+  }
+
+  @Test
   void selectByKey_givenOneIssueNewOnReferenceBranch_selectOneIssueWithNewOnReferenceBranch() {
     underTest.insert(db.getSession(), newIssueDto(ISSUE_KEY1)
       .setMessage("the message")
@@ -1151,6 +1188,7 @@ class IssueDaoIT {
     dto.setIssueUpdateTime(1_450_000_000_000L);
     dto.setIssueCloseTime(1_450_000_000_000L);
     dto.setTags(Set.of("tag1", "tag2"));
+    dto.setInternalTags(Set.of("internalTag1", "internalTag2"));
     dto.setCodeVariants(Set.of("variant1", "variant2"));
     return dto;
   }
@@ -1170,6 +1208,63 @@ class IssueDaoIT {
       .setStatus("CLOSED")
       .setProjectUuid(PROJECT_UUID));
     db.getSession().commit();
+  }
+
+  @Test
+  void countSandboxIssuesPerProject() {
+    // Create additional projects for testing
+    ProjectData projectData1 = db.components().insertPrivateProject();
+    ProjectData projectData2 = db.components().insertPrivateProject();
+    ComponentDto project1 = projectData1.getMainBranchComponent();
+    ComponentDto project2 = projectData2.getMainBranchComponent();
+
+    // Create files in each project
+    ComponentDto file1 = db.components().insertComponent(newFileDto(project1));
+    ComponentDto fileInProject2 = db.components().insertComponent(newFileDto(project2));
+
+    // Create additional rules for testing
+    RuleDto rule1 = db.rules().insert(r -> r.setType(RuleType.CODE_SMELL));
+    RuleDto rule2 = db.rules().insert(r -> r.setType(RuleType.BUG));
+
+    // Insert sandbox issues in different projects
+    // 3 sandbox issues in original project (projectDto)
+    underTest.insert(db.getSession(), createIssueWithKey("sandbox1", projectDto.uuid(), FILE_UUID)
+      .setRuleUuid(rule1.getUuid()).setStatus(STATUS_IN_SANDBOX));
+    underTest.insert(db.getSession(), createIssueWithKey("sandbox2", projectDto.uuid(), FILE_UUID)
+      .setRuleUuid(rule2.getUuid()).setStatus(STATUS_IN_SANDBOX));
+    underTest.insert(db.getSession(), createIssueWithKey("sandbox3", projectDto.uuid(), FILE_UUID)
+      .setRuleUuid(RULE.getUuid()).setStatus(STATUS_IN_SANDBOX));
+
+    // 2 sandbox issues in project1
+    underTest.insert(db.getSession(), createIssueWithKey("sandbox4", project1.uuid(), file1.uuid())
+      .setRuleUuid(rule1.getUuid()).setStatus(STATUS_IN_SANDBOX));
+    underTest.insert(db.getSession(), createIssueWithKey("sandbox5", project1.uuid(), file1.uuid())
+      .setRuleUuid(RULE.getUuid()).setStatus(STATUS_IN_SANDBOX));
+
+    // 1 sandbox issue in project2
+    underTest.insert(db.getSession(), createIssueWithKey("sandbox6", project2.uuid(), fileInProject2.uuid())
+      .setRuleUuid(rule2.getUuid()).setStatus(STATUS_IN_SANDBOX));
+
+    // Insert non-sandbox issues that should not be counted
+    underTest.insert(db.getSession(), createIssueWithKey("open1", projectDto.uuid(), FILE_UUID)
+      .setRuleUuid(rule1.getUuid()).setStatus(STATUS_OPEN));
+    underTest.insert(db.getSession(), createIssueWithKey("closed1", project1.uuid(), file1.uuid())
+      .setRuleUuid(rule2.getUuid()).setStatus(STATUS_CLOSED));
+
+    db.getSession().commit();
+
+    // Execute the method under test
+    List<IssueCount> result = underTest.countSandboxIssuesPerProject(db.getSession());
+
+    // Verify results
+    assertThat(result).hasSize(3);
+    assertThat(result)
+      .extracting(IssueCount::getProjectUuid, IssueCount::getCount)
+      .containsExactlyInAnyOrder(
+        tuple(projectData.projectUuid(), 3),
+        tuple(projectData1.projectUuid(), 2),
+        tuple(projectData2.projectUuid(), 1)
+      );
   }
 
   private static ImpactDto newIssueImpact(SoftwareQuality softwareQuality, Severity severity) {

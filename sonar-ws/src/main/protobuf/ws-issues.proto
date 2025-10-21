@@ -168,7 +168,8 @@ message Issue {
   repeated sonarqube.ws.commons.Impact impacts = 42;
   optional string issueStatus = 43;
   optional bool prioritizedRule = 44;
-  optional string cveId = 45;
+  optional bool fromSonarQubeUpdate = 45;
+  repeated string internalTags = 46;
 }
 
 message Transitions {

@@ -29,6 +29,7 @@ import org.sonar.api.testfixtures.log.LogTester;
 import org.sonar.api.utils.log.LoggerLevel;
 import org.sonar.ce.task.CeTaskInterrupter;
 import org.sonar.ce.task.ChangeLogLevel;
+import org.sonar.ce.task.telemetry.MutableStepsTelemetryHolder;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -45,14 +46,26 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 public class ComputationStepExecutorTest {
-  @Rule
-  public LogTester logTester = new LogTester();
-
   private final ComputationStepExecutor.Listener listener = mock(ComputationStepExecutor.Listener.class);
+  private final MutableStepsTelemetryHolder stepsTelemetryHolder = new TestComputationStepContext.TestTelemetryMetrics();
   private final CeTaskInterrupter taskInterrupter = mock(CeTaskInterrupter.class);
   private final ComputationStep computationStep1 = mockComputationStep("step1");
   private final ComputationStep computationStep2 = mockComputationStep("step2");
   private final ComputationStep computationStep3 = mockComputationStep("step3");
+  @Rule
+  public LogTester logTester = new LogTester();
+
+  private static ComputationSteps mockComputationSteps(ComputationStep... computationSteps) {
+    ComputationSteps steps = mock(ComputationSteps.class);
+    when(steps.instances()).thenReturn(Arrays.asList(computationSteps));
+    return steps;
+  }
+
+  private static ComputationStep mockComputationStep(String desc) {
+    ComputationStep mock = mock(ComputationStep.class);
+    when(mock.getDescription()).thenReturn(desc);
+    return mock;
+  }
 
   @Test
   public void execute_call_execute_on_each_ComputationStep_in_order_returned_by_instances_method() {
@@ -67,6 +80,31 @@ public class ComputationStepExecutorTest {
     inOrder.verify(computationStep3).execute(any());
     inOrder.verify(computationStep3).getDescription();
     inOrder.verifyNoMoreInteractions();
+  }
+
+  @Test
+  public void execute_call_execute_on_ComputationStepWithTelemetryMetricOnly() {
+    ComputationStep step = new StepWithTelemetryMetricOnly("Step", "step.foo", "100", "step.bar", "20");
+
+    new ComputationStepExecutor(mockComputationSteps(step), taskInterrupter, stepsTelemetryHolder, listener)
+      .execute();
+
+    assertThat(stepsTelemetryHolder.getTelemetryMetrics()).containsEntry("prefix.step.foo", "100");
+    assertThat(stepsTelemetryHolder.getTelemetryMetrics()).containsEntry("prefix.step.bar", "20");
+  }
+
+  @Test
+  public void execute_call_execute_on_ComputationStepWithTelemetryWithStatistic() {
+    ComputationStep step = new StepWithTelemetrywithStatistic("Step", "step.foo", "100", "step.bar", "20");
+
+    new ComputationStepExecutor(mockComputationSteps(step), taskInterrupter, stepsTelemetryHolder, listener)
+      .execute();
+
+    assertThat(stepsTelemetryHolder.getTelemetryMetrics()).containsEntry("prefix.step.foo", "100");
+    assertThat(stepsTelemetryHolder.getTelemetryMetrics()).containsEntry("prefix.step.bar", "20");
+    List<String> infoLogs = logTester.logs(Level.INFO);
+    assertThat(infoLogs).hasSize(1);
+    assertThat(infoLogs.get(0)).contains("Step | step.foo=100 | step.bar=20 | status=SUCCESS | time=");
   }
 
   @Test
@@ -182,7 +220,7 @@ public class ComputationStepExecutorTest {
 
   @Test
   public void execute_calls_listener_finished_method_with_all_step_runs() {
-    new ComputationStepExecutor(mockComputationSteps(computationStep1, computationStep2), taskInterrupter, listener)
+    new ComputationStepExecutor(mockComputationSteps(computationStep1, computationStep2), taskInterrupter, stepsTelemetryHolder, listener)
       .execute();
 
     verify(listener).finished(true);
@@ -197,7 +235,7 @@ public class ComputationStepExecutorTest {
       .execute(any());
 
     try {
-      new ComputationStepExecutor(mockComputationSteps(computationStep1, computationStep2), taskInterrupter, listener)
+      new ComputationStepExecutor(mockComputationSteps(computationStep1, computationStep2), taskInterrupter, stepsTelemetryHolder, listener)
         .execute();
       fail("exception toBeThrown should have been raised");
     } catch (RuntimeException e) {
@@ -214,7 +252,7 @@ public class ComputationStepExecutorTest {
       .when(listener)
       .finished(anyBoolean());
 
-    new ComputationStepExecutor(mockComputationSteps(computationStep1), taskInterrupter, listener).execute();
+    new ComputationStepExecutor(mockComputationSteps(computationStep1), taskInterrupter, stepsTelemetryHolder, listener).execute();
   }
 
   @Test
@@ -286,18 +324,6 @@ public class ComputationStepExecutorTest {
     }
   }
 
-  private static ComputationSteps mockComputationSteps(ComputationStep... computationSteps) {
-    ComputationSteps steps = mock(ComputationSteps.class);
-    when(steps.instances()).thenReturn(Arrays.asList(computationSteps));
-    return steps;
-  }
-
-  private static ComputationStep mockComputationStep(String desc) {
-    ComputationStep mock = mock(ComputationStep.class);
-    when(mock.getDescription()).thenReturn(desc);
-    return mock;
-  }
-
   private static class StepWithStatistics implements ComputationStep {
     private final String description;
     private final String[] statistics;
@@ -311,6 +337,50 @@ public class ComputationStepExecutorTest {
     public void execute(Context context) {
       for (int i = 0; i < statistics.length; i += 2) {
         context.getStatistics().add(statistics[i], statistics[i + 1]);
+      }
+    }
+
+    @Override
+    public String getDescription() {
+      return description;
+    }
+  }
+
+  private static class StepWithTelemetryMetricOnly implements ComputationStep {
+    private final String description;
+    private final String[] metrics;
+
+    private StepWithTelemetryMetricOnly(String description, String... metrics) {
+      this.description = description;
+      this.metrics = metrics;
+    }
+
+    @Override
+    public void execute(Context context) {
+      for (int i = 0; i < metrics.length; i += 2) {
+        context.addTelemetryMetricOnly("prefix", metrics[i], metrics[i + 1]);
+      }
+    }
+
+    @Override
+    public String getDescription() {
+      return description;
+    }
+  }
+
+  private static class StepWithTelemetrywithStatistic implements ComputationStep {
+    private final String description;
+    private final String[] metrics;
+
+    private StepWithTelemetrywithStatistic(String description, String... metrics) {
+      this.description = description;
+      this.metrics = metrics;
+    }
+
+    @Override
+    public void execute(Context context) {
+      for (int i = 0; i < metrics.length; i += 2) {
+        context.addTelemetryWithStatistic("prefix", metrics[i], metrics[i + 1]);
       }
     }
 

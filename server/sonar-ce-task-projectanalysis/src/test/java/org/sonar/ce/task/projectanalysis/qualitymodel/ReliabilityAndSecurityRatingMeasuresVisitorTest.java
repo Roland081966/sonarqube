@@ -25,7 +25,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.sonar.api.issue.impact.Severity;
 import org.sonar.api.issue.impact.SoftwareQuality;
-import org.sonar.api.rules.RuleType;
+import org.sonar.core.rule.RuleType;
 import org.sonar.api.utils.Duration;
 import org.sonar.ce.task.projectanalysis.component.Component;
 import org.sonar.ce.task.projectanalysis.component.FileAttributes;
@@ -43,6 +43,7 @@ import org.sonar.server.measure.Rating;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.sonar.api.issue.Issue.RESOLUTION_FIXED;
+import static org.sonar.api.issue.Issue.STATUS_IN_SANDBOX;
 import static org.sonar.api.measures.CoreMetrics.RELIABILITY_RATING;
 import static org.sonar.api.measures.CoreMetrics.RELIABILITY_RATING_KEY;
 import static org.sonar.api.measures.CoreMetrics.SECURITY_RATING;
@@ -52,9 +53,9 @@ import static org.sonar.api.rule.Severity.CRITICAL;
 import static org.sonar.api.rule.Severity.INFO;
 import static org.sonar.api.rule.Severity.MAJOR;
 import static org.sonar.api.rule.Severity.MINOR;
-import static org.sonar.api.rules.RuleType.BUG;
-import static org.sonar.api.rules.RuleType.CODE_SMELL;
-import static org.sonar.api.rules.RuleType.VULNERABILITY;
+import static org.sonar.core.rule.RuleType.BUG;
+import static org.sonar.core.rule.RuleType.CODE_SMELL;
+import static org.sonar.core.rule.RuleType.VULNERABILITY;
 import static org.sonar.ce.task.projectanalysis.component.Component.Type.DIRECTORY;
 import static org.sonar.ce.task.projectanalysis.component.Component.Type.FILE;
 import static org.sonar.ce.task.projectanalysis.component.Component.Type.PROJECT;
@@ -362,6 +363,25 @@ class ReliabilityAndSecurityRatingMeasuresVisitorTest {
     verifyAddedRawMeasure(PROJECT_REF, SOFTWARE_QUALITY_SECURITY_RATING_KEY, A);
   }
 
+  @Test
+  void compute_rating_ignoring_sandbox_issues() {
+    treeRootHolder.setRoot(ROOT_PROJECT);
+    fillComponentIssuesVisitorRule.setIssues(FILE_1_REF,
+      // Only sandbox issues - these should be completely ignored for rating calculation
+      newBugIssue(10, BLOCKER).setStatus(STATUS_IN_SANDBOX).setResolution(null),
+      newVulnerabilityIssue(5, CRITICAL).setStatus(STATUS_IN_SANDBOX).setResolution(null),
+      newImpactIssue(SoftwareQuality.RELIABILITY, Severity.BLOCKER).setStatus(STATUS_IN_SANDBOX).setResolution(null),
+      newImpactIssue(SoftwareQuality.SECURITY, Severity.HIGH).setStatus(STATUS_IN_SANDBOX).setResolution(null));
+
+    underTest.visit(ROOT_PROJECT);
+
+    // Should have A rating since all issues are in sandbox and should be ignored
+    verifyAddedRawMeasure(PROJECT_REF, RELIABILITY_RATING_KEY, A);
+    verifyAddedRawMeasure(PROJECT_REF, SECURITY_RATING_KEY, A);
+    verifyAddedRawMeasure(PROJECT_REF, SOFTWARE_QUALITY_RELIABILITY_RATING_KEY, A);
+    verifyAddedRawMeasure(PROJECT_REF, SOFTWARE_QUALITY_SECURITY_RATING_KEY, A);
+  }
+
   private void verifyAddedRawMeasure(int componentRef, String metricKey, Rating rating) {
     assertThat(toEntries(measureRepository.getAddedRawMeasures(componentRef))).contains(entryOf(metricKey, newMeasureBuilder().create(rating.getIndex(), rating.name())));
   }
@@ -392,6 +412,8 @@ class ReliabilityAndSecurityRatingMeasuresVisitorTest {
       .setKey(Uuids.create())
       .setSeverity(severity)
       .setType(type)
+      .setStatus("OPEN")
+      .setResolution(null)
       .setCreationDate(new Date(1000L));
   }
 
@@ -401,6 +423,8 @@ class ReliabilityAndSecurityRatingMeasuresVisitorTest {
       .addImpact(softwareQuality, severity)
       .setType(BUG)
       .setSeverity("BLOCKER")
+      .setStatus("OPEN")
+      .setResolution(null)
       .setCreationDate(new Date(1000L));
   }
 

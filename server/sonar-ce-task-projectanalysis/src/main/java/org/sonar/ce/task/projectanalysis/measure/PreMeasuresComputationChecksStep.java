@@ -85,6 +85,5 @@ public class PreMeasuresComputationChecksStep implements ComputationStep {
     public Configuration getConfiguration() {
       return configurationRepository.getConfiguration();
     }
-
   }
 }

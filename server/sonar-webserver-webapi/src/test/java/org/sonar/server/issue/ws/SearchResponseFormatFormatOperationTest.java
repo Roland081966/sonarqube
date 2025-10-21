@@ -20,7 +20,6 @@
 package org.sonar.server.issue.ws;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 import java.util.Set;
@@ -44,7 +43,6 @@ import org.sonar.db.project.ProjectDto;
 import org.sonar.db.rule.RuleDto;
 import org.sonar.db.user.UserDto;
 import org.sonar.server.issue.TextRangeResponseFormatter;
-import org.sonar.server.issue.workflow.Transition;
 import org.sonarqube.ws.Common;
 import org.sonarqube.ws.Issues.Issue;
 import org.sonarqube.ws.Issues.Operation;
@@ -58,11 +56,11 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static org.sonar.db.component.ComponentQualifiers.UNIT_TEST_FILE;
 import static org.sonar.api.rule.RuleKey.EXTERNAL_RULE_REPO_PREFIX;
-import static org.sonar.api.rules.RuleType.CODE_SMELL;
-import static org.sonar.api.rules.RuleType.SECURITY_HOTSPOT;
 import static org.sonar.api.utils.DateUtils.formatDateTime;
+import static org.sonar.core.rule.RuleType.CODE_SMELL;
+import static org.sonar.core.rule.RuleType.SECURITY_HOTSPOT;
+import static org.sonar.db.component.ComponentQualifiers.UNIT_TEST_FILE;
 import static org.sonar.db.component.ComponentTesting.newPrivateProjectDto;
 import static org.sonar.db.issue.IssueTesting.newIssue;
 import static org.sonar.db.issue.IssueTesting.newIssueChangeDto;
@@ -144,6 +142,7 @@ class SearchResponseFormatFormatOperationTest {
     assertThat(issue.getStatus()).isEqualTo(issueDto.getStatus());
     assertThat(issue.getMessage()).isEqualTo(issueDto.getMessage());
     assertThat(new ArrayList<>(issue.getTagsList())).containsExactlyInAnyOrderElementsOf(issueDto.getTags());
+    assertThat(new ArrayList<>(issue.getInternalTagsList())).containsExactlyInAnyOrderElementsOf(issueDto.getInternalTags());
     assertThat(issue.getLine()).isEqualTo(issueDto.getLine());
     assertThat(issue.getHash()).isEqualTo(issueDto.getChecksum());
     assertThat(issue.getAuthor()).isEqualTo(issueDto.getAuthorLogin());
@@ -256,18 +255,12 @@ class SearchResponseFormatFormatOperationTest {
 
   @Test
   void formatOperation_should_add_transitions_on_issues() {
-    Set<String> expectedTransitions = Set.of("transitionone", "transitiontwo");
-    searchResponseData.addTransitions(issueDto.getKey(), createFakeTransitions(expectedTransitions));
+    List<String> expectedTransitions = List.of("transitionone", "transitiontwo");
+    searchResponseData.addTransitions(issueDto.getKey(), expectedTransitions);
 
     Operation result = searchResponseFormat.formatOperation(searchResponseData, true);
 
     assertThat(result.getIssue().getTransitions().getTransitionsList()).containsExactlyInAnyOrderElementsOf(expectedTransitions);
-  }
-
-  private static List<Transition> createFakeTransitions(Collection<String> transitions) {
-    return transitions.stream()
-      .map(transition -> Transition.builder(transition).from("OPEN").to("RESOLVED").build())
-      .collect(toList());
   }
 
   @Test

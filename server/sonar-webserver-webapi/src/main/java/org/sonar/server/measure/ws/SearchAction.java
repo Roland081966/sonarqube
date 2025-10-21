@@ -31,7 +31,7 @@ import org.sonar.api.server.ws.Change;
 import org.sonar.api.server.ws.Request;
 import org.sonar.api.server.ws.Response;
 import org.sonar.api.server.ws.WebService;
-import org.sonar.api.web.UserRole;
+import org.sonar.db.permission.ProjectPermission;
 import org.sonar.db.DbClient;
 import org.sonar.db.DbSession;
 import org.sonar.db.component.ComponentDto;
@@ -87,6 +87,9 @@ public class SearchAction implements MeasuresWsAction {
       .setResponseExample(getClass().getResource("search-example.json"))
       .setHandler(this)
       .setChangelog(
+        new Change("2025.4", format(
+          "The following SCA metrics are available on licensed enterprise/datacenter editions with SCA enabled: %s",
+          MeasuresWsModule.getNewScaMetricsInSonarQube202504())),
         new Change("10.8", format("The following metrics are not deprecated anymore: %s", MeasuresWsModule.getUndeprecatedMetricsinSonarQube108())),
         new Change("10.8", String.format("Added new accepted values for the 'metricKeys' param: %s",
           MeasuresWsModule.getNewMetricsInSonarQube108())),
@@ -171,7 +174,7 @@ public class SearchAction implements MeasuresWsAction {
     }
 
     private List<ComponentDto> getAuthorizedProjects(List<ComponentDto> componentDtos) {
-      return userSession.keepAuthorizedComponents(UserRole.USER, componentDtos);
+      return userSession.keepAuthorizedComponents(ProjectPermission.USER, componentDtos);
     }
 
     private List<MetricDto> searchMetrics() {

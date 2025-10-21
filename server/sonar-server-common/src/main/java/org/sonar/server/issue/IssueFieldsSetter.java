@@ -34,7 +34,6 @@ import org.sonar.api.issue.IssueStatus;
 import org.sonar.api.issue.impact.Severity;
 import org.sonar.api.issue.impact.SoftwareQuality;
 import org.sonar.api.rules.CleanCodeAttribute;
-import org.sonar.api.rules.RuleType;
 import org.sonar.api.server.ServerSide;
 import org.sonar.api.server.rule.RuleTagFormat;
 import org.sonar.api.utils.Duration;
@@ -43,6 +42,7 @@ import org.sonar.core.issue.DefaultIssue;
 import org.sonar.core.issue.DefaultIssueComment;
 import org.sonar.core.issue.IssueChangeContext;
 import org.sonar.core.rule.ImpactSeverityMapper;
+import org.sonar.core.rule.RuleType;
 import org.sonar.db.protobuf.DbIssues;
 import org.sonar.db.user.UserDto;
 import org.sonar.db.user.UserIdDto;
@@ -51,6 +51,7 @@ import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.base.Strings.isNullOrEmpty;
 import static java.util.Objects.requireNonNull;
 import static org.sonar.api.server.rule.internal.ImpactMapper.convertToSoftwareQuality;
+import static org.sonar.core.rule.RuleTypeMapper.toApiRuleType;
 
 /**
  * Updates issue fields and chooses if changes must be kept in history.
@@ -478,6 +479,21 @@ public class IssueFieldsSetter {
     return false;
   }
 
+  public boolean setInternalTags(DefaultIssue issue, Set<String> currentInternalTags, IssueChangeContext context) {
+    Set<String> newInternalTags = issue.internalTags().stream()
+      .map(String::trim)
+      .filter(s -> !s.isEmpty())
+      .collect(Collectors.toSet());
+
+    if (!currentInternalTags.equals(newInternalTags)) {
+      issue.setInternalTags(newInternalTags);
+      issue.setUpdateDate(context.date());
+      issue.setChanged(true);
+      return true;
+    }
+    return false;
+  }
+
   public boolean setCodeVariants(DefaultIssue issue, Set<String> currentCodeVariants, IssueChangeContext context) {
     Set<String> newCodeVariants = getNewCodeVariants(issue);
     if (!currentCodeVariants.equals(newCodeVariants)) {
@@ -505,7 +521,7 @@ public class IssueFieldsSetter {
       && issue.getImpacts().stream().noneMatch(DefaultImpact::manualSeverity)) {
       issue.getImpacts()
         .stream()
-        .filter(i -> convertToSoftwareQuality(issue.type()).equals(i.softwareQuality()))
+        .filter(i -> convertToSoftwareQuality(toApiRuleType(issue.type())).equals(i.softwareQuality()))
         .forEach(i -> {
           Severity newSeverity = ImpactSeverityMapper.mapImpactSeverity(issue.severity());
           issue.addImpact(i.softwareQuality(), newSeverity, true);

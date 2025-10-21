@@ -33,7 +33,7 @@ import static org.sonar.api.measures.CoreMetrics.NEW_SECURITY_HOTSPOTS_REVIEWED_
 import static org.sonar.api.measures.CoreMetrics.NEW_SECURITY_HOTSPOTS_REVIEWED_STATUS_KEY;
 import static org.sonar.api.measures.CoreMetrics.NEW_SECURITY_HOTSPOTS_TO_REVIEW_STATUS_KEY;
 import static org.sonar.api.measures.CoreMetrics.NEW_SECURITY_REVIEW_RATING_KEY;
-import static org.sonar.api.rules.RuleType.SECURITY_HOTSPOT;
+import static org.sonar.core.rule.RuleType.SECURITY_HOTSPOT;
 import static org.sonar.ce.task.projectanalysis.component.ComponentVisitor.Order.POST_ORDER;
 import static org.sonar.ce.task.projectanalysis.component.CrawlerDepthLimit.FILE;
 import static org.sonar.server.security.SecurityReviewRating.computePercent;
@@ -84,7 +84,7 @@ public class NewSecurityReviewMeasuresVisitor extends PathAwareVisitorAdapter<Se
   }
 
   private void computeMeasure(Component component, Path<SecurityReviewCounter> path) {
-    componentIssuesRepository.getIssues(component)
+    componentIssuesRepository.getNotSandboxedIssues(component)
       .stream()
       .filter(issue -> issue.type().equals(SECURITY_HOTSPOT))
       .filter(issue -> newIssueClassifier.isNew(component, issue))

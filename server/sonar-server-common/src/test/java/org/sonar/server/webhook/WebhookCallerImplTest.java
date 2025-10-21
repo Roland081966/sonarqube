@@ -39,6 +39,7 @@ import org.sonar.api.impl.utils.TestSystem2;
 import org.sonar.api.utils.System2;
 import org.sonar.api.utils.Version;
 import org.sonar.core.platform.SonarQubeVersion;
+import org.sonar.server.network.NetworkInterfaceProvider;
 import org.sonar.server.util.OkHttpClientProvider;
 
 import static org.apache.commons.lang3.RandomStringUtils.secure;
@@ -233,9 +234,8 @@ public class WebhookCallerImplTest {
 
   @Test
   public void silently_catch_error_when_url_is_localhost(){
-    String url = server.url("/").toString();
     Webhook webhook = new Webhook(WEBHOOK_UUID, PROJECT_UUID, CE_TASK_UUID,
-      secure().nextAlphanumeric(40), "my-webhook", url, null);
+      secure().nextAlphanumeric(40), "my-webhook", "http://localhost", null);
 
     WebhookDelivery delivery = newSender(true).call(webhook, PAYLOAD);
 

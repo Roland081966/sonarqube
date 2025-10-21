@@ -21,38 +21,44 @@ package org.sonar.server.v2.api.analysis.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
+import jakarta.annotation.PostConstruct;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Predicate;
 import javax.annotation.Nullable;
-import jakarta.annotation.PostConstruct;
+import org.sonar.api.config.Configuration;
 import org.sonar.server.exceptions.NotFoundException;
 import org.sonar.server.v2.api.analysis.response.JreInfoRestResponse;
+import org.sonar.server.v2.common.model.Arch;
+import org.sonar.server.v2.common.model.OS;
+import org.springframework.beans.factory.annotation.Autowired;
 
-import static java.lang.String.join;
 import static org.apache.commons.lang.StringUtils.isBlank;
+import static org.sonar.core.config.CorePropertyDefinitions.DISABLE_JRE_AUTO_PROVISIONING;
 
 public class JresHandlerImpl implements JresHandler {
 
   private static final String JRES_METADATA_FILENAME = "jres-metadata.json";
 
+  private final Configuration configuration;
   private final String jresMetadataFilename;
   private final Map<String, JreInfoRestResponse> metadata = new HashMap<>();
 
-  public JresHandlerImpl() {
-    this(JRES_METADATA_FILENAME);
+  @Autowired(required=true)
+  public JresHandlerImpl(Configuration configuration) {
+    this(configuration, JRES_METADATA_FILENAME);
   }
 
   @VisibleForTesting
-  public JresHandlerImpl(String jresMetadataFilename) {
+  public JresHandlerImpl(Configuration configuration, String jresMetadataFilename) {
+    this.configuration = configuration;
     this.jresMetadataFilename = jresMetadataFilename;
   }
 
@@ -73,6 +79,9 @@ public class JresHandlerImpl implements JresHandler {
 
   @Override
   public List<JreInfoRestResponse> getJresMetadata(@Nullable String os, @Nullable String arch) {
+    if (configuration.getBoolean(DISABLE_JRE_AUTO_PROVISIONING).orElse(false)) {
+      return List.of();
+    }
     Predicate<JreInfoRestResponse> osFilter = isBlank(os) ? jre -> true : (jre -> OS.from(jre.os()) == OS.from(os));
     Predicate<JreInfoRestResponse> archFilter = isBlank(arch) ? jre -> true : (jre -> Arch.from(jre.arch()) == Arch.from(arch));
     return metadata.values().stream()
@@ -93,56 +102,6 @@ public class JresHandlerImpl implements JresHandler {
       return new FileInputStream("jres/" + jreFilename);
     } catch (FileNotFoundException fileNotFoundException) {
       throw new NotFoundException(String.format("Unable to find JRE '%s'", jreFilename));
-    }
-  }
-
-  enum OS {
-    WINDOWS("win", "windows", "win32"),
-    LINUX("linux"),
-    MACOS("mac", "macos", "darwin"),
-    ALPINE("alpine");
-
-    private final List<String> aliases;
-
-    OS(String... aliases) {
-      this.aliases = Arrays.stream(aliases).toList();
-    }
-
-    private static OS from(String alias) {
-      return Arrays.stream(values())
-        .filter(os -> os.aliases.contains(alias))
-        .findFirst()
-        .orElseThrow(() -> new IllegalArgumentException(String.format("Unsupported OS: '%s'. Supported values are '%s'", alias, join(", ", supportedValues()))));
-    }
-
-    private static List<String> supportedValues() {
-      return Arrays.stream(values())
-        .flatMap(os -> os.aliases.stream())
-        .toList();
-    }
-  }
-
-  enum Arch {
-    X64("x86_64", "x86-64", "amd64", "x64"),
-    AARCH64("arm64", "aarch64");
-
-    private final List<String> aliases;
-
-    Arch(String... aliases) {
-      this.aliases = Arrays.stream(aliases).toList();
-    }
-
-    private static Arch from(String alias) {
-      return Arrays.stream(values())
-        .filter(arch -> arch.aliases.contains(alias))
-        .findFirst()
-        .orElseThrow(() -> new IllegalArgumentException(String.format("Unsupported architecture: '%s'. Supported values are '%s'", alias, join(", ", supportedValues()))));
-    }
-
-    private static List<String> supportedValues() {
-      return Arrays.stream(values())
-        .flatMap(arch -> arch.aliases.stream())
-        .toList();
     }
   }
 }

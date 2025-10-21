@@ -22,9 +22,7 @@ package org.sonar.server.webhook.ws;
 import org.junit.Rule;
 import org.junit.Test;
 import org.sonar.api.config.Configuration;
-import org.sonar.server.component.ComponentTypes;
 import org.sonar.api.server.ws.WebService;
-import org.sonar.api.web.UserRole;
 import org.sonar.core.util.UuidFactory;
 import org.sonar.core.util.UuidFactoryFast;
 import org.sonar.db.DbClient;
@@ -32,12 +30,15 @@ import org.sonar.db.DbTester;
 import org.sonar.db.component.ComponentDbTester;
 import org.sonar.db.component.ComponentDto;
 import org.sonar.db.permission.GlobalPermission;
+import org.sonar.db.permission.ProjectPermission;
 import org.sonar.db.project.ProjectDto;
 import org.sonar.db.webhook.WebhookDbTester;
 import org.sonar.server.component.ComponentFinder;
+import org.sonar.server.component.ComponentTypes;
 import org.sonar.server.exceptions.ForbiddenException;
 import org.sonar.server.exceptions.NotFoundException;
 import org.sonar.server.exceptions.UnauthorizedException;
+import org.sonar.server.network.NetworkInterfaceProvider;
 import org.sonar.server.tester.UserSessionRule;
 import org.sonar.server.ws.TestRequest;
 import org.sonar.server.ws.WsActionTester;
@@ -99,7 +100,7 @@ public class CreateActionIT {
     String longProjectKey = generateStringWithLength(400);
     ProjectDto project = componentDbTester.insertPrivateProject(componentDto -> componentDto.setKey(longProjectKey)).getProjectDto();
 
-    userSession.logIn().addProjectPermission(UserRole.ADMIN, project);
+    userSession.logIn().addProjectPermission(ProjectPermission.ADMIN, project);
 
     CreateWsResponse response = wsActionTester.newRequest()
       .setParam("project", longProjectKey)
@@ -161,7 +162,7 @@ public class CreateActionIT {
   public void create_a_webhook_on_project() {
     ProjectDto project = componentDbTester.insertPrivateProject().getProjectDto();
 
-    userSession.logIn().addProjectPermission(UserRole.ADMIN, project);
+    userSession.logIn().addProjectPermission(ProjectPermission.ADMIN, project);
 
     CreateWsResponse response = wsActionTester.newRequest()
       .setParam("project", project.getKey())
@@ -195,7 +196,7 @@ public class CreateActionIT {
     for (int i = 0; i < 10; i++) {
       webhookDbTester.insertWebhook(project);
     }
-    userSession.logIn().addProjectPermission(UserRole.ADMIN, project);
+    userSession.logIn().addProjectPermission(ProjectPermission.ADMIN, project);
     TestRequest request = wsActionTester.newRequest()
       .setParam(PROJECT_KEY_PARAM, project.getKey())
       .setParam(NAME_PARAM, NAME_WEBHOOK_EXAMPLE_001)

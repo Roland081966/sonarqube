@@ -33,10 +33,10 @@ import org.slf4j.LoggerFactory;
 import org.sonar.api.issue.impact.Severity;
 import org.sonar.api.issue.impact.SoftwareQuality;
 import org.sonar.api.rule.RuleKey;
-import org.sonar.api.rules.RuleType;
+import org.sonar.core.rule.RuleType;
 import org.sonar.api.server.rule.internal.ImpactMapper;
 import org.sonar.api.utils.Duration;
-import org.sonar.ce.task.projectanalysis.batch.BatchReportReader;
+import org.sonar.ce.common.scanner.ScannerReportReader;
 import org.sonar.ce.task.projectanalysis.component.Component;
 import org.sonar.ce.task.projectanalysis.component.TreeRootHolder;
 import org.sonar.ce.task.projectanalysis.issue.filter.IssueFilter;
@@ -47,6 +47,7 @@ import org.sonar.core.issue.DefaultIssue;
 import org.sonar.core.issue.tracking.Input;
 import org.sonar.core.issue.tracking.LazyInput;
 import org.sonar.core.issue.tracking.LineHashSequence;
+import org.sonar.core.rule.RuleTypeMapper;
 import org.sonar.core.util.CloseableIterator;
 import org.sonar.db.protobuf.DbCommons;
 import org.sonar.db.protobuf.DbIssues;
@@ -63,13 +64,13 @@ import static org.sonar.api.issue.Issue.STATUS_TO_REVIEW;
 public class TrackerRawInputFactory {
   private static final long DEFAULT_EXTERNAL_ISSUE_EFFORT = 0L;
   private final TreeRootHolder treeRootHolder;
-  private final BatchReportReader reportReader;
+  private final ScannerReportReader reportReader;
   private final IssueFilter issueFilter;
   private final SourceLinesHashRepository sourceLinesHash;
   private final RuleRepository ruleRepository;
   private final ActiveRulesHolder activeRulesHolder;
 
-  public TrackerRawInputFactory(TreeRootHolder treeRootHolder, BatchReportReader reportReader, SourceLinesHashRepository sourceLinesHash,
+  public TrackerRawInputFactory(TreeRootHolder treeRootHolder, ScannerReportReader reportReader, SourceLinesHashRepository sourceLinesHash,
     IssueFilter issueFilter, RuleRepository ruleRepository, ActiveRulesHolder activeRulesHolder) {
     this.treeRootHolder = treeRootHolder;
     this.reportReader = reportReader;
@@ -197,6 +198,7 @@ public class TrackerRawInputFactory {
       issue.setQuickFixAvailable(reportIssue.getQuickFixAvailable());
       issue.setRuleDescriptionContextKey(reportIssue.hasRuleDescriptionContextKey() ? reportIssue.getRuleDescriptionContextKey() : null);
       issue.setCodeVariants(reportIssue.getCodeVariantsList());
+      issue.setInternalTags(reportIssue.getInternalTagsList());
 
       issue.replaceImpacts(replaceDefaultWithOverriddenImpactsForIssue(issue.ruleKey(), reportIssue.getOverriddenImpactsList()));
       return issue;
@@ -344,7 +346,8 @@ public class TrackerRawInputFactory {
     private Optional<DbIssues.Location> convertLocation(ScannerReport.IssueLocation source) {
       DbIssues.Location.Builder target = DbIssues.Location.newBuilder();
       if (source.getComponentRef() != 0 && source.getComponentRef() != component.getReportAttributes().getRef()) {
-        // SONAR-10781 Component might not exist because on PR, only changed components are included in the report
+        // Component might not exist because on PR, only changed components are included in the component tree
+        // See in BuildComponentTreeStep the call to buildChangedComponentTreeRoot
         Optional<Component> optionalComponent = treeRootHolder.getOptionalComponentByRef(source.getComponentRef());
         if (optionalComponent.isEmpty()) {
           return Optional.empty();
@@ -380,7 +383,7 @@ public class TrackerRawInputFactory {
         return rule.getType();
       } else if (!rule.getDefaultImpacts().isEmpty()) {
         SoftwareQuality impactSoftwareQuality = ImpactMapper.getBestImpactForBackmapping(rule.getDefaultImpacts()).getKey();
-        return ImpactMapper.convertToRuleType(impactSoftwareQuality);
+        return RuleTypeMapper.toRuleType(ImpactMapper.convertToRuleType(impactSoftwareQuality));
       } else {
         throw new IllegalArgumentException("Cannot determine the type for issue of rule %s".formatted(reportExternalIssue.getRuleId()));
       }

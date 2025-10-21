@@ -24,10 +24,10 @@ import java.util.Map;
 import java.util.Set;
 import org.sonar.api.issue.impact.Severity;
 import org.sonar.api.issue.impact.SoftwareQuality;
-import org.sonar.api.rules.RuleType;
+import org.sonar.core.rule.RuleType;
 import org.sonar.api.server.ServerSide;
 
-import static org.sonar.api.rules.RuleType.VULNERABILITY;
+import static org.sonar.core.rule.RuleType.VULNERABILITY;
 
 @ServerSide
 public interface QGChangeEventListener {
@@ -73,7 +73,8 @@ public interface QGChangeEventListener {
     RESOLVED_FIXED,
     TO_REVIEW,
     IN_REVIEW,
-    REVIEWED;
+    REVIEWED,
+    IN_SANDBOX;
 
     protected static final Set<Status> CLOSED_STATUSES = EnumSet.of(CONFIRMED, RESOLVED_FIXED, RESOLVED_FP, RESOLVED_WF);
   }

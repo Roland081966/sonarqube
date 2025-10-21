@@ -19,6 +19,7 @@
  */
 package org.sonar.process.cluster.hz;
 
+import com.google.common.net.HostAndPort;
 import com.hazelcast.config.Config;
 import com.hazelcast.config.JoinConfig;
 import com.hazelcast.config.MemberAttributeConfig;
@@ -26,10 +27,10 @@ import com.hazelcast.config.NetworkConfig;
 import com.hazelcast.core.Hazelcast;
 import java.util.List;
 import java.util.stream.Stream;
+import org.jetbrains.annotations.NotNull;
 import org.sonar.process.ProcessId;
 import org.sonar.process.cluster.hz.HazelcastMember.Attribute;
 
-import static java.lang.String.format;
 import static java.util.Collections.singletonList;
 import static java.util.Objects.requireNonNull;
 import static org.sonar.process.ProcessProperties.Property.CLUSTER_NODE_HZ_PORT;
@@ -94,22 +95,25 @@ public class HazelcastMemberBuilder {
       .setReuseAddress(true);
     netConfig.getInterfaces()
       .setEnabled(true)
-      .setInterfaces(singletonList(requireNonNull(networkInterface, "Network interface is missing")));
+      .setInterfaces(provideNetworkInterfaceForHazelcastConfig());
 
     JoinConfig joinConfig = netConfig.getJoin();
     joinConfig.getAwsConfig().setEnabled(false);
     joinConfig.getMulticastConfig().setEnabled(false);
 
+    final int defaultHzNodePort = Integer.parseInt(CLUSTER_NODE_HZ_PORT.getDefaultValue());
     if (KUBERNETES.equals(type)) {
       joinConfig.getKubernetesConfig().setEnabled(true)
         .setProperty("service-dns", requireNonNull(members, "Service DNS is missing"))
-        .setProperty("service-port", CLUSTER_NODE_HZ_PORT.getDefaultValue());
+        .setProperty("service-port", String.valueOf(defaultHzNodePort));
     } else {
       List<String> addressesWithDefaultPorts = Stream.of(this.members.split(","))
-          .filter(host -> !host.isBlank())
-          .map(String::trim)
-          .map(HazelcastMemberBuilder::applyDefaultPortToHost)
-          .toList();
+        .filter(host -> !host.isBlank())
+        .map(String::trim)
+        .map(HostAndPort::fromString)
+        .map(parsedHost -> parsedHost.withDefaultPort(defaultHzNodePort))
+        .map(HostAndPort::toString)
+        .toList();
       joinConfig.getTcpIpConfig().setEnabled(true);
       joinConfig.getTcpIpConfig().setMembers(requireNonNull(addressesWithDefaultPorts, "Members are missing"));
     }
@@ -127,8 +131,9 @@ public class HazelcastMemberBuilder {
       .setProperty("hazelcast.phone.home.enabled", "false")
       // Use slf4j for logging
       .setProperty("hazelcast.logging.type", "slf4j")
-      .setProperty("hazelcast.partial.member.disconnection.resolution.heartbeat.count", "5")
-    ;
+      // support ip v6
+      .setProperty("hazelcast.prefer.ipv4.stack", "false")
+      .setProperty("hazelcast.partial.member.disconnection.resolution.heartbeat.count", "5");
 
     MemberAttributeConfig attributes = config.getMemberAttributeConfig();
     attributes.setAttribute(Attribute.NODE_NAME.getKey(), requireNonNull(nodeName, "Node name is missing"));
@@ -137,8 +142,15 @@ public class HazelcastMemberBuilder {
     return new HazelcastMemberImpl(Hazelcast.newHazelcastInstance(config));
   }
 
-  private static String applyDefaultPortToHost(String host) {
-    return host.contains(":") ? host : format("%s:%s", host, CLUSTER_NODE_HZ_PORT.getDefaultValue());
+  /**
+   * Hazelcast doesn't recognize IPv6 address in the square brackets so we remove in case user provided us with the IP with square brackets
+   */
+  @NotNull
+  private List<String> provideNetworkInterfaceForHazelcastConfig() {
+    String hazelcastNetworkInterface = requireNonNull(networkInterface, "Network interface is missing");
+    if (hazelcastNetworkInterface.startsWith("[") && hazelcastNetworkInterface.endsWith("]")) {
+      hazelcastNetworkInterface = hazelcastNetworkInterface.replace("[", "").replace("]", "");
+    }
+    return singletonList(hazelcastNetworkInterface);
   }
-
 }

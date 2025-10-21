@@ -194,4 +194,18 @@ public interface PurgeMapper {
   void deleteAnticipatedTransitionsByProjectUuidAndCreationDate(@Param("projectUuid") String projectUuid, @Param("createdAtBefore") Long createdAtBefore);
 
   void deleteIssuesFixedByBranchUuid(@Param("branchUuid") String branchUuid);
+
+  void deleteScaAnalysesByComponentUuid(@Param("componentUuid") String componentUuid);
+
+  void deleteScaDependenciesByComponentUuid(@Param("componentUuid") String componentUuid);
+
+  void deleteScaIssuesReleasesByComponentUuid(@Param("componentUuid") String componentUuid);
+
+  void deleteScaIssuesReleasesChangesByComponentUuid(@Param("componentUuid") String componentUuid);
+
+  void deleteScaReleasesByComponentUuid(@Param("componentUuid") String componentUuid);
+
+  void deleteScaLicenseProfileProjectsByProjectUuid(@Param("projectUuid") String projectUuid);
+
+  void deleteArchitectureGraphsByBranchUuid(@Param("branchUuid") String branchUuid);
 }

@@ -33,9 +33,9 @@ import org.mockito.ArgumentCaptor;
 import org.sonar.api.issue.impact.Severity;
 import org.sonar.api.issue.impact.SoftwareQuality;
 import org.sonar.api.rule.RuleKey;
-import org.sonar.api.rules.RuleType;
+import org.sonar.core.rule.RuleType;
 import org.sonar.api.utils.System2;
-import org.sonar.ce.task.projectanalysis.batch.BatchReportReaderRule;
+import org.sonar.ce.common.scanner.ScannerReportReaderRule;
 import org.sonar.ce.task.projectanalysis.issue.AdHocRuleCreator;
 import org.sonar.ce.task.projectanalysis.issue.ProtoIssueCache;
 import org.sonar.ce.task.projectanalysis.issue.RuleRepositoryImpl;
@@ -88,7 +88,7 @@ public class PersistIssuesStepIT extends BaseStepTest {
   @Rule
   public DbTester db = DbTester.create(System2.INSTANCE);
   @Rule
-  public BatchReportReaderRule reportReader = new BatchReportReaderRule();
+  public ScannerReportReaderRule reportReader = new ScannerReportReaderRule();
   @Rule
   public PeriodHolderRule periodHolder = new PeriodHolderRule();
 
@@ -301,7 +301,7 @@ public class PersistIssuesStepIT extends BaseStepTest {
       .containsExactlyInAnyOrder(Tuple.tuple(SoftwareQuality.SECURITY, Severity.MEDIUM));
     assertThat(result.isPrioritizedRule()).isTrue();
 
-    List<IssueChangeDto> changes = dbClient.issueChangeDao().selectByIssueKeys(session, Arrays.asList(issueKey));
+    List<IssueChangeDto> changes = dbClient.issueChangeDao().selectByIssueKeys(session, List.of(issueKey));
     assertThat(changes).extracting(IssueChangeDto::getChangeType).containsExactly(IssueChangeDto.TYPE_COMMENT, IssueChangeDto.TYPE_FIELD_CHANGE);
     assertThat(context.getStatistics().getAll()).contains(
       entry("inserts", "1"), entry("updates", "0"), entry("merged", "0"));

@@ -29,7 +29,7 @@ import javax.annotation.Nullable;
 import org.sonar.api.issue.IssueStatus;
 import org.sonar.api.issue.impact.Severity;
 import org.sonar.api.issue.impact.SoftwareQuality;
-import org.sonar.api.rules.RuleType;
+import org.sonar.core.rule.RuleType;
 import org.sonar.db.issue.IssueGroupDto;
 import org.sonar.db.issue.IssueImpactGroupDto;
 import org.sonar.db.issue.IssueImpactSeverityGroupDto;
@@ -37,7 +37,7 @@ import org.sonar.db.rule.SeverityUtil;
 import org.sonar.server.measure.ImpactMeasureBuilder;
 
 import static org.sonar.api.rule.Severity.INFO;
-import static org.sonar.api.rules.RuleType.SECURITY_HOTSPOT;
+import static org.sonar.core.rule.RuleType.SECURITY_HOTSPOT;
 
 class IssueCounter {
 
@@ -52,6 +52,7 @@ class IssueCounter {
   private final Count unresolved = new Count();
   private long prioritizedRuleIssues = 0;
   private final Count highImpactAccepted = new Count();
+  private final Count inSandbox = new Count();
   private final Map<SoftwareQuality, Map<Severity, Count>> bySoftwareQualityAndSeverity = new EnumMap<>(SoftwareQuality.class);
   private final Map<SoftwareQuality, Effort> effortOfUnresolvedBySoftwareQuality = new EnumMap<>(SoftwareQuality.class);
   private final Map<SoftwareQuality, HighestImpactSeverity> highestSeverityOfUnresolvedBySoftwareQuality = new EnumMap<>(SoftwareQuality.class);
@@ -59,7 +60,7 @@ class IssueCounter {
   IssueCounter(Collection<IssueGroupDto> groups, Collection<IssueImpactGroupDto> impactGroups,
     Collection<IssueImpactSeverityGroupDto> impactSeverityGroups) {
     for (IssueGroupDto group : groups) {
-      if (RuleType.valueOf(group.getRuleType()).equals(SECURITY_HOTSPOT)) {
+      if (RuleType.fromDbConstant(group.getRuleType()).equals(SECURITY_HOTSPOT)) {
         processHotspotGroup(group);
       } else {
         processGroup(group);
@@ -89,8 +90,12 @@ class IssueCounter {
   }
 
   private void processGroup(IssueGroupDto group) {
+    if (group.getStatus() != null && IssueStatus.of(group.getStatus(), group.getResolution()) == IssueStatus.IN_SANDBOX) {
+      inSandbox.add(group);
+      return;
+    }
     if (group.getResolution() == null) {
-      RuleType ruleType = RuleType.valueOf(group.getRuleType());
+      RuleType ruleType = RuleType.fromDbConstant(group.getRuleType());
       highestSeverityOfUnresolved
         .computeIfAbsent(ruleType, k -> new HighestSeverity())
         .add(group);
@@ -119,6 +124,10 @@ class IssueCounter {
 
   private void processImpactGroup(IssueImpactGroupDto group) {
     IssueStatus issueStatus = IssueStatus.of(group.getStatus(), group.getResolution());
+
+    if (IssueStatus.IN_SANDBOX == issueStatus) {
+      return;
+    }
 
     if (IssueStatus.OPEN == issueStatus || IssueStatus.CONFIRMED == issueStatus) {
       bySoftwareQualityAndSeverity
@@ -203,6 +212,10 @@ class IssueCounter {
 
   public long countHighImpactAccepted(boolean onlyInLeak) {
     return value(highImpactAccepted, onlyInLeak);
+  }
+
+  public long countInSandbox(boolean onlyInLeak) {
+    return value(inSandbox, onlyInLeak);
   }
 
   public long countHotspotsByStatus(String status, boolean onlyInLeak) {

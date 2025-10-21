@@ -27,7 +27,7 @@ import jakarta.inject.Inject;
 import org.jetbrains.annotations.NotNull;
 import org.sonar.api.issue.Issue;
 import org.sonar.api.rules.CleanCodeAttribute;
-import org.sonar.api.rules.RuleType;
+import org.sonar.core.rule.RuleType;
 import org.sonar.ce.task.projectanalysis.analysis.AnalysisMetadataHolder;
 import org.sonar.core.issue.DefaultImpact;
 import org.sonar.core.issue.DefaultIssue;
@@ -111,6 +111,7 @@ public class IssueLifecycle {
   public void copyExistingOpenIssueFromBranch(DefaultIssue raw, DefaultIssue base, String branchName) {
     raw.setKey(Uuids.create());
     raw.setNew(false);
+    raw.setFromSonarQubeUpdate(base.isFromSonarQubeUpdate());
     copyAttributesOfIssueFromAnotherBranch(raw, base);
     raw.setFieldChange(changeContext, IssueFieldsSetter.FROM_BRANCH, branchName, analysisMetadataHolder.getBranch().getName());
   }
@@ -189,6 +190,7 @@ public class IssueLifecycle {
     Rule rule = ruleRepository.getByKey(raw.ruleKey());
     raw.setKey(base.key());
     raw.setNew(false);
+    raw.setFromSonarQubeUpdate(base.isFromSonarQubeUpdate());
     if (base.isChanged()) {
       // In case issue was moved from module or folder to the root project
       raw.setChanged(true);
@@ -216,6 +218,7 @@ public class IssueLifecycle {
     updater.setPastMessage(raw, base.getMessage(), base.getMessageFormattings(), changeContext);
     updater.setPastGap(raw, base.gap(), changeContext);
     updater.setPastEffort(raw, base.effort(), changeContext);
+    updater.setInternalTags(raw, requireNonNull(base.internalTags()), changeContext);
     updater.setCodeVariants(raw, requireNonNull(base.codeVariants()), changeContext);
     updater.setImpacts(raw, base.getImpacts(), changeContext);
     updater.setCleanCodeAttribute(raw, base.getCleanCodeAttribute(), changeContext);
@@ -258,5 +261,6 @@ public class IssueLifecycle {
     toIssue.setSelectedAt(fromIssue.selectedAt());
     toIssue.setIsNewCodeReferenceIssue(fromIssue.isNewCodeReferenceIssue());
     toIssue.setPrioritizedRule(fromIssue.isPrioritizedRule());
+    toIssue.setFromSonarQubeUpdate(fromIssue.isFromSonarQubeUpdate());
   }
 }

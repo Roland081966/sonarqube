@@ -80,8 +80,8 @@ dependencies {
 
     webapp 'org.sonarsource.sonarqube:webapp-assets'
 
-    def artifactoryUsername = System.env.'ARTIFACTORY_PRIVATE_USERNAME' ?: (project.hasProperty('artifactoryUsername') ? project.getProperty('artifactoryUsername') : '')
-    def artifactoryPassword = System.env.'ARTIFACTORY_PRIVATE_PASSWORD' ?: (project.hasProperty('artifactoryPassword') ? project.getProperty('artifactoryPassword') : '')
+    def artifactoryUsername = System.env.'ARTIFACTORY_USERNAME' ?: (project.hasProperty('artifactoryUsername') ? project.getProperty('artifactoryUsername') : '')
+    def artifactoryPassword = System.env.'ARTIFACTORY_ACCESS_TOKEN' ?: (project.hasProperty('artifactoryPassword') ? project.getProperty('artifactoryPassword') : '')
     
     if (artifactoryUsername && artifactoryPassword) {
       zipDist "sonarqube:elasticsearch:${elasticSearchServerVersion}-no-jdk@tar.gz"
@@ -113,6 +113,10 @@ downloadLicenses {
 }
 
 tasks.register('downloadJres') {
+  inputs.file(layout.projectDirectory.dir('src/main/resources/jres-metadata.json').asFile).withPathSensitivity(PathSensitivity.RELATIVE)
+  outputs.dir(layout.buildDirectory.file('jres'))
+  outputs.cacheIf { true }
+
   doLast {
     def jresMetadata = new JsonSlurper().parse(file(layout.projectDirectory.dir('src/main/resources/jres-metadata.json').asFile))
     jresMetadata.each { jre ->
@@ -147,6 +151,14 @@ task zip(type: Zip, dependsOn: [configurations.compileClasspath]) {
       exclude 'bin/windows-x86-64/StartSonar.bat'
       exclude 'bin/linux-x86-64/sonar.sh'
       exclude 'bin/macosx-universal-64/sonar.sh'
+      rename { fileName ->
+        if (fileName == 'CVE-review-and-treatment-status-sqcb.csv') {
+          return "CVE-review-and-treatment-status-sqcb-${version}.csv"
+        } else if (fileName == 'CVE-review-and-treatment-status-sqcb.json') {
+          return "CVE-review-and-treatment-status-sqcb-${version}.json"
+        }
+        return fileName
+      }
     }
   }
 
@@ -349,14 +361,14 @@ zip {
     //When the archive size increases due to dependencies, the expected size should be updated as well.
     //Bump the expected size by at least 10 more megabytes than what is strictly needed, this in conjunction with the
     //tolerance will allow for some growth in the archive size.
-    def expectedSize = 830_000_000
+    def expectedSize = 850_000_000
     //We set a tolerance of 15MB to avoid failing the build for small differences in the archive size.
     def tolerance = 15_000_000
     def minArchiveSize = expectedSize - tolerance
     def maxArchiveSize = expectedSize + tolerance
 
     def archiveSize = archiveFile.get().asFile.length()
-    if (archiveSize < minArchiveSize)
+    if (archiveSize < minArchiveSize && System.getenv("CI") == "true")
       throw new GradleException("${archiveFileName.get()} size ($archiveSize) too small. Min is $minArchiveSize")
     if (archiveSize > maxArchiveSize)
       throw new GradleException("${destinationDirectory.get()}/${archiveFileName.get()} size ($archiveSize) too large. Max is $maxArchiveSize")
@@ -370,6 +382,7 @@ task cleanLocalUnzippedDir(dependsOn: zip) {
   def unzippedDir = file("$buildDir/distributions/sonarqube-$version")
   inputs.files(file("$buildDir/distributions/sonar-application-${version}.zip"))
   outputs.upToDateWhen { true }
+  outputs.cacheIf('Caching has not been enabled for the task.') { false }
 
   doLast {
     println("delete directory ${unzippedDir}")
@@ -384,6 +397,9 @@ artifactoryPublish.skip = !deployCommunity
 
 def bomFile = layout.buildDirectory.file('reports/bom.json')
 cyclonedxBom {
+  setVCSGit { vcs ->
+    vcs.url = "https://github.com/SonarSource/sonarqube"
+  }
   includeConfigs = ["runtimeClasspath", "web", "shutdowner", "jdbc_mssql", "jdbc_mssql_entra", "jdbc_postgresql", "jdbc_h2", "bundledPlugin_deps",
                     "cyclonedx"]
   outputs.file bomFile

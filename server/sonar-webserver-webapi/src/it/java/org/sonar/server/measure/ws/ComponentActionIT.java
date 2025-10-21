@@ -33,6 +33,7 @@ import org.sonar.db.component.ProjectData;
 import org.sonar.db.component.SnapshotDto;
 import org.sonar.db.measure.MeasureDto;
 import org.sonar.db.metric.MetricDto;
+import org.sonar.db.permission.GlobalPermission;
 import org.sonar.server.component.TestComponentFinder;
 import org.sonar.server.exceptions.BadRequestException;
 import org.sonar.server.exceptions.ForbiddenException;
@@ -50,11 +51,12 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.tuple;
 import static org.sonar.api.measures.CoreMetrics.RELIABILITY_ISSUES;
 import static org.sonar.api.utils.DateUtils.parseDateTime;
-import static org.sonar.api.web.UserRole.USER;
 import static org.sonar.db.component.BranchDto.DEFAULT_MAIN_BRANCH_NAME;
 import static org.sonar.db.component.BranchType.PULL_REQUEST;
 import static org.sonar.db.component.ComponentTesting.newFileDto;
 import static org.sonar.db.component.ComponentTesting.newProjectCopy;
+import static org.sonar.db.permission.ProjectPermission.SCAN;
+import static org.sonar.db.permission.ProjectPermission.USER;
 import static org.sonar.server.component.ws.MeasuresWsParameters.PARAM_ADDITIONAL_FIELDS;
 import static org.sonar.server.component.ws.MeasuresWsParameters.PARAM_BRANCH;
 import static org.sonar.server.component.ws.MeasuresWsParameters.PARAM_COMPONENT;
@@ -104,6 +106,32 @@ public class ComponentActionIT {
     assertThat(response.getMetrics().getMetricsCount()).isOne();
     assertThat(response.hasPeriod()).isFalse();
     assertThat(response.getComponent().getKey()).isEqualTo(mainBranch.getKey());
+  }
+
+  @Test
+  public void user_with_project_scan_permission_is_allowed_to_get_project_measures() {
+    ProjectData projectData = db.components().insertPrivateProject();
+    ComponentDto mainBranch = projectData.getMainBranchComponent();
+    userSession.addProjectPermission(SCAN, projectData.getProjectDto())
+      .registerBranches(projectData.getMainBranchDto());
+    MetricDto metric = db.measures().insertMetric(m -> m.setValueType("INT"));
+
+    ComponentWsResponse response = newRequest(mainBranch.getKey(), metric.getKey());
+
+    assertThat(response.getMetrics().getMetricsCount()).isOne();
+  }
+
+  @Test
+  public void user_with_global_scan_permission_is_allowed_to_get_project_status() {
+    ProjectData projectData = db.components().insertPrivateProject();
+    ComponentDto mainBranch = projectData.getMainBranchComponent();
+    userSession.addPermission(GlobalPermission.SCAN);
+
+    MetricDto metric = db.measures().insertMetric(m -> m.setValueType("INT"));
+
+    ComponentWsResponse response = newRequest(mainBranch.getKey(), metric.getKey());
+
+    assertThat(response.getMetrics().getMetricsCount()).isOne();
   }
 
   @Test

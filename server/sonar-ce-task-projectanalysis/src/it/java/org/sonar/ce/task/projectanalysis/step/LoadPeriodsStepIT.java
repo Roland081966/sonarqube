@@ -62,7 +62,6 @@ import static org.apache.commons.lang3.RandomStringUtils.secure;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.fail;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -89,8 +88,7 @@ public class LoadPeriodsStepIT extends BaseStepTest {
   private final NewCodePeriodResolver newCodePeriodResolver = new NewCodePeriodResolver(dbTester.getDbClient(), analysisMetadataHolder);
   private final ZonedDateTime analysisDate = ZonedDateTime.of(2019, 3, 20, 5, 30, 40, 0, ZoneId.systemDefault());
   private final CeTaskMessages ceTaskMessages = mock(CeTaskMessages.class);
-  private final LoadPeriodsStep underTest = new LoadPeriodsStep(analysisMetadataHolder, dao, treeRootHolder, periodsHolder, dbTester.getDbClient(), newCodePeriodResolver,
-    ceTaskMessages, system2Mock);
+  private final LoadPeriodsStep underTest = new LoadPeriodsStep(analysisMetadataHolder, dao, treeRootHolder, periodsHolder, dbTester.getDbClient(), newCodePeriodResolver);
 
   private ComponentDto project;
 
@@ -198,7 +196,6 @@ public class LoadPeriodsStepIT extends BaseStepTest {
 
     underTest.execute(new TestComputationStepContext());
     assertPeriod(NewCodePeriodType.REFERENCE_BRANCH, newCodeReferenceBranch, null);
-    verify(ceTaskMessages).add(any(CeTaskMessages.Message.class));
   }
 
   @Test

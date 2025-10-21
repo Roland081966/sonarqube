@@ -19,13 +19,8 @@
  */
 package org.sonar.server.qualityprofile.ws;
 
-import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.List;
 import javax.annotation.Nullable;
-import org.sonar.api.profiles.ProfileImporter;
 import org.sonar.api.resources.Languages;
-import org.sonar.api.server.ws.Change;
 import org.sonar.api.server.ws.Request;
 import org.sonar.api.server.ws.Response;
 import org.sonar.api.server.ws.WebService;
@@ -33,11 +28,8 @@ import org.sonar.api.server.ws.WebService.NewAction;
 import org.sonar.db.DbClient;
 import org.sonar.db.DbSession;
 import org.sonar.db.qualityprofile.QProfileDto;
-import org.sonar.server.qualityprofile.QProfileExporters;
 import org.sonar.server.qualityprofile.QProfileFactory;
 import org.sonar.server.qualityprofile.builtin.QProfileName;
-import org.sonar.server.qualityprofile.QProfileResult;
-import org.sonar.server.qualityprofile.index.ActiveRuleIndexer;
 import org.sonar.server.user.UserSession;
 import org.sonarqube.ws.Qualityprofiles.CreateWsResponse;
 
@@ -48,37 +40,22 @@ import static org.sonar.server.ws.WsUtils.writeProtobuf;
 import static org.sonarqube.ws.client.qualityprofile.QualityProfileWsParameters.ACTION_CREATE;
 import static org.sonarqube.ws.client.qualityprofile.QualityProfileWsParameters.PARAM_LANGUAGE;
 import static org.sonarqube.ws.client.qualityprofile.QualityProfileWsParameters.PARAM_NAME;
-import org.springframework.beans.factory.annotation.Autowired;
 
 public class CreateAction implements QProfileWsAction {
 
-  private static final String PARAM_BACKUP_FORMAT = "backup_%s";
   static final int NAME_MAXIMUM_LENGTH = 100;
 
   private final DbClient dbClient;
   private final QProfileFactory profileFactory;
-  private final QProfileExporters exporters;
   private final Languages languages;
-  private final ProfileImporter[] importers;
   private final UserSession userSession;
-  private final ActiveRuleIndexer activeRuleIndexer;
 
-  @Autowired(required = false)
-  public CreateAction(DbClient dbClient, QProfileFactory profileFactory, QProfileExporters exporters, Languages languages,
-    UserSession userSession, ActiveRuleIndexer activeRuleIndexer, ProfileImporter... importers) {
+  public CreateAction(DbClient dbClient, QProfileFactory profileFactory, Languages languages,
+    UserSession userSession) {
     this.dbClient = dbClient;
     this.profileFactory = profileFactory;
-    this.exporters = exporters;
     this.languages = languages;
     this.userSession = userSession;
-    this.activeRuleIndexer = activeRuleIndexer;
-    this.importers = importers;
-  }
-
-  @Autowired(required = false)
-  public CreateAction(DbClient dbClient, QProfileFactory profileFactory, QProfileExporters exporters, Languages languages,
-    UserSession userSession, ActiveRuleIndexer activeRuleIndexer) {
-    this(dbClient, profileFactory, exporters, languages, userSession, activeRuleIndexer, new ProfileImporter[0]);
   }
 
   @Override
@@ -90,7 +67,6 @@ public class CreateAction implements QProfileWsAction {
       .setResponseExample(getClass().getResource("create-example.json"))
       .setSince("5.2")
       .setHandler(this);
-    List<Change> changelog = new ArrayList<>();
 
     create.createParam(PARAM_NAME)
       .setRequired(true)
@@ -103,41 +79,22 @@ public class CreateAction implements QProfileWsAction {
       .setDescription("Quality profile language")
       .setExampleValue("js")
       .setPossibleValues(getOrderedLanguageKeys(languages));
-
-    for (ProfileImporter importer : importers) {
-      String backupParamName = getBackupParamName(importer.getKey());
-      create.createParam(backupParamName)
-        .setDescription(String.format("A configuration file for %s.", importer.getName()))
-        .setDeprecatedSince("9.8");
-      changelog.add(new Change("9.8", String.format("'%s' parameter is deprecated", backupParamName)));
-    }
-
-    create.setChangelog(changelog.toArray(new Change[0]));
   }
 
   @Override
   public void handle(Request request, Response response) throws Exception {
     userSession.checkLoggedIn();
+    userSession.checkPermission(ADMINISTER_QUALITY_PROFILES);
     try (DbSession dbSession = dbClient.openSession(false)) {
-      userSession.checkPermission(ADMINISTER_QUALITY_PROFILES);
       CreateRequest createRequest = toRequest(request);
-      writeProtobuf(doHandle(dbSession, createRequest, request), request, response);
+      writeProtobuf(doHandle(dbSession, createRequest), request, response);
     }
   }
 
-  private CreateWsResponse doHandle(DbSession dbSession, CreateRequest createRequest, Request request) {
-    QProfileResult result = new QProfileResult();
+  private CreateWsResponse doHandle(DbSession dbSession, CreateRequest createRequest) {
     QProfileDto profile = profileFactory.checkAndCreateCustom(dbSession, QProfileName.createFor(createRequest.getLanguage(), createRequest.getName()));
-    result.setProfile(profile);
-    for (ProfileImporter importer : importers) {
-      String importerKey = importer.getKey();
-      InputStream contentToImport = request.paramAsInputStream(getBackupParamName(importerKey));
-      if (contentToImport != null) {
-        result.add(exporters.importXml(profile, importerKey, contentToImport, dbSession));
-      }
-    }
-    activeRuleIndexer.commitAndIndex(dbSession, result.getChanges());
-    return buildResponse(result);
+    dbSession.commit();
+    return buildResponse(profile);
   }
 
   private static CreateRequest toRequest(Request request) {
@@ -147,26 +104,16 @@ public class CreateAction implements QProfileWsAction {
     return builder.build();
   }
 
-  private CreateWsResponse buildResponse(QProfileResult result) {
-    String language = result.profile().getLanguage();
+  private CreateWsResponse buildResponse(QProfileDto profile) {
+    String language = profile.getLanguage();
     CreateWsResponse.QualityProfile.Builder builder = CreateWsResponse.QualityProfile.newBuilder()
-      .setKey(result.profile().getKee())
-      .setName(result.profile().getName())
+      .setKey(profile.getKee())
+      .setName(profile.getName())
       .setLanguage(language)
-      .setLanguageName(languages.get(result.profile().getLanguage()).getName())
+      .setLanguageName(languages.get(profile.getLanguage()).getName())
       .setIsDefault(false)
       .setIsInherited(false);
-    if (!result.infos().isEmpty()) {
-      builder.getInfosBuilder().addAllInfos(result.infos());
-    }
-    if (!result.warnings().isEmpty()) {
-      builder.getWarningsBuilder().addAllWarnings(result.warnings());
-    }
     return CreateWsResponse.newBuilder().setProfile(builder.build()).build();
-  }
-
-  private static String getBackupParamName(String importerKey) {
-    return String.format(PARAM_BACKUP_FORMAT, importerKey);
   }
 
   private static class CreateRequest {

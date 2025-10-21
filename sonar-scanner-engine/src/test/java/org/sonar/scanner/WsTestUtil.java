@@ -22,12 +22,12 @@ package org.sonar.scanner;
 import java.io.InputStream;
 import java.io.Reader;
 import javax.annotation.Nullable;
-import org.apache.commons.lang3.StringUtils;
 import org.mockito.ArgumentMatcher;
 import org.sonar.scanner.http.DefaultScannerWsClient;
 import org.sonarqube.ws.client.WsRequest;
 import org.sonarqube.ws.client.WsResponse;
 
+import static org.apache.commons.lang3.Strings.CS;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
@@ -74,6 +74,32 @@ public class WsTestUtil {
     when(mock.call(argThat(new RequestMatcher(path)))).thenThrow(e);
   }
 
+  /**
+   * For testing intermittent failures that a retry would alleviate.
+   */
+  public static void mockExceptionThenReader(
+    DefaultScannerWsClient mock,
+    String path,
+    Exception e,
+    Reader reader) {
+    WsResponse response = mock(WsResponse.class);
+    when(response.contentReader()).thenReturn(reader);
+    when(mock.call(argThat(new RequestMatcher(path)))).thenThrow(e).thenReturn(response);
+  }
+
+  /**
+   * For testing intermittent failures that a retry would alleviate.
+   */
+  public static void mockExceptionThenStream(
+    DefaultScannerWsClient mock,
+    String path,
+    Exception e,
+    InputStream stream) {
+    WsResponse response = mock(WsResponse.class);
+    when(response.contentStream()).thenReturn(stream);
+    when(mock.call(argThat(new RequestMatcher(path)))).thenThrow(e).thenReturn(response);
+  }
+
   public static void verifyCall(DefaultScannerWsClient mock, String path) {
     verify(mock).call(argThat(new RequestMatcher(path)));
   }
@@ -90,7 +116,7 @@ public class WsTestUtil {
       if (item == null) {
         return false;
       }
-      return StringUtils.equals(item.getPath(), path);
+      return CS.equals(item.getPath(), path);
     }
 
     @Override

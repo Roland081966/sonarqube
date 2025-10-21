@@ -20,21 +20,23 @@
 package org.sonar.server.issue.ws.anticipatedtransition;
 
 import java.io.IOException;
+import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import org.junit.Rule;
 import org.junit.Test;
-import org.sonar.server.component.ComponentTypeTree;
-import org.sonar.server.component.ComponentTypes;
 import org.sonar.api.server.ws.WebService;
-import org.sonar.server.component.DefaultComponentTypes;
 import org.sonar.core.util.SequenceUuidFactory;
 import org.sonar.core.util.UuidFactory;
 import org.sonar.db.DbTester;
 import org.sonar.db.issue.AnticipatedTransitionDao;
+import org.sonar.db.permission.ProjectPermission;
 import org.sonar.db.project.ProjectDto;
 import org.sonar.db.user.UserDto;
 import org.sonar.server.component.ComponentFinder;
+import org.sonar.server.component.ComponentTypeTree;
+import org.sonar.server.component.ComponentTypes;
+import org.sonar.server.component.DefaultComponentTypes;
 import org.sonar.server.exceptions.ForbiddenException;
 import org.sonar.server.tester.UserSessionRule;
 import org.sonar.server.ws.TestRequest;
@@ -44,9 +46,9 @@ import org.sonar.server.ws.WsActionTester;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.tuple;
-import static org.sonar.api.web.UserRole.CODEVIEWER;
-import static org.sonar.api.web.UserRole.ISSUE_ADMIN;
 import static org.sonar.db.component.ProjectTesting.newPrivateProjectDto;
+import static org.sonar.db.permission.ProjectPermission.CODEVIEWER;
+import static org.sonar.db.permission.ProjectPermission.ISSUE_ADMIN;
 
 public class AnticipatedTransitionsActionIT {
 
@@ -57,7 +59,7 @@ public class AnticipatedTransitionsActionIT {
   @Rule
   public DbTester db = DbTester.create();
 
-  private final ComponentFinder componentFinder = new ComponentFinder(db.getDbClient(), new ComponentTypes(new ComponentTypeTree[]{DefaultComponentTypes.get()}));
+  private final ComponentFinder componentFinder = new ComponentFinder(db.getDbClient(), new ComponentTypes(new ComponentTypeTree[] {DefaultComponentTypes.get()}));
   private final AnticipatedTransitionsActionValidator validator = new AnticipatedTransitionsActionValidator(db.getDbClient(), componentFinder, userSession);
   private final UuidFactory uuidFactory = new SequenceUuidFactory();
   private final AnticipatedTransitionDao anticipatedTransitionDao = db.getDbClient().anticipatedTransitionDao();
@@ -97,13 +99,13 @@ public class AnticipatedTransitionsActionIT {
       ]</code></pre>""");
     assertThat(definition.isPost()).isTrue();
     assertThat(definition.isInternal()).isTrue();
-    assertThat(definition.params()).extracting(WebService.Param::key, WebService.Param::isRequired, WebService.Param::description, WebService.Param::since).containsExactlyInAnyOrder(
-      tuple("projectKey", true, "The key of the project", "10.2")
-    );
+    assertThat(definition.params()).extracting(WebService.Param::key, WebService.Param::isRequired, WebService.Param::description, WebService.Param::since)
+      .containsExactlyInAnyOrder(
+        tuple("projectKey", true, "The key of the project", "10.2"));
   }
 
   @Test
-  public void givenRequestWithTransitions_whenHandle_thenAllTransitionsAreSaved() throws IOException {
+  public void givenRequestWithTransitions_whenHandle_thenAllTransitionsAreSaved() throws IOException, URISyntaxException {
     // given
     ProjectDto projectDto = mockProjectDto();
     mockUser(projectDto, ISSUE_ADMIN);
@@ -148,7 +150,7 @@ public class AnticipatedTransitionsActionIT {
   }
 
   @Test
-  public void givenTransitionsForUserAndProjectAlreadyExistInDb_whenHandle_thenTheNewTransitionsShouldReplaceTheOldOnes() throws IOException {
+  public void givenTransitionsForUserAndProjectAlreadyExistInDb_whenHandle_thenTheNewTransitionsShouldReplaceTheOldOnes() throws IOException, URISyntaxException {
     // given
     ProjectDto projectDto = mockProjectDto();
     mockUser(projectDto, ISSUE_ADMIN);
@@ -178,7 +180,7 @@ public class AnticipatedTransitionsActionIT {
   }
 
   @Test
-  public void givenRequestWithNoTransitions_whenHandle_thenExistingTransitionsForUserAndProjectShouldBePurged() throws IOException {
+  public void givenRequestWithNoTransitions_whenHandle_thenExistingTransitionsForUserAndProjectShouldBePurged() throws IOException, URISyntaxException {
     // given
     ProjectDto projectDto = mockProjectDto();
     mockUser(projectDto, ISSUE_ADMIN);
@@ -197,7 +199,7 @@ public class AnticipatedTransitionsActionIT {
   }
 
   @Test
-  public void givenUserWithoutAdminIssuesPermission_whenHandle_thenThrowException() throws IOException {
+  public void givenUserWithoutAdminIssuesPermission_whenHandle_thenThrowException() throws IOException, URISyntaxException {
     // given
     ProjectDto projectDto = mockProjectDto();
     mockUser(projectDto, CODEVIEWER);
@@ -220,7 +222,7 @@ public class AnticipatedTransitionsActionIT {
       .setPayload(requestBody);
   }
 
-  private void mockUser(ProjectDto projectDto, String permission) {
+  private void mockUser(ProjectDto projectDto, ProjectPermission permission) {
     UserDto user = db.users().insertUser();
     db.users().insertProjectPermissionOnUser(user, permission, projectDto);
     userSession.logIn(user);
@@ -233,8 +235,8 @@ public class AnticipatedTransitionsActionIT {
     return projectDto;
   }
 
-  private String readTestResourceFile(String fileName) throws IOException {
-    return Files.readString(Path.of(getClass().getResource(fileName).getPath()));
+  private String readTestResourceFile(String fileName) throws IOException, URISyntaxException {
+    return Files.readString(Path.of(getClass().getResource(fileName).toURI()));
   }
 
 }

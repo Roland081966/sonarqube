@@ -63,14 +63,6 @@ import org.sonar.db.component.SnapshotDto;
 import org.sonar.db.component.SnapshotMapper;
 import org.sonar.db.component.UuidWithBranchUuidDto;
 import org.sonar.db.component.ViewsSnapshotDto;
-import org.sonar.db.dependency.CveCweDto;
-import org.sonar.db.dependency.CveCweMapper;
-import org.sonar.db.dependency.CveDto;
-import org.sonar.db.dependency.CveMapper;
-import org.sonar.db.dependency.IssuesDependencyDto;
-import org.sonar.db.dependency.IssuesDependencyMapper;
-import org.sonar.db.dependency.ProjectDependenciesMapper;
-import org.sonar.db.dependency.ProjectDependencyDto;
 import org.sonar.db.duplication.DuplicationMapper;
 import org.sonar.db.duplication.DuplicationUnitDto;
 import org.sonar.db.entity.EntityDto;
@@ -87,6 +79,8 @@ import org.sonar.db.issue.IssueChangeMapper;
 import org.sonar.db.issue.IssueDto;
 import org.sonar.db.issue.IssueFixedMapper;
 import org.sonar.db.issue.IssueMapper;
+import org.sonar.db.jira.AtlassianAuthenticationDetailsMapper;
+import org.sonar.db.jira.JiraProjectBindingMapper;
 import org.sonar.db.issue.NewCodeReferenceIssueDto;
 import org.sonar.db.issue.PrIssueDto;
 import org.sonar.db.measure.LargestBranchNclocDto;
@@ -217,8 +211,6 @@ public class MyBatis {
     confBuilder.loadAlias("AnticipatedTransition", AnticipatedTransitionDto.class);
     confBuilder.loadAlias("CeTaskCharacteristic", CeTaskCharacteristicDto.class);
     confBuilder.loadAlias("Component", ComponentDto.class);
-    confBuilder.loadAlias("Cve", CveDto.class);
-    confBuilder.loadAlias("CveCwe", CveCweDto.class);
     confBuilder.loadAlias("DevOpsPermissionsMapping", DevOpsPermissionsMappingDto.class);
     confBuilder.loadAlias("DuplicationUnit", DuplicationUnitDto.class);
     confBuilder.loadAlias("Entity", EntityDto.class);
@@ -236,7 +228,6 @@ public class MyBatis {
     confBuilder.loadAlias("KeyLongValue", KeyLongValue.class);
     confBuilder.loadAlias("Impact", ImpactDto.class);
     confBuilder.loadAlias("Issue", IssueDto.class);
-    confBuilder.loadAlias("IssueDependency", IssuesDependencyDto.class);
     confBuilder.loadAlias("NewCodeReferenceIssue", NewCodeReferenceIssueDto.class);
     confBuilder.loadAlias("ProjectMeasure", ProjectMeasureDto.class);
     confBuilder.loadAlias("LargestBranchNclocDto", LargestBranchNclocDto.class);
@@ -253,7 +244,6 @@ public class MyBatis {
     confBuilder.loadAlias("ProjectQgateAssociation", ProjectQgateAssociationDto.class);
     confBuilder.loadAlias("Project", ProjectDto.class);
     confBuilder.loadAlias("ProjectBadgeToken", ProjectBadgeTokenDto.class);
-    confBuilder.loadAlias("ProjectDependency", ProjectDependencyDto.class);
     confBuilder.loadAlias("AnalysisPropertyValuePerProject", AnalysisPropertyValuePerProject.class);
     confBuilder.loadAlias("ProjectAlmKeyAndProject", ProjectAlmKeyAndProject.class);
     confBuilder.loadAlias("PrAndBranchCountByProjectDto", PrBranchAnalyzedLanguageCountByProjectDto.class);
@@ -296,8 +286,6 @@ public class MyBatis {
       CeTaskMessageMapper.class,
       ComponentKeyUpdaterMapper.class,
       ComponentMapper.class,
-      CveMapper.class,
-      CveCweMapper.class,
       DefaultQProfileMapper.class,
       DuplicationMapper.class,
       EntityMapper.class,
@@ -317,7 +305,8 @@ public class MyBatis {
       IssueChangeMapper.class,
       IssueMapper.class,
       IssueFixedMapper.class,
-      IssuesDependencyMapper.class,
+      JiraProjectBindingMapper.class,
+      AtlassianAuthenticationDetailsMapper.class,
       MeasureMapper.class,
       ProjectMeasureMapper.class,
       MetricMapper.class,
@@ -329,7 +318,6 @@ public class MyBatis {
       PluginMapper.class,
       PortfolioMapper.class,
       ProjectAlmSettingMapper.class,
-      ProjectDependenciesMapper.class,
       ProjectLinkMapper.class,
       ProjectMapper.class,
       ProjectBadgeTokenMapper.class,

@@ -25,16 +25,16 @@ import java.util.Set;
 import java.util.stream.IntStream;
 import javax.annotation.CheckForNull;
 import javax.annotation.Nullable;
-import org.sonar.db.component.ComponentQualifiers;
-import org.sonar.db.component.ComponentScopes;
 import org.sonar.api.server.ws.Change;
 import org.sonar.api.server.ws.Response;
 import org.sonar.api.server.ws.WebService;
-import org.sonar.api.web.UserRole;
+import org.sonar.db.permission.ProjectPermission;
 import org.sonar.db.DbClient;
 import org.sonar.db.DbSession;
 import org.sonar.db.component.BranchDto;
 import org.sonar.db.component.ComponentDto;
+import org.sonar.db.component.ComponentQualifiers;
+import org.sonar.db.component.ComponentScopes;
 import org.sonar.db.component.SnapshotDto;
 import org.sonar.db.project.ProjectDto;
 import org.sonar.server.component.ComponentFinder;
@@ -56,7 +56,8 @@ import static org.sonarqube.ws.client.component.ComponentsWsParameters.PARAM_COM
 
 public class ShowAction implements ComponentsWsAction {
   private static final Set<String> PROJECT_OR_APP_QUALIFIERS = Set.of(ComponentQualifiers.PROJECT, ComponentQualifiers.APP);
-  private static final Set<String> APP_VIEW_OR_SUBVIEW_QUALIFIERS = Set.of(ComponentQualifiers.APP, ComponentQualifiers.VIEW, ComponentQualifiers.SUBVIEW);
+  private static final Set<String> APP_VIEW_OR_SUBVIEW_QUALIFIERS = Set.of(ComponentQualifiers.APP, ComponentQualifiers.VIEW,
+    ComponentQualifiers.SUBVIEW);
   private final UserSession userSession;
   private final DbClient dbClient;
   private final ComponentFinder componentFinder;
@@ -110,8 +111,13 @@ public class ShowAction implements ComponentsWsAction {
   private ShowWsResponse doHandle(Request request) {
     try (DbSession dbSession = dbClient.openSession(false)) {
       ComponentDto component = loadComponent(dbSession, request);
-      userSession.checkComponentPermission(UserRole.USER, component);
-      Optional<SnapshotDto> lastAnalysis = dbClient.snapshotDao().selectLastAnalysisByComponentUuid(dbSession, component.branchUuid());
+      userSession.checkComponentPermission(ProjectPermission.USER, component);
+      Optional<SnapshotDto> lastAnalysis;
+      if (component.getCopyComponentUuid() != null) {
+        lastAnalysis = dbClient.snapshotDao().selectLastAnalysisByComponentUuid(dbSession, component.getCopyComponentUuid());
+      } else {
+        lastAnalysis = dbClient.snapshotDao().selectLastAnalysisByComponentUuid(dbSession, component.branchUuid());
+      }
       List<ComponentDto> ancestors = dbClient.componentDao().selectAncestors(dbSession, component);
       return buildResponse(dbSession, component, ancestors, lastAnalysis.orElse(null), request);
     }

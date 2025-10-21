@@ -29,7 +29,7 @@ import javax.annotation.Nullable;
 import org.sonar.api.issue.IssueStatus;
 import org.sonar.api.issue.impact.Severity;
 import org.sonar.api.issue.impact.SoftwareQuality;
-import org.sonar.api.rules.RuleType;
+import org.sonar.core.rule.RuleType;
 import org.sonar.ce.task.projectanalysis.component.Component;
 import org.sonar.ce.task.projectanalysis.measure.Measure;
 import org.sonar.ce.task.projectanalysis.measure.MeasureRepository;
@@ -42,6 +42,8 @@ import org.sonar.server.measure.ImpactMeasureBuilder;
 import static org.sonar.api.issue.Issue.STATUS_CONFIRMED;
 import static org.sonar.api.issue.Issue.STATUS_OPEN;
 import static org.sonar.api.issue.Issue.STATUS_REOPENED;
+import static org.sonar.server.metric.IssueCountMetrics.ISSUES_IN_SANDBOX_KEY;
+import static org.sonar.server.metric.IssueCountMetrics.NEW_ISSUES_IN_SANDBOX_KEY;
 import static org.sonar.api.measures.CoreMetrics.ACCEPTED_ISSUES_KEY;
 import static org.sonar.api.measures.CoreMetrics.BLOCKER_VIOLATIONS_KEY;
 import static org.sonar.api.measures.CoreMetrics.BUGS_KEY;
@@ -80,10 +82,10 @@ import static org.sonar.api.rule.Severity.CRITICAL;
 import static org.sonar.api.rule.Severity.INFO;
 import static org.sonar.api.rule.Severity.MAJOR;
 import static org.sonar.api.rule.Severity.MINOR;
-import static org.sonar.api.rules.RuleType.BUG;
-import static org.sonar.api.rules.RuleType.CODE_SMELL;
-import static org.sonar.api.rules.RuleType.SECURITY_HOTSPOT;
-import static org.sonar.api.rules.RuleType.VULNERABILITY;
+import static org.sonar.core.rule.RuleType.BUG;
+import static org.sonar.core.rule.RuleType.CODE_SMELL;
+import static org.sonar.core.rule.RuleType.SECURITY_HOTSPOT;
+import static org.sonar.core.rule.RuleType.VULNERABILITY;
 
 /**
  * For each component, computes the measures related to number of issues:
@@ -220,6 +222,7 @@ public class IssueCounter extends IssueVisitor {
     addMeasure(component, FALSE_POSITIVE_ISSUES_KEY, currentCounters.counter().falsePositives);
     addMeasure(component, ACCEPTED_ISSUES_KEY, currentCounters.counter().accepted);
     addMeasure(component, HIGH_IMPACT_ACCEPTED_ISSUES_KEY, currentCounters.counter().highImpactAccepted);
+    addMeasure(component, ISSUES_IN_SANDBOX_KEY, currentCounters.counter().inSandbox);
   }
 
   private void addMeasuresByImpact(Component component) {
@@ -278,6 +281,7 @@ public class IssueCounter extends IssueVisitor {
     }
 
     addMeasure(component, NEW_ACCEPTED_ISSUES_KEY, currentCounters.counterForPeriod().accepted);
+    addMeasure(component, NEW_ISSUES_IN_SANDBOX_KEY, currentCounters.counterForPeriod().inSandbox);
   }
 
   /**
@@ -291,6 +295,7 @@ public class IssueCounter extends IssueVisitor {
     private int falsePositives = 0;
     private int accepted = 0;
     private int highImpactAccepted = 0;
+    private int inSandbox = 0;
     private final Multiset<String> severityBag = HashMultiset.create();
     private final Multiset<Severity> impactSeverityBag = HashMultiset.create();
     /**
@@ -317,6 +322,7 @@ public class IssueCounter extends IssueVisitor {
       falsePositives += counter.falsePositives;
       accepted += counter.accepted;
       highImpactAccepted += counter.highImpactAccepted;
+      inSandbox += counter.inSandbox;
       severityBag.addAll(counter.severityBag);
       impactSeverityBag.addAll(counter.impactSeverityBag);
       typeBag.addAll(counter.typeBag);
@@ -331,6 +337,10 @@ public class IssueCounter extends IssueVisitor {
     }
 
     void add(DefaultIssue issue) {
+      if (IssueStatus.IN_SANDBOX.equals(issue.issueStatus())) {
+        inSandbox++;
+        return;
+      }
       if (issue.type() == SECURITY_HOTSPOT) {
         if (issue.resolution() == null) {
           typeBag.add(SECURITY_HOTSPOT);

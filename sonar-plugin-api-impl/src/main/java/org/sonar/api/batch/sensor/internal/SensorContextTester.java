@@ -20,6 +20,7 @@
 package org.sonar.api.batch.sensor.internal;
 
 import java.io.File;
+import java.io.InputStream;
 import java.io.Serializable;
 import java.nio.charset.Charset;
 import java.nio.file.Path;
@@ -447,6 +448,12 @@ public class SensorContextTester implements SensorContext {
     sensorStorage.storeTelemetry(key, value);
   }
 
+  @Override
+  public void addAnalysisData(String key, String mimeType, InputStream data) {
+    //No Need to check the source of the plugin in the tester
+    sensorStorage.storeAnalysisData(key,mimeType, data);
+  }
+
   public void setCacheEnabled(boolean enabled) {
     this.cacheEnabled = enabled;
   }
@@ -455,4 +462,5 @@ public class SensorContextTester implements SensorContext {
   public NewSignificantCode newSignificantCode() {
     return new DefaultSignificantCode(sensorStorage);
   }
+
 }

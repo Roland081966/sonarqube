@@ -36,7 +36,7 @@ import org.sonar.api.issue.impact.Severity;
 import org.sonar.api.issue.impact.SoftwareQuality;
 import org.sonar.api.rule.RuleKey;
 import org.sonar.api.rules.CleanCodeAttribute;
-import org.sonar.api.rules.RuleType;
+import org.sonar.core.rule.RuleType;
 import org.sonar.api.utils.Duration;
 import org.sonar.api.utils.System2;
 import org.sonar.core.issue.DefaultImpact;
@@ -99,7 +99,7 @@ public class ProtobufIssueDiskCache implements DiskCache<DefaultIssue> {
   static DefaultIssue toDefaultIssue(IssueCache.Issue next) {
     DefaultIssue defaultIssue = new DefaultIssue();
     defaultIssue.setKey(next.getKey());
-    defaultIssue.setType(RuleType.valueOf(next.getRuleType()));
+    defaultIssue.setType(RuleType.fromDbConstant(next.getRuleType()));
     defaultIssue.setComponentUuid(next.hasComponentUuid() ? next.getComponentUuid() : null);
     defaultIssue.setComponentKey(next.getComponentKey());
     defaultIssue.setProjectUuid(next.getProjectUuid());
@@ -121,6 +121,7 @@ public class ProtobufIssueDiskCache implements DiskCache<DefaultIssue> {
     defaultIssue.setAuthorLogin(next.hasAuthorLogin() ? next.getAuthorLogin() : null);
     next.getCommentsList().forEach(c -> defaultIssue.addComment(toDefaultIssueComment(c)));
     defaultIssue.setTags(ImmutableSet.copyOf(STRING_LIST_SPLITTER.split(next.getTags())));
+    defaultIssue.setInternalTags(ImmutableSet.copyOf(STRING_LIST_SPLITTER.split(next.getInternalTags())));
     defaultIssue.setCodeVariants(ImmutableSet.copyOf(STRING_LIST_SPLITTER.split(next.getCodeVariants())));
     defaultIssue.setRuleDescriptionContextKey(next.hasRuleDescriptionContextKey() ? next.getRuleDescriptionContextKey() : null);
     defaultIssue.setLocations(next.hasLocations() ? next.getLocations() : null);
@@ -140,6 +141,7 @@ public class ProtobufIssueDiskCache implements DiskCache<DefaultIssue> {
     defaultIssue.setSelectedAt(next.hasSelectedAt() ? next.getSelectedAt() : null);
     defaultIssue.setQuickFixAvailable(next.getQuickFixAvailable());
     defaultIssue.setPrioritizedRule(next.getIsPrioritizedRule());
+    defaultIssue.setFromSonarQubeUpdate(next.getIsFromSonarqubeUpdate());
     defaultIssue.setIsNoLongerNewCodeReferenceIssue(next.getIsNoLongerNewCodeReferenceIssue());
     defaultIssue.setCleanCodeAttribute(next.hasCleanCodeAttribute() ? CleanCodeAttribute.valueOf(next.getCleanCodeAttribute()) : null);
     if (next.hasAnticipatedTransitionUuid()) {
@@ -152,7 +154,6 @@ public class ProtobufIssueDiskCache implements DiskCache<DefaultIssue> {
     for (IssueCache.FieldDiffs protoFieldDiffs : next.getChangesList()) {
       defaultIssue.addChange(toDefaultIssueChanges(protoFieldDiffs));
     }
-    defaultIssue.setCveId(next.hasCveId() ? next.getCveId() : null);
     return defaultIssue;
   }
 
@@ -183,6 +184,7 @@ public class ProtobufIssueDiskCache implements DiskCache<DefaultIssue> {
     ofNullable(defaultIssue.authorLogin()).ifPresent(builder::setAuthorLogin);
     defaultIssue.defaultIssueComments().forEach(c -> builder.addComments(toProtoComment(c)));
     ofNullable(defaultIssue.tags()).ifPresent(t -> builder.setTags(String.join(TAGS_SEPARATOR, t)));
+    ofNullable(defaultIssue.internalTags()).ifPresent(internalTag -> builder.setInternalTags(String.join(TAGS_SEPARATOR, internalTag)));
     ofNullable(defaultIssue.codeVariants()).ifPresent(codeVariant -> builder.setCodeVariants(String.join(TAGS_SEPARATOR, codeVariant)));
     ofNullable(defaultIssue.getLocations()).ifPresent(l -> builder.setLocations((DbIssues.Locations) l));
     defaultIssue.getRuleDescriptionContextKey().ifPresent(builder::setRuleDescriptionContextKey);
@@ -194,6 +196,7 @@ public class ProtobufIssueDiskCache implements DiskCache<DefaultIssue> {
     builder.setIsNew(defaultIssue.isNew());
     builder.setIsOnChangedLine(defaultIssue.isOnChangedLine());
     builder.setIsPrioritizedRule(defaultIssue.isPrioritizedRule());
+    builder.setIsFromSonarqubeUpdate(defaultIssue.isFromSonarQubeUpdate());
     builder.setIsNewCodeReferenceIssue(defaultIssue.isNewCodeReferenceIssue());
     builder.setIsCopied(defaultIssue.isCopied());
     builder.setBeingClosed(defaultIssue.isBeingClosed());
@@ -215,7 +218,6 @@ public class ProtobufIssueDiskCache implements DiskCache<DefaultIssue> {
     for (FieldDiffs fieldDiffs : defaultIssue.changes()) {
       builder.addChanges(toProtoIssueChanges(fieldDiffs));
     }
-    ofNullable(defaultIssue.getCveId()).ifPresent(builder::setCveId);
     return builder.build();
   }
 

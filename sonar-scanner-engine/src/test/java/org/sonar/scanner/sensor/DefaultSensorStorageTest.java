@@ -97,7 +97,6 @@ class DefaultSensorStorageTest {
   public void prepare() {
     MetricFinder metricFinder = mock(MetricFinder.class);
     when(metricFinder.<Integer>findByKey(CoreMetrics.NCLOC_KEY)).thenReturn(CoreMetrics.NCLOC);
-    when(metricFinder.<String>findByKey(CoreMetrics.FUNCTION_COMPLEXITY_DISTRIBUTION_KEY)).thenReturn(CoreMetrics.FUNCTION_COMPLEXITY_DISTRIBUTION);
     when(metricFinder.<Integer>findByKey(CoreMetrics.LINES_TO_COVER_KEY)).thenReturn(CoreMetrics.LINES_TO_COVER);
 
     settings = new MapSettings();
@@ -112,8 +111,9 @@ class DefaultSensorStorageTest {
 
     branchConfiguration = mock(BranchConfiguration.class);
 
-    underTest = new DefaultSensorStorage(metricFinder,
-      moduleIssues, settings.asConfig(), reportPublisher, mock(SonarCpdBlockIndex.class), contextPropertiesCache, telemetryCache, new ScannerMetrics(), branchConfiguration);
+    underTest = new DefaultSensorStorage(
+      metricFinder, moduleIssues, settings.asConfig(), reportPublisher, mock(SonarCpdBlockIndex.class), contextPropertiesCache, telemetryCache, new ScannerMetrics(),
+      branchConfiguration);
 
     project = new DefaultInputProject(ProjectDefinition.create()
       .setKey("foo")

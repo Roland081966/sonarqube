@@ -40,7 +40,7 @@ import org.sonar.api.issue.impact.Severity;
 import org.sonar.api.issue.impact.SoftwareQuality;
 import org.sonar.api.rule.RuleKey;
 import org.sonar.api.rule.RuleStatus;
-import org.sonar.api.rules.RuleType;
+import org.sonar.core.rule.RuleType;
 import org.sonar.api.testfixtures.log.LogTester;
 import org.sonar.api.utils.System2;
 import org.sonar.ce.task.projectexport.component.ComponentRepositoryImpl;
@@ -236,7 +236,8 @@ public class ExportIssuesStepIT {
       .addImpact(new ImpactDto().setSoftwareQuality(SoftwareQuality.SECURITY).setSeverity(Severity.BLOCKER).setManualSeverity(false))
       .setIssueCloseTime(741L)
       .setCodeVariants(List.of("v1", "v2"))
-      .setPrioritizedRule(true);
+      .setPrioritizedRule(true)
+      .setInternalTagsString("internal-tag-1,internal-tag-2");
 
     // fields tested separately and/or required to match SQL request
     issueDto
@@ -278,6 +279,7 @@ public class ExportIssuesStepIT {
       .isEqualTo(ExportIssuesStep.dbToDumpMessageFormatting(messageFormattings.getMessageFormattingList()));
     assertThat(issue.getCodeVariants()).isEqualTo(issueDto.getCodeVariantsString());
     assertThat(issue.getPrioritizedRule()).isEqualTo(issueDto.isPrioritizedRule());
+    assertThat(issue.getInternalTags()).isEqualTo(issueDto.getInternalTagsString());
   }
 
   @Test

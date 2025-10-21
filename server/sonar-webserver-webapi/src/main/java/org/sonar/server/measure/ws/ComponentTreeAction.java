@@ -49,7 +49,7 @@ import org.sonar.api.server.ws.Response;
 import org.sonar.api.server.ws.WebService;
 import org.sonar.api.server.ws.WebService.Param;
 import org.sonar.api.utils.Paging;
-import org.sonar.api.web.UserRole;
+import org.sonar.db.permission.ProjectPermission;
 import org.sonar.core.i18n.I18n;
 import org.sonar.db.DbClient;
 import org.sonar.db.DbSession;
@@ -183,6 +183,9 @@ public class ComponentTreeAction implements MeasuresWsAction {
       .setHandler(this)
       .addPagingParams(100, MAX_SIZE)
       .setChangelog(
+        new Change("2025.4", format(
+          "The following SCA metrics are available on licensed enterprise/datacenter editions with SCA enabled: %s",
+          MeasuresWsModule.getNewScaMetricsInSonarQube202504())),
         new Change("10.8", format(NUMBER_OF_KEYS_LIMITED, 75)),
         new Change("10.8", "Portfolio project metrics now also include: 'contains_ai_code', 'reliability_rating_without_aica', " +
           "'reliability_rating_with_aica', 'software_quality_security_rating_without_aica', 'software_quality_security_rating_with_aica', " +
@@ -657,7 +660,7 @@ public class ComponentTreeAction implements MeasuresWsAction {
   }
 
   private List<ComponentDto> filterAuthorizedComponents(List<ComponentDto> components) {
-    return userSession.keepAuthorizedComponents(UserRole.USER, components);
+    return userSession.keepAuthorizedComponents(ProjectPermission.USER, components);
   }
 
   private static boolean componentWithMeasuresOnly(ComponentTreeRequest wsRequest) {
@@ -715,10 +718,10 @@ public class ComponentTreeAction implements MeasuresWsAction {
   }
 
   private void checkPermissions(ComponentDto baseComponent) {
-    userSession.checkComponentPermission(UserRole.USER, baseComponent);
+    userSession.checkComponentPermission(ProjectPermission.USER, baseComponent);
 
     if (ComponentScopes.PROJECT.equals(baseComponent.scope()) && ComponentQualifiers.APP.equals(baseComponent.qualifier())) {
-      userSession.checkChildProjectsPermission(UserRole.USER, baseComponent);
+      userSession.checkChildProjectsPermission(ProjectPermission.USER, baseComponent);
     }
   }
 

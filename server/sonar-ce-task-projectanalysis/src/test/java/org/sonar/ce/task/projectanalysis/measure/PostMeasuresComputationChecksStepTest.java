@@ -19,11 +19,13 @@
  */
 package org.sonar.ce.task.projectanalysis.measure;
 
+import java.util.UUID;
 import org.junit.Rule;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
 import org.sonar.api.measures.CoreMetrics;
+import org.sonar.ce.common.scanner.ScannerReportReader;
 import org.sonar.ce.task.projectanalysis.analysis.AnalysisMetadataHolderRule;
 import org.sonar.ce.task.projectanalysis.component.TreeRootHolderRule;
 import org.sonar.ce.task.projectanalysis.measure.PostMeasuresComputationCheck.Context;
@@ -39,6 +41,7 @@ import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import static org.sonar.api.measures.CoreMetrics.NCLOC;
 import static org.sonar.ce.task.projectanalysis.component.ReportComponent.DUMB_PROJECT;
 import static org.sonar.db.component.ComponentTesting.newPrivateProjectDto;
@@ -53,6 +56,7 @@ public class PostMeasuresComputationChecksStepTest {
   public MeasureRepositoryRule measureRepository = MeasureRepositoryRule.create(treeRootHolder, metricRepository);
   @Rule
   public AnalysisMetadataHolderRule analysisMetadataHolder = new AnalysisMetadataHolderRule();
+  private ScannerReportReader reportReader = mock(ScannerReportReader.class);
 
   @Test
   public void execute_extensions() {
@@ -103,6 +107,19 @@ public class PostMeasuresComputationChecksStepTest {
   }
 
   @Test
+  public void whenOnCheck_thenAnalysisUuidIsPresent() {
+    String analysisUuid = "analysisUuid";
+    PostMeasuresComputationCheck check = mock(PostMeasuresComputationCheck.class);
+    analysisMetadataHolder.setUuid(analysisUuid);
+
+    newStep(check).execute(new TestComputationStepContext());
+
+    ArgumentCaptor<Context> contextArgumentCaptor = ArgumentCaptor.forClass(Context.class);
+    verify(check).onCheck(contextArgumentCaptor.capture());
+    assertThat(contextArgumentCaptor.getValue().getAnalysisUuid()).isEqualTo(analysisUuid);
+  }
+
+  @Test
   public void do_nothing_if_no_extensions() {
     // no failure
     newStep().execute(new TestComputationStepContext());
@@ -131,9 +148,6 @@ public class PostMeasuresComputationChecksStepTest {
   }
 
   private PostMeasuresComputationChecksStep newStep(PostMeasuresComputationCheck... postMeasuresComputationChecks) {
-    if (postMeasuresComputationChecks.length == 0) {
-      return new PostMeasuresComputationChecksStep(treeRootHolder, metricRepository, measureRepository, analysisMetadataHolder);
-    }
-    return new PostMeasuresComputationChecksStep(treeRootHolder, metricRepository, measureRepository, analysisMetadataHolder, postMeasuresComputationChecks);
+    return new PostMeasuresComputationChecksStep(treeRootHolder, metricRepository, measureRepository, analysisMetadataHolder, reportReader, postMeasuresComputationChecks);
   }
 }

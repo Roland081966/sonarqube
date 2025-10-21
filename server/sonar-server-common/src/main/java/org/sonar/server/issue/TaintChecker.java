@@ -27,7 +27,7 @@ import java.util.Map;
 import java.util.function.Predicate;
 import org.jetbrains.annotations.NotNull;
 import org.sonar.api.config.Configuration;
-import org.sonar.api.rules.RuleType;
+import org.sonar.core.rule.RuleType;
 import org.sonar.core.issue.DefaultIssue;
 import org.sonar.db.issue.IssueDto;
 
@@ -77,8 +77,8 @@ public class TaintChecker {
   }
 
   private List<String> initializeRepositories() {
-    List<String> repositories = new ArrayList<>(List.of("roslyn.sonaranalyzer.security.cs",
-      "javasecurity", "jssecurity", "tssecurity", "phpsecurity", "pythonsecurity"));
+    List<String> repositories = new ArrayList<>(List.of("gosecurity", "javasecurity", "jssecurity", "kotlinsecurity", "phpsecurity", "pythonsecurity",
+      "roslyn.sonaranalyzer.security.cs", "tssecurity", "vbnetsecurity"));
 
     if (!config.hasKey(EXTRA_TAINT_REPOSITORIES)) {
       return repositories;

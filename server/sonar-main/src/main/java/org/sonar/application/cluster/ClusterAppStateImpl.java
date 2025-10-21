@@ -25,7 +25,6 @@ import com.hazelcast.cluster.MembershipEvent;
 import com.hazelcast.core.EntryAdapter;
 import com.hazelcast.core.EntryEvent;
 import com.hazelcast.core.HazelcastInstanceNotActiveException;
-import com.hazelcast.cp.IAtomicReference;
 import com.hazelcast.replicatedmap.ReplicatedMap;
 import java.util.ArrayList;
 import java.util.EnumMap;
@@ -34,6 +33,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
+import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.cluster.health.ClusterHealthStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,6 +47,7 @@ import org.sonar.application.es.EsConnector;
 import org.sonar.process.MessageException;
 import org.sonar.process.NetworkUtilsImpl;
 import org.sonar.process.ProcessId;
+import org.sonar.process.cluster.hz.DistributedReference;
 import org.sonar.process.cluster.hz.HazelcastMember;
 
 import static java.lang.String.format;
@@ -126,7 +127,7 @@ public class ClusterAppStateImpl implements ClusterAppState {
 
   @Override
   public boolean tryToLockWebLeader() {
-    IAtomicReference<UUID> leader = hzMember.getAtomicReference(LEADER);
+    DistributedReference<UUID> leader = hzMember.getAtomicReference(LEADER);
     return leader.compareAndSet(null, hzMember.getUuid());
   }
 
@@ -138,10 +139,11 @@ public class ClusterAppStateImpl implements ClusterAppState {
   /**
    * Tries to release the lock of the cluster leader. It is safe to call this method even if one is not sure about the UUID of the leader.
    * If all nodes call this method then we can be confident that the lock is released.
+   *
    * @param uuidOfLeader - the UUID of the leader to release the lock. In case the UUID is not the leader's uuid this method has no effect.
    */
   private void tryToReleaseWebLeaderLock(UUID uuidOfLeader) {
-    IAtomicReference<UUID> leader = hzMember.getAtomicReference(LEADER);
+    DistributedReference<UUID> leader = hzMember.getAtomicReference(LEADER);
     leader.compareAndSet(uuidOfLeader, null);
   }
 
@@ -152,7 +154,7 @@ public class ClusterAppStateImpl implements ClusterAppState {
 
   @Override
   public void registerSonarQubeVersion(String sonarqubeVersion) {
-    IAtomicReference<String> sqVersion = hzMember.getAtomicReference(SONARQUBE_VERSION);
+    DistributedReference<String> sqVersion = hzMember.getAtomicReference(SONARQUBE_VERSION);
     boolean wasSet = sqVersion.compareAndSet(null, sonarqubeVersion);
 
     if (!wasSet) {
@@ -166,7 +168,7 @@ public class ClusterAppStateImpl implements ClusterAppState {
 
   @Override
   public void registerClusterName(String clusterName) {
-    IAtomicReference<String> property = hzMember.getAtomicReference(CLUSTER_NAME);
+    DistributedReference<String> property = hzMember.getAtomicReference(CLUSTER_NAME);
     boolean wasSet = property.compareAndSet(null, clusterName);
 
     if (!wasSet) {
@@ -221,9 +223,14 @@ public class ClusterAppStateImpl implements ClusterAppState {
   }
 
   private boolean isElasticSearchOperational() {
-    return esConnector.getClusterHealthStatus()
-      .filter(t -> ClusterHealthStatus.GREEN.equals(t) || ClusterHealthStatus.YELLOW.equals(t))
-      .isPresent();
+    try {
+      return esConnector.getClusterHealthStatus()
+        .filter(t -> ClusterHealthStatus.GREEN.equals(t) || ClusterHealthStatus.YELLOW.equals(t))
+        .isPresent();
+    } catch (ElasticsearchException e) {
+      LOGGER.warn("Cannot check at current time whether Elasticsearch is operational", e);
+      return false;
+    }
   }
 
   private void asyncWaitForEsToBecomeOperational() {

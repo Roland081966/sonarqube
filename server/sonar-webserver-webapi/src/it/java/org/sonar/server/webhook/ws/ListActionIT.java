@@ -23,23 +23,24 @@ import java.util.List;
 import org.junit.Rule;
 import org.junit.Test;
 import org.sonar.api.config.Configuration;
-import org.sonar.server.component.ComponentTypes;
 import org.sonar.api.server.ws.WebService;
 import org.sonar.api.server.ws.WebService.Param;
-import org.sonar.api.web.UserRole;
 import org.sonar.db.DbClient;
 import org.sonar.db.DbTester;
 import org.sonar.db.component.ComponentDbTester;
 import org.sonar.db.component.ComponentDto;
 import org.sonar.db.permission.GlobalPermission;
+import org.sonar.db.permission.ProjectPermission;
 import org.sonar.db.project.ProjectDto;
 import org.sonar.db.webhook.WebhookDbTester;
 import org.sonar.db.webhook.WebhookDeliveryDbTester;
 import org.sonar.db.webhook.WebhookDto;
 import org.sonar.server.component.ComponentFinder;
+import org.sonar.server.component.ComponentTypes;
 import org.sonar.server.exceptions.ForbiddenException;
 import org.sonar.server.exceptions.NotFoundException;
 import org.sonar.server.exceptions.UnauthorizedException;
+import org.sonar.server.network.NetworkInterfaceProvider;
 import org.sonar.server.tester.UserSessionRule;
 import org.sonar.server.ws.TestRequest;
 import org.sonar.server.ws.WsActionTester;
@@ -203,7 +204,7 @@ public class ListActionIT {
   @Test
   public void list_project_webhooks_when_project_key_param_is_provided() {
     ProjectDto project1 = componentDbTester.insertPrivateProject().getProjectDto();
-    userSession.logIn().addProjectPermission(UserRole.ADMIN, project1);
+    userSession.logIn().addProjectPermission(ProjectPermission.ADMIN, project1);
 
     WebhookDto dto1 = webhookDbTester.insertWebhook(project1);
     WebhookDto dto2 = webhookDbTester.insertWebhook(project1);

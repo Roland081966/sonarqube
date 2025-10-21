@@ -26,7 +26,7 @@ import org.junit.Test;
 import org.sonar.api.issue.impact.Severity;
 import org.sonar.api.issue.impact.SoftwareQuality;
 import org.sonar.api.rules.CleanCodeAttribute;
-import org.sonar.api.rules.RuleType;
+import org.sonar.core.rule.RuleType;
 import org.sonar.api.utils.Duration;
 import org.sonar.ce.task.projectanalysis.analysis.AnalysisMetadataHolderRule;
 import org.sonar.ce.task.projectanalysis.analysis.Branch;
@@ -329,6 +329,7 @@ public class IssueLifecycleTest {
 
     assertThat(raw.isNew()).isFalse();
     assertThat(raw.isCopied()).isTrue();
+    assertThat(raw.isFromSonarQubeUpdate()).isFalse();
     assertThat(raw.getCleanCodeAttribute()).isEqualTo(CleanCodeAttribute.FOCUSED);
     assertThat(raw.key()).isNotNull();
     assertThat(raw.key()).isNotEqualTo(base.key());
@@ -349,6 +350,27 @@ public class IssueLifecycleTest {
     assertThat(raw.getRuleDescriptionContextKey()).contains(TEST_CONTEXT_KEY);
 
     verifyNoInteractions(updater);
+  }
+
+  @Test
+  public void copyExistingOpenIssueFromBranch_preserves_from_sonarqube_update_flag() {
+    DefaultIssue raw = new DefaultIssue()
+      .setNew(true)
+      .setKey("RAW_KEY");
+    DefaultIssue base = new DefaultIssue()
+      .setKey("BASE_KEY")
+      .setStatus(STATUS_OPEN)
+      .setFromSonarQubeUpdate(true);
+
+    when(debtCalculator.calculate(raw)).thenReturn(DEFAULT_DURATION);
+
+    Branch branch = mock(Branch.class);
+    when(branch.getName()).thenReturn("release-2.x");
+    analysisMetadataHolder.setBranch(branch);
+
+    underTest.copyExistingOpenIssueFromBranch(raw, base, "master");
+
+    assertThat(raw.isFromSonarQubeUpdate()).isTrue();
   }
 
   @Test
@@ -397,6 +419,7 @@ public class IssueLifecycleTest {
       .setRuleKey(XOO_X1)
       .setRuleDescriptionContextKey("spring")
       .setCleanCodeAttribute(CleanCodeAttribute.IDENTIFIABLE)
+      .setInternalTags(Set.of("internalTag1", "internalTag2"))
       .setCodeVariants(Set.of("foo", "bar"))
       .addImpact(SoftwareQuality.MAINTAINABILITY, Severity.LOW)
       .addImpact(SoftwareQuality.RELIABILITY, Severity.HIGH)
@@ -439,6 +462,7 @@ public class IssueLifecycleTest {
       .setMessageFormattings(messageFormattings)
       .setGap(15d)
       .setRuleDescriptionContextKey("hibernate")
+      .setInternalTags(Set.of("base-internal-tag"))
       .setCodeVariants(Set.of("donut"))
       .addImpact(SoftwareQuality.RELIABILITY, Severity.LOW, true)
       .setEffort(Duration.create(15L))
@@ -452,6 +476,7 @@ public class IssueLifecycleTest {
     underTest.mergeExistingOpenIssue(raw, base);
 
     assertThat(raw.isNew()).isFalse();
+    assertThat(raw.isFromSonarQubeUpdate()).isFalse();
     assertThat(raw.key()).isEqualTo("BASE_KEY");
     assertThat(raw.creationDate()).isEqualTo(base.creationDate());
     assertThat(raw.updateDate()).isEqualTo(base.updateDate());
@@ -461,6 +486,7 @@ public class IssueLifecycleTest {
     assertThat(raw.assigneeLogin()).isEqualTo("base assignee login");
     assertThat(raw.authorLogin()).isEqualTo("base author");
     assertThat(raw.tags()).containsOnly("base tag");
+    assertThat(raw.internalTags()).containsOnly("internalTag1", "internalTag2");
     assertThat(raw.codeVariants()).containsOnly("foo", "bar");
     assertThat(raw.effort()).isEqualTo(DEFAULT_DURATION);
     assertThat(raw.isOnDisabledRule()).isTrue();
@@ -479,6 +505,7 @@ public class IssueLifecycleTest {
     verify(updater).setPastLine(raw, 10);
     verify(updater).setRuleDescriptionContextKey(raw, "hibernate");
     verify(updater).setCodeVariants(raw, Set.of("donut"), issueChangeContext);
+    verify(updater).setInternalTags(raw, Set.of("base-internal-tag"), issueChangeContext);
     verify(updater).setPastMessage(raw, "message with code", messageFormattings, issueChangeContext);
     verify(updater).setPastEffort(raw, Duration.create(15L), issueChangeContext);
     verify(updater).setPastLocations(raw, issueLocations);
@@ -542,6 +569,22 @@ public class IssueLifecycleTest {
 
     assertThat(raw.isChanged()).isTrue();
     assertThat(raw.getRuleDescriptionContextKey()).isEqualTo(raw.getRuleDescriptionContextKey());
+  }
+
+  @Test
+  public void mergeExistingOpenIssue_preserves_from_sonarqube_update_flag() {
+    DefaultIssue raw = new DefaultIssue()
+      .setNew(true)
+      .setKey("RAW_KEY")
+      .setRuleKey(XOO_X1);
+    DefaultIssue base = new DefaultIssue()
+      .setKey("BASE_KEY")
+      .setStatus(STATUS_OPEN)
+      .setFromSonarQubeUpdate(true);
+
+    underTest.mergeExistingOpenIssue(raw, base);
+
+    assertThat(raw.isFromSonarQubeUpdate()).isTrue();
   }
 
   @Test

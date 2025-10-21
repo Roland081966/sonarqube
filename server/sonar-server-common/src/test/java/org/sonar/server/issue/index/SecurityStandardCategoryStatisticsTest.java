@@ -20,6 +20,9 @@
 package org.sonar.server.issue.index;
 
 import java.util.ArrayList;
+import java.util.Map;
+import java.util.OptionalInt;
+
 import org.junit.Test;
 
 import static java.util.OptionalInt.empty;
@@ -31,7 +34,7 @@ public class SecurityStandardCategoryStatisticsTest {
   public void hasMoreRules_default_false() {
     SecurityStandardCategoryStatistics standardCategoryStatistics = new SecurityStandardCategoryStatistics(
       "cat", 0, empty(), 0,
-      0, 5, null, null
+      0, 5, null, null, Map.of()
     );
     assertThat(standardCategoryStatistics.hasMoreRules()).isFalse();
   }
@@ -40,7 +43,7 @@ public class SecurityStandardCategoryStatisticsTest {
   public void hasMoreRules_is_updatable() {
     SecurityStandardCategoryStatistics standardCategoryStatistics = new SecurityStandardCategoryStatistics(
       "cat", 0, empty(), 0,
-      0, 5, null, null
+      0, 5, null, null, Map.of()
     );
     standardCategoryStatistics.setHasMoreRules(true);
     assertThat(standardCategoryStatistics.hasMoreRules()).isTrue();
@@ -50,7 +53,7 @@ public class SecurityStandardCategoryStatisticsTest {
   public void test_getters() {
     SecurityStandardCategoryStatistics standardCategoryStatistics = new SecurityStandardCategoryStatistics(
       "cat", 1, empty(), 0,
-      0, 5, new ArrayList<>(), "version"
+      0, 5, new ArrayList<>(), "version", Map.of()
     ).setLevel("1");
 
     standardCategoryStatistics.setActiveRules(3);
@@ -69,6 +72,47 @@ public class SecurityStandardCategoryStatisticsTest {
     assertThat(standardCategoryStatistics.getVersion().get()).contains("version");
     assertThat(standardCategoryStatistics.getLevel().get()).contains("1");
     assertThat(standardCategoryStatistics.hasMoreRules()).isFalse();
+    assertThat(standardCategoryStatistics.getSeverityDistribution()).isEmpty();
   }
 
+  @Test
+  public void withModifiedVulnerabilities() {
+    SecurityStandardCategoryStatistics standardCategoryStatistics = new SecurityStandardCategoryStatistics(
+      "cat", 1, empty(), 0,
+      0, 5, null, null, Map.of()
+    );
+
+    SecurityStandardCategoryStatistics modified = standardCategoryStatistics.withModifiedVulnerabilities(2, 3);
+
+    assertThat(modified.getVulnerabilities()).isEqualTo(3);
+    assertThat(modified.getVulnerabilityRating()).isPresent();
+    assertThat(modified.getVulnerabilityRating().getAsInt()).isEqualTo(3);
+  }
+
+  @Test
+  public void withModifiedVulnerabilities_noNewRating() {
+    SecurityStandardCategoryStatistics standardCategoryStatistics = new SecurityStandardCategoryStatistics(
+        "cat", 1, OptionalInt.of(1), 0,
+        0, 5, null, null, Map.of()
+    );
+
+    SecurityStandardCategoryStatistics modified = standardCategoryStatistics.withModifiedVulnerabilities(2, null);
+
+    assertThat(modified.getVulnerabilities()).isEqualTo(3);
+    assertThat(modified.getVulnerabilityRating()).isPresent();
+    assertThat(modified.getVulnerabilityRating().getAsInt()).isEqualTo(1);
+  }
+
+  @Test
+  public void withModifiedVulnerabilities_usesLowestRating() {
+    SecurityStandardCategoryStatistics standardCategoryStatistics = new SecurityStandardCategoryStatistics(
+        "cat", 1, OptionalInt.of(5), 0,
+        0, 5, null, null, Map.of()
+    );
+
+    SecurityStandardCategoryStatistics modified = standardCategoryStatistics.withModifiedVulnerabilities(2, 3);
+
+    assertThat(modified.getVulnerabilityRating()).isPresent();
+    assertThat(modified.getVulnerabilityRating().getAsInt()).isEqualTo(5);
+  }
 }

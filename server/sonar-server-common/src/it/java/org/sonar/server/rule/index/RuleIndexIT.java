@@ -74,10 +74,10 @@ import static org.sonar.api.rule.Severity.BLOCKER;
 import static org.sonar.api.rule.Severity.CRITICAL;
 import static org.sonar.api.rule.Severity.MAJOR;
 import static org.sonar.api.rule.Severity.MINOR;
-import static org.sonar.api.rules.RuleType.BUG;
-import static org.sonar.api.rules.RuleType.CODE_SMELL;
-import static org.sonar.api.rules.RuleType.SECURITY_HOTSPOT;
-import static org.sonar.api.rules.RuleType.VULNERABILITY;
+import static org.sonar.core.rule.RuleType.BUG;
+import static org.sonar.core.rule.RuleType.CODE_SMELL;
+import static org.sonar.core.rule.RuleType.SECURITY_HOTSPOT;
+import static org.sonar.core.rule.RuleType.VULNERABILITY;
 import static org.sonar.core.config.MQRModeConstants.MULTI_QUALITY_MODE_ENABLED;
 import static org.sonar.db.rule.RuleDescriptionSectionDto.createDefaultRuleDescriptionSection;
 import static org.sonar.db.rule.RuleTesting.newRule;
@@ -511,6 +511,22 @@ class RuleIndexIT {
 
     RuleQuery query = new RuleQuery().setOwaspTop10For2021(of("a5", "a10"));
     SearchIdResult<String> results = underTest.search(query, new SearchOptions().addFacets("owaspTop10-2021"));
+    assertThat(results.getUuids()).containsOnly(rule1.getUuid(), rule2.getUuid());
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void search_by_security_owaspMobileTop10_2024_return_correct_data_based_on_mode(boolean mqrMode) {
+    doReturn(Optional.of(mqrMode)).when(config).getBoolean(MULTI_QUALITY_MODE_ENABLED);
+    RuleDto rule1 = createRule(setSecurityStandards(of("owaspMobileTop10-2024:m1", "owaspMobileTop10-2024:m10", "cwe:543")),
+      r -> r.setType(VULNERABILITY).replaceAllDefaultImpacts(List.of(new ImpactDto(SECURITY, Severity.HIGH))));
+    RuleDto rule2 = createRule(setSecurityStandards(of("owaspMobileTop10-2024:m10", "cwe:543")), r -> r.setType(SECURITY_HOTSPOT));
+    createRule(setSecurityStandards(of("cwe:543")),
+      r -> r.setType(CODE_SMELL).replaceAllDefaultImpacts(List.of(new ImpactDto(MAINTAINABILITY, Severity.HIGH))));
+    index();
+
+    RuleQuery query = new RuleQuery().setOwaspMobileTop10For2024(of("m5", "m10"));
+    SearchIdResult<String> results = underTest.search(query, new SearchOptions().addFacets("owaspMobileTop10-2024"));
     assertThat(results.getUuids()).containsOnly(rule1.getUuid(), rule2.getUuid());
   }
 

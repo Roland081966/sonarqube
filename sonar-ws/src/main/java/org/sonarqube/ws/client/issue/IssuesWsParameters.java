@@ -63,6 +63,7 @@ public class IssuesWsParameters {
   public static final String PARAM_ISSUE_STATUSES = "issueStatuses";
   public static final String PARAM_RESOLVED = "resolved";
   public static final String PARAM_PRIORITIZED_RULE = "prioritizedRule";
+  public static final String PARAM_FROM_SONAR_QUBE_UPDATE = "fromSonarQubeUpdate";
   public static final String PARAM_COMPONENTS = "components";
   public static final String PARAM_COMPONENT_KEYS = "componentKeys";
   public static final String PARAM_COMPONENT_UUIDS = "componentUuids";
@@ -93,6 +94,8 @@ public class IssuesWsParameters {
   public static final String PARAM_PCI_DSS_40 = "pciDss-4.0";
   public static final String PARAM_OWASP_ASVS = "owaspAsvs";
   public static final String PARAM_OWASP_ASVS_40 = "owaspAsvs-4.0";
+  public static final String PARAM_OWASP_MOBILE_TOP_10 = "owaspMobileTop10";
+  public static final String PARAM_OWASP_MOBILE_TOP_10_2024 = "owaspMobileTop10-2024";
   public static final String PARAM_OWASP_TOP_10 = "owaspTop10";
   public static final String PARAM_OWASP_TOP_10_2021 = "owaspTop10-2021";
   public static final String PARAM_STIG_ASD_V5R3 = "stig-ASD_V5R3";

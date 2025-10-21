@@ -37,7 +37,7 @@ import org.sonar.api.server.ws.Request;
 import org.sonar.api.server.ws.Response;
 import org.sonar.api.server.ws.WebService;
 import org.sonar.api.server.ws.WebService.Param;
-import org.sonar.api.web.UserRole;
+import org.sonar.db.permission.ProjectPermission;
 import org.sonar.db.DbClient;
 import org.sonar.db.DbSession;
 import org.sonar.db.component.ComponentDto;
@@ -109,6 +109,9 @@ public class SearchHistoryAction implements MeasuresWsAction {
       .setResponseExample(getClass().getResource("search_history-example.json"))
       .setSince("6.3")
       .setChangelog(
+        new Change("2025.4", format(
+          "The following SCA metrics are available on licensed enterprise/datacenter editions with SCA enabled: %s",
+          MeasuresWsModule.getNewScaMetricsInSonarQube202504())),
         new Change("10.8", String.format("The following metrics are not deprecated anymore: %s",
           MeasuresWsModule.getUndeprecatedMetricsinSonarQube108())),
         new Change("10.8", String.format("Added new accepted values for the 'metricKeys' param: %s",
@@ -227,9 +230,9 @@ public class SearchHistoryAction implements MeasuresWsAction {
 
   private ComponentDto searchComponent(SearchHistoryRequest request, DbSession dbSession) {
     ComponentDto component = loadComponent(dbSession, request);
-    userSession.checkComponentPermission(UserRole.USER, component);
+    userSession.checkComponentPermission(ProjectPermission.USER, component);
     if (ComponentScopes.PROJECT.equals(component.scope()) && ComponentQualifiers.APP.equals(component.qualifier())) {
-      userSession.checkChildProjectsPermission(UserRole.USER, component);
+      userSession.checkChildProjectsPermission(ProjectPermission.USER, component);
     }
     return component;
   }

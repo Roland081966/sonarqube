@@ -31,7 +31,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.sonar.api.issue.IssueStatus;
 import org.sonar.api.issue.impact.Severity;
-import org.sonar.api.rules.RuleType;
+import org.sonar.core.rule.RuleType;
 import org.sonar.api.server.rule.RulesDefinition.OwaspAsvsVersion;
 import org.sonar.db.component.ComponentDto;
 import org.sonar.db.rule.RuleDto;
@@ -541,6 +541,20 @@ class IssueIndexFacetsTest extends IssueIndexTestCommon {
     );
 
     assertThatFacetHasOnly(IssueQuery.builder(), "prioritizedRule", entry("true", 2L), entry("false", 1L));
+  }
+
+  @Test
+  void facets_on_issues_from_analyzer_update() {
+    ComponentDto project = newPrivateProjectDto();
+    ComponentDto file = newFileDto(project);
+
+    indexIssues(
+      newDoc("I1", project.uuid(), file).setFromSonarQubeUpdate(false),
+      newDoc("I2", project.uuid(), file).setFromSonarQubeUpdate(true),
+      newDoc("I3", project.uuid(), file).setFromSonarQubeUpdate(true)
+    );
+
+    assertThatFacetHasOnly(IssueQuery.builder(), "fromSonarQubeUpdate", entry("true", 2L), entry("false", 1L));
   }
 
   @Test

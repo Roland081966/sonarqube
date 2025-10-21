@@ -58,6 +58,7 @@ import org.sonar.core.language.LanguagesProvider;
 import org.sonar.core.metric.SoftwareQualitiesMetrics;
 import org.sonar.core.platform.PlatformEditionProvider;
 import org.sonar.core.platform.SpringComponentContainer;
+import org.sonar.core.scadata.DefaultScaDataSourceImpl;
 import org.sonar.server.ai.code.assurance.AiCodeAssuranceEntitlement;
 import org.sonar.server.ai.code.assurance.NoOpAiCodeAssuranceVerifier;
 import org.sonar.server.almintegration.ws.AlmIntegrationsWSModule;
@@ -70,6 +71,7 @@ import org.sonar.server.authentication.AuthenticationModule;
 import org.sonar.server.authentication.DefaultAdminCredentialsVerifierImpl;
 import org.sonar.server.authentication.DefaultAdminCredentialsVerifierNotificationHandler;
 import org.sonar.server.authentication.DefaultAdminCredentialsVerifierNotificationTemplate;
+import org.sonar.server.authentication.HardcodedActiveTimeoutProvider;
 import org.sonar.server.authentication.LogOAuthWarning;
 import org.sonar.server.authentication.ws.AuthenticationWsModule;
 import org.sonar.server.badge.ws.ProjectBadgesWsModule;
@@ -93,6 +95,7 @@ import org.sonar.server.common.github.config.GithubConfigurationService;
 import org.sonar.server.common.gitlab.config.GitlabConfigurationService;
 import org.sonar.server.common.group.service.GroupMembershipService;
 import org.sonar.server.common.group.service.GroupService;
+import org.sonar.server.network.NetworkInterfaceProvider;
 import org.sonar.server.common.newcodeperiod.NewCodeDefinitionResolver;
 import org.sonar.server.common.permission.DefaultTemplatesResolverImpl;
 import org.sonar.server.common.permission.GroupPermissionChanger;
@@ -137,6 +140,7 @@ import org.sonar.server.issue.AddTagsAction;
 import org.sonar.server.issue.AssignAction;
 import org.sonar.server.issue.CommentAction;
 import org.sonar.server.issue.IssueChangePostProcessorImpl;
+import org.sonar.server.issue.FromSonarQubeUpdateFeature;
 import org.sonar.server.issue.PrioritizedRulesFeature;
 import org.sonar.server.issue.RemoveTagsAction;
 import org.sonar.server.issue.SetSeverityAction;
@@ -157,6 +161,7 @@ import org.sonar.server.issue.notification.NewModesNotificationsModule;
 import org.sonar.server.issue.ws.IssueWsModule;
 import org.sonar.server.language.LanguageValidation;
 import org.sonar.server.language.ws.LanguageWs;
+import org.sonar.server.log.DistributedServerLogging;
 import org.sonar.server.log.ServerLogging;
 import org.sonar.server.loginmessage.LoginMessageFeature;
 import org.sonar.server.management.DelegatingManagedServices;
@@ -198,6 +203,7 @@ import org.sonar.server.platform.db.CheckAnyonePermissionsAtStartup;
 import org.sonar.server.platform.db.migration.DatabaseMigrationPersister;
 import org.sonar.server.platform.db.migration.DatabaseMigrationTelemetry;
 import org.sonar.server.platform.telemetry.TelemetryFipsEnabledProvider;
+import org.sonar.server.platform.telemetry.TelemetryIpv6EnabledProvider;
 import org.sonar.server.platform.telemetry.TelemetryMQRModePropertyProvider;
 import org.sonar.server.platform.telemetry.TelemetryNclocProvider;
 import org.sonar.server.platform.telemetry.TelemetryPortfolioSelectionModeProvider;
@@ -205,7 +211,8 @@ import org.sonar.server.platform.telemetry.TelemetrySubportfolioSelectionModePro
 import org.sonar.server.platform.telemetry.TelemetryUserEnabledProvider;
 import org.sonar.server.platform.telemetry.TelemetryVersionProvider;
 import org.sonar.server.platform.web.ActionDeprecationLoggerInterceptor;
-import org.sonar.server.platform.web.SonarLintConnectionFilter;
+import org.sonar.server.platform.web.NoCacheFilter;
+import org.sonar.server.platform.web.SonarQubeIdeConnectionFilter;
 import org.sonar.server.platform.web.WebServiceFilter;
 import org.sonar.server.platform.web.WebServiceReroutingFilter;
 import org.sonar.server.platform.web.requestid.HttpRequestIdModule;
@@ -246,7 +253,6 @@ import org.sonar.server.qualitygate.ws.QualityGateWsModule;
 import org.sonar.server.qualityprofile.QProfileBackuperImpl;
 import org.sonar.server.qualityprofile.QProfileComparison;
 import org.sonar.server.qualityprofile.QProfileCopier;
-import org.sonar.server.qualityprofile.QProfileExporters;
 import org.sonar.server.qualityprofile.QProfileFactoryImpl;
 import org.sonar.server.qualityprofile.QProfileParser;
 import org.sonar.server.qualityprofile.QProfileResetImpl;
@@ -330,7 +336,8 @@ public class PlatformLevel4 extends PlatformLevel {
       MetadataIndexImpl.class,
       EsDbCompatibilityImpl.class);
 
-    addIfCluster(new NodeHealthModule());
+    addIfCluster(new NodeHealthModule(),
+      DistributedServerLogging.class);
 
     add(
       RuleDescriptionFormatter.class,
@@ -350,6 +357,7 @@ public class PlatformLevel4 extends PlatformLevel {
       DefaultBranchNameResolver.class,
       DelegatingManagedServices.class,
       DelegatingDevOpsProjectCreatorFactory.class,
+      NetworkInterfaceProvider.class,
 
       // ai code assurance
       NoOpAiCodeAssuranceVerifier.class,
@@ -369,7 +377,6 @@ public class PlatformLevel4 extends PlatformLevel {
       QProfileRulesImpl.class,
       RuleActivator.class,
       QualityProfileChangeEventServiceImpl.class,
-      QProfileExporters.class,
       QProfileFactoryImpl.class,
       QProfileCopier.class,
       QProfileBackuperImpl.class,
@@ -420,8 +427,9 @@ public class PlatformLevel4 extends PlatformLevel {
       ActionDeprecationLoggerInterceptor.class,
       WebServiceEngine.class,
       new WebServicesWsModule(),
-      SonarLintConnectionFilter.class,
+      SonarQubeIdeConnectionFilter.class,
       WebServiceFilter.class,
+      NoCacheFilter.class,
       WebServiceReroutingFilter.class,
 
       // localization
@@ -445,6 +453,7 @@ public class PlatformLevel4 extends PlatformLevel {
       DefaultAdminCredentialsVerifierImpl.class,
       DefaultAdminCredentialsVerifierNotificationTemplate.class,
       DefaultAdminCredentialsVerifierNotificationHandler.class,
+      HardcodedActiveTimeoutProvider.class,
 
       // users
       UserSessionFactoryImpl.class,
@@ -506,6 +515,7 @@ public class PlatformLevel4 extends PlatformLevel {
       IssueIteratorFactory.class,
       PermissionIndexer.class,
       PrioritizedRulesFeature.class,
+      FromSonarQubeUpdateFeature.class,
       new IssueWsModule(),
       NewIssuesEmailTemplate.class,
       MyNewIssuesEmailTemplate.class,
@@ -571,7 +581,6 @@ public class PlatformLevel4 extends PlatformLevel {
       new ProjectAnalysisWsModule(),
 
       // System
-      ServerLogging.class,
       new ChangeLogLevelServiceModule(getWebServer()),
       new HealthCheckerModule(getWebServer()),
       new SystemWsModule(),
@@ -691,6 +700,7 @@ public class PlatformLevel4 extends PlatformLevel {
       TelemetryNclocProvider.class,
       TelemetryUserEnabledProvider.class,
       TelemetryFipsEnabledProvider.class,
+      TelemetryIpv6EnabledProvider.class,
       TelemetrySubportfolioSelectionModeProvider.class,
       TelemetryPortfolioSelectionModeProvider.class,
       TelemetryApplicationsCountProvider.class,
@@ -739,26 +749,23 @@ public class PlatformLevel4 extends PlatformLevel {
 
       MainCollector.class,
 
-      PluginsRiskConsentFilter.class);
+      PluginsRiskConsentFilter.class,
+
+      // sca-provided capabilities
+      DefaultScaDataSourceImpl.class);
 
     // system info
     add(new SystemInfoWriterModule(getWebServer()));
 
-    addAll(level4AddedComponents);
-  }
+    addIfStandalone(ServerLogging.class);
 
-  @Override
-  public PlatformLevel start() {
+    addAll(level4AddedComponents);
+
     SpringComponentContainer container = getContainer();
     CoreExtensionsInstaller coreExtensionsInstaller = parent.get(WebCoreExtensionsInstaller.class);
     coreExtensionsInstaller.install(container, hasPlatformLevel4OrNone(), noAdditionalSideFilter());
 
     ServerExtensionInstaller extensionInstaller = parent.get(ServerExtensionInstaller.class);
     extensionInstaller.installExtensions(container);
-
-    super.start();
-
-    return this;
   }
-
 }

@@ -32,8 +32,8 @@ import org.apache.ibatis.cursor.Cursor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.sonar.api.rules.CleanCodeAttribute;
-import org.sonar.api.rules.RuleType;
 import org.sonar.api.server.rule.RulesDefinition.StigVersion;
+import org.sonar.core.rule.RuleType;
 import org.sonar.db.DatabaseUtils;
 import org.sonar.db.DbClient;
 import org.sonar.db.DbSession;
@@ -126,10 +126,11 @@ class IssueIteratorForSingleChunk implements IssueIterator {
     doc.setProjectUuid(projectUuid);
     String tags = indexedIssueDto.getTags();
     doc.setTags(STRING_LIST_SPLITTER.splitToList(tags == null ? "" : tags));
-    doc.setType(RuleType.valueOf(indexedIssueDto.getIssueType()));
+    doc.setType(RuleType.fromDbConstant(indexedIssueDto.getIssueType()));
     doc.setImpacts(indexedIssueDto.getEffectiveImpacts());
     SecurityStandards securityStandards = fromSecurityStandards(deserializeSecurityStandardsString(indexedIssueDto.getSecurityStandards()));
     SecurityStandards.SQCategory sqCategory = securityStandards.getSqCategory();
+    doc.setOwaspMobileTop10For2024(securityStandards.getOwaspMobileTop10For2024());
     doc.setOwaspTop10(securityStandards.getOwaspTop10());
     doc.setOwaspTop10For2021(securityStandards.getOwaspTop10For2021());
     doc.setStigAsdV5R3(securityStandards.getStig(StigVersion.ASD_V5R3));
@@ -147,6 +148,7 @@ class IssueIteratorForSingleChunk implements IssueIterator {
     String codeVariants = indexedIssueDto.getCodeVariants();
     doc.setCodeVariants(STRING_LIST_SPLITTER.splitToList(codeVariants == null ? "" : codeVariants));
     doc.setPrioritizedRule(indexedIssueDto.isPrioritizedRule());
+    doc.setFromSonarQubeUpdate(indexedIssueDto.isFromSonarQubeUpdate());
     return doc;
 
   }

@@ -28,7 +28,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -48,13 +47,13 @@ import org.sonar.api.issue.impact.SoftwareQuality;
 import org.sonar.api.rule.RuleKey;
 import org.sonar.api.rule.Severity;
 import org.sonar.api.rules.CleanCodeAttribute;
-import org.sonar.api.rules.RuleType;
 import org.sonar.api.utils.Duration;
 import org.sonar.core.issue.tracking.Trackable;
+import org.sonar.core.rule.RuleType;
 
 import static org.sonar.api.utils.DateUtils.truncateToSeconds;
 
-public class DefaultIssue implements Issue, Trackable, org.sonar.api.ce.measure.Issue {
+public class DefaultIssue implements Issue, Trackable {
 
   private String key = null;
   private RuleType type = null;
@@ -81,8 +80,10 @@ public class DefaultIssue implements Issue, Trackable, org.sonar.api.ce.measure.
   private String authorLogin = null;
   private List<DefaultIssueComment> comments = null;
   private Set<String> tags = null;
+  private Set<String> internalTags = null;
   private Set<String> codeVariants = null;
   private boolean prioritizedRule = false;
+  private boolean fromSonarQubeUpdate = false;
   // temporarily an Object as long as DefaultIssue is used by sonar-batch
   private Object locations = null;
 
@@ -141,8 +142,6 @@ public class DefaultIssue implements Issue, Trackable, org.sonar.api.ce.measure.
   private final Map<SoftwareQuality, DefaultImpact> impacts = new LinkedHashMap<>();
   private CleanCodeAttribute cleanCodeAttribute = null;
 
-  private String cveId = null;
-
   @Override
   public String key() {
     return key;
@@ -153,12 +152,10 @@ public class DefaultIssue implements Issue, Trackable, org.sonar.api.ce.measure.
     return this;
   }
 
-  @Override
   public RuleType type() {
     return type;
   }
 
-  @Override
   public Map<SoftwareQuality, org.sonar.api.issue.impact.Severity> impacts() {
     return impacts.values().stream().collect(Collectors.toMap(DefaultImpact::softwareQuality, DefaultImpact::severity));
   }
@@ -358,7 +355,6 @@ public class DefaultIssue implements Issue, Trackable, org.sonar.api.ce.measure.
   }
 
   @Nullable
-  @Override
   public IssueStatus issueStatus() {
     return IssueStatus.of(status, resolution);
   }
@@ -372,6 +368,10 @@ public class DefaultIssue implements Issue, Trackable, org.sonar.api.ce.measure.
   public DefaultIssue setResolution(@Nullable String s) {
     this.resolution = s;
     return this;
+  }
+
+  public boolean isUnresolved() {
+    return resolution == null;
   }
 
   @Override
@@ -517,25 +517,6 @@ public class DefaultIssue implements Issue, Trackable, org.sonar.api.ce.measure.
   public DefaultIssue setSendNotifications(boolean b) {
     sendNotifications = b;
     return this;
-  }
-
-  /**
-   * @deprecated since 9.4, attribute was already not returning any element since 5.2
-   */
-  @Deprecated
-  @Override
-  @CheckForNull
-  public String attribute(String key) {
-    return null;
-  }
-
-  /**
-   * @deprecated since 9.4, attribute was already not returning any element since 5.2
-   */
-  @Deprecated
-  @Override
-  public Map<String, String> attributes() {
-    return new HashMap<>();
   }
 
   @Override
@@ -703,6 +684,19 @@ public class DefaultIssue implements Issue, Trackable, org.sonar.api.ce.measure.
     return this;
   }
 
+  public Set<String> internalTags() {
+    if (internalTags == null) {
+      return Set.of();
+    } else {
+      return ImmutableSet.copyOf(internalTags);
+    }
+  }
+
+  public DefaultIssue setInternalTags(Collection<String> internalTags) {
+    this.internalTags = new LinkedHashSet<>(internalTags);
+    return this;
+  }
+
   @Override
   public Set<String> codeVariants() {
     if (codeVariants == null) {
@@ -749,6 +743,15 @@ public class DefaultIssue implements Issue, Trackable, org.sonar.api.ce.measure.
     return this;
   }
 
+  public boolean isFromSonarQubeUpdate() {
+    return fromSonarQubeUpdate;
+  }
+
+  public DefaultIssue setFromSonarQubeUpdate(boolean fromSonarQubeUpdate) {
+    this.fromSonarQubeUpdate = fromSonarQubeUpdate;
+    return this;
+  }
+
   @Nullable
   public CleanCodeAttribute getCleanCodeAttribute() {
     return cleanCodeAttribute;
@@ -782,16 +785,5 @@ public class DefaultIssue implements Issue, Trackable, org.sonar.api.ce.measure.
   @Override
   public Date getUpdateDate() {
     return updateDate;
-  }
-
-  @Override
-  @CheckForNull
-  public String getCveId() {
-    return cveId;
-  }
-
-  public DefaultIssue setCveId(@Nullable String cveId) {
-    this.cveId = cveId;
-    return this;
   }
 }

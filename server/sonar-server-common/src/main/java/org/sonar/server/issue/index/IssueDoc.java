@@ -28,7 +28,7 @@ import javax.annotation.CheckForNull;
 import javax.annotation.Nullable;
 import org.sonar.api.issue.impact.SoftwareQuality;
 import org.sonar.api.rule.Severity;
-import org.sonar.api.rules.RuleType;
+import org.sonar.core.rule.RuleType;
 import org.sonar.api.utils.Duration;
 import org.sonar.server.es.BaseDoc;
 import org.sonar.server.permission.index.AuthorizationDoc;
@@ -336,6 +336,16 @@ public class IssueDoc extends BaseDoc {
   }
 
   @CheckForNull
+  public Collection<String> getOwaspMobileTop10For2024() {
+    return getNullableField(IssueIndexDefinition.FIELD_ISSUE_OWASP_MOBILE_TOP_10_2024);
+  }
+
+  public IssueDoc setOwaspMobileTop10For2024(@Nullable Collection<String> o) {
+    setField(IssueIndexDefinition.FIELD_ISSUE_OWASP_MOBILE_TOP_10_2024, o);
+    return this;
+  }
+
+  @CheckForNull
   public Collection<String> getOwaspTop10() {
     return getNullableField(IssueIndexDefinition.FIELD_ISSUE_OWASP_TOP_10);
   }
@@ -442,6 +452,15 @@ public class IssueDoc extends BaseDoc {
 
   public IssueDoc setPrioritizedRule(boolean prioritizedRule) {
     setField(IssueIndexDefinition.FIELD_PRIORITIZED_RULE, prioritizedRule);
+    return this;
+  }
+
+  public boolean isFromSonarQubeUpdate() {
+    return getField(IssueIndexDefinition.FIELD_FROM_SONAR_QUBE_UPDATE);
+  }
+
+  public IssueDoc setFromSonarQubeUpdate(boolean fromSonarQubeUpdate) {
+    setField(IssueIndexDefinition.FIELD_FROM_SONAR_QUBE_UPDATE, fromSonarQubeUpdate);
     return this;
   }
 }

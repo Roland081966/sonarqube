@@ -218,12 +218,12 @@ public class ScannerReportReader {
     return Protobuf.readStream(file, ScannerReport.AnalysisWarning.parser());
   }
 
-  public CloseableIterator<ScannerReport.Dependency> readDependencies() {
-    File file = fileStructure.dependencies();
-    if (!fileExists(file)) {
-      return emptyCloseableIterator();
+  public File readDependencyFilesArchive() {
+    File file = fileStructure.dependencyFilesArchive();
+    if (fileExists(file)) {
+      return file;
     }
-    return Protobuf.readStream(file, ScannerReport.Dependency.parser());
+    return null;
   }
 
   private static boolean fileExists(File file) {
@@ -240,5 +240,13 @@ public class ScannerReportReader {
       return emptyCloseableIterator();
     }
     return Protobuf.readStream(file, ScannerReport.TelemetryEntry.parser());
+  }
+
+  public CloseableIterator<ScannerReport.AnalysisData> readAnalysisData() {
+    File file = fileStructure.analysisData();
+    if (!fileExists(file)) {
+      return emptyCloseableIterator();
+    }
+    return Protobuf.readStream(file, ScannerReport.AnalysisData.parser());
   }
 }

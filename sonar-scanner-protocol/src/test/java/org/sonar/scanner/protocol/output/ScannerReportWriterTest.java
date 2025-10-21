@@ -21,7 +21,10 @@ package org.sonar.scanner.protocol.output;
 
 import com.google.common.collect.Iterators;
 import java.io.File;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
+import org.apache.commons.io.FileUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -33,6 +36,7 @@ import org.sonar.scanner.protocol.output.ScannerReport.Measure.DoubleValue;
 import org.sonar.scanner.protocol.output.ScannerReport.SyntaxHighlightingRule.HighlightingType;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class ScannerReportWriterTest {
 
@@ -361,22 +365,20 @@ class ScannerReportWriterTest {
   }
 
   @Test
-  void write_dependencies() {
-    ScannerReport.Dependency dependency = ScannerReport.Dependency.newBuilder()
-      .setKey("mvn+com.fasterxml.jackson.core:jackson-databind$2.9.7")
-      .setName("jackson-databind")
-      .setFullName("com.fasterxml.jackson.core:jackson-databind")
-      .setDescription("General data-binding functionality for Jackson: works on core streaming API")
-      .setVersion("2.9.7")
-      .addParentDependencyKey("mvn+org.springframework:spring-webmvc$5.1.3.RELEASE")
-      .build();
-    underTest.appendDependency(dependency);
+  void writeScaFile_shouldCopyFileToScaDir() throws IOException {
+    File scaFile = new File(temp, "scaFile");
+    FileUtils.write(scaFile, "sca content", StandardCharsets.UTF_8);
 
-    File file = underTest.getFileStructure().dependencies();
-    assertThat(file).exists().isFile();
-    try (CloseableIterator<ScannerReport.Dependency> read = Protobuf.readStream(file, ScannerReport.Dependency.parser())) {
-      assertThat(Iterators.size(read)).isOne();
-    }
+    underTest.writeScaFile(scaFile);
+    assertThat(new File(underTest.getFileStructure().scaDir(), "scaFile")).exists().isFile()
+      .content(StandardCharsets.UTF_8).isEqualTo("sca content");
   }
 
+  @Test
+  void writeScaFile_whenUnableToCopy_shouldThrowIllegalStateException() {
+    File scaFile = new File(temp, "scaFile");
+    assertThatThrownBy(() -> underTest.writeScaFile(scaFile))
+      .isInstanceOf(IllegalStateException.class)
+      .hasMessage(String.format("Unable to copy sca file '%s' to sca folder", scaFile));
+  }
 }

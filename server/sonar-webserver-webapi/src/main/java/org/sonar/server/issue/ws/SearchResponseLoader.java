@@ -32,8 +32,8 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import javax.annotation.Nullable;
-import org.sonar.api.rules.RuleType;
 import org.sonar.core.issue.DefaultIssue;
+import org.sonar.core.rule.RuleType;
 import org.sonar.db.DbClient;
 import org.sonar.db.DbSession;
 import org.sonar.db.component.BranchDto;
@@ -57,7 +57,7 @@ import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Stream.concat;
-import static org.sonar.api.web.UserRole.ISSUE_ADMIN;
+import static org.sonar.db.permission.ProjectPermission.ISSUE_ADMIN;
 import static org.sonar.server.issue.AssignAction.ASSIGN_KEY;
 import static org.sonar.server.issue.CommentAction.COMMENT_KEY;
 import static org.sonar.server.issue.SetSeverityAction.SET_SEVERITY_KEY;
@@ -236,7 +236,7 @@ public class SearchResponseLoader {
         if (fields.contains(TRANSITIONS)) {
           // TODO workflow and action engines must not depend on org.sonar.api.issue.Issue but on a generic interface
           DefaultIssue issue = issueDto.toDefaultIssue();
-          result.addTransitions(issue.key(), transitionService.listTransitions(issue));
+          result.addTransitions(issue.key(), transitionService.listTransitionKeys(issue));
         }
       }
     }
@@ -248,7 +248,7 @@ public class SearchResponseLoader {
     if (login == null) {
       return Collections.emptySet();
     }
-    RuleType ruleType = RuleType.valueOf(issue.getType());
+    RuleType ruleType = RuleType.fromDbConstant(issue.getType());
     availableActions.add(COMMENT_KEY);
     availableActions.add("set_tags");
     if (issue.getResolution() != null) {
